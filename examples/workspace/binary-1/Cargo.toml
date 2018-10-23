@@ -1,0 +1,11 @@
+[package]
+name = "binary-1"
+version = "0.1.0"
+authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.32"
+
+[dependencies.lib-1]
+path = "../lib-1"
