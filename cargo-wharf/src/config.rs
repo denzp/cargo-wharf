@@ -1,10 +1,13 @@
+use std::env::current_dir;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use cargo::core::{PackageId, Resolve, Workspace};
+use cargo::core::{PackageId, Resolve, Shell, Workspace};
 use cargo::ops::resolve_ws;
-use cargo::util::CargoResult;
+use cargo::util::{homedir, CargoResult, Config as CargoConfig};
 
+use failure::format_err;
+use path_absolutize::Absolutize;
 use semver::Version;
 
 pub struct Config {
@@ -18,12 +21,32 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_cargo_workspace(ws: &Workspace) -> CargoResult<Self> {
-        let (_, resolved) = resolve_ws(ws)?;
+    pub fn from_workspace_root<P: AsRef<Path>>(root: P) -> CargoResult<Self> {
+        let crate_path: PathBuf = if root.as_ref().is_absolute() {
+            PathBuf::from(root.as_ref()).absolutize()?
+        } else {
+            current_dir()?.join(root).absolutize()?
+        };
+
+        let homedir = homedir(&crate_path).ok_or_else(|| {
+            format_err!(
+                "Cargo couldn't find your home directory. \
+                 This probably means that $HOME was not set."
+            )
+        })?;
+
+        let config = CargoConfig::new(Shell::new(), crate_path, homedir);
+        let workspace = Workspace::new(&config.cwd().join("Cargo.toml"), &config)?;
+
+        Self::from_cargo_workspace(&workspace)
+    }
+
+    pub fn from_cargo_workspace(workspace: &Workspace) -> CargoResult<Self> {
+        let (_, resolved) = resolve_ws(workspace)?;
 
         Ok(Config {
-            local_root: ws.root().into(),
-            local_outdir: ws.target_dir().into_path_unlocked(),
+            local_root: workspace.root().into(),
+            local_outdir: workspace.target_dir().into_path_unlocked(),
 
             remote_root: PathBuf::from("/rust-src"),
             remote_outdir: PathBuf::from("/rust-out"),
@@ -62,5 +85,32 @@ impl fmt::Debug for Config {
             .field("remote_root", &self.remote_root)
             .field("remote_targetdir", &self.remote_outdir)
             .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_should_translate_target_paths() -> CargoResult<()> {
+        let config = Config::from_workspace_root("../examples/workspace")?;
+
+        assert_eq!(
+            config.get_local_outdir(),
+            current_dir()?
+                .join("../examples/workspace/target")
+                .absolutize()?
+        );
+
+        assert_eq!(
+            config.get_local_root(),
+            current_dir()?.join("../examples/workspace").absolutize()?
+        );
+
+        assert_eq!(config.get_container_outdir(), PathBuf::from("/rust-out"));
+        assert_eq!(config.get_container_root(), PathBuf::from("/rust-src"));
+
+        Ok(())
     }
 }

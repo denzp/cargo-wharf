@@ -91,28 +91,18 @@ fn translate_pathes(config: &Config, cwd: Option<&Path>, input: &str) -> String 
 
 #[cfg(test)]
 mod tests {
-    use std::env::current_dir;
-    use std::path::PathBuf;
-
-    use cargo::core::Workspace;
-    use cargo::util::{CargoResult, Config as CargoConfig};
-
     use super::*;
-    use crate::config::Config;
 
     #[test]
     fn it_should_translate_target_paths() -> CargoResult<()> {
-        let cargo_config = CargoConfig::default()?;
-        let cargo_ws = Workspace::new(&current_dir()?.join("Cargo.toml"), &cargo_config)?;
-
-        let config = Config::from_cargo_workspace(&cargo_ws)?;
+        let config = Config::from_workspace_root("../examples/workspace")?;
 
         unsafe {
             assert_eq!(
                 TargetPath::with_config(
                     &config,
-                    &current_dir()?
-                        .join("target")
+                    &config
+                        .get_local_outdir()
                         .join("debug")
                         .join("library-1.rlib")
                 )?,
@@ -128,8 +118,8 @@ mod tests {
             assert_eq!(
                 TargetPath::with_config(
                     &config,
-                    &current_dir()?
-                        .join("target")
+                    &config
+                        .get_local_outdir()
                         .join("debug")
                         .join("deps")
                         .join("binary-2")
@@ -148,13 +138,10 @@ mod tests {
 
     #[test]
     fn it_should_panic_when_path_is_not_target() -> CargoResult<()> {
-        let cargo_config = CargoConfig::default()?;
-        let cargo_ws = Workspace::new(&current_dir()?.join("Cargo.toml"), &cargo_config)?;
+        let config = Config::from_workspace_root("../examples/workspace")?;
+        let path = config.get_local_root().join("src/lib.rs");
 
-        let config = Config::from_cargo_workspace(&cargo_ws)?;
-
-        TargetPath::with_config(&config, &current_dir()?.join("src").join("lib.rs"))
-            .expect_err("should panic!");
+        TargetPath::with_config(&config, &path).expect_err("should panic!");
 
         Ok(())
     }
@@ -175,10 +162,7 @@ mod tests {
 
     #[test]
     fn it_should_translate_arguments() -> CargoResult<()> {
-        let cargo_config = CargoConfig::default()?;
-        let cargo_ws = Workspace::new(&current_dir()?.join("Cargo.toml"), &cargo_config)?;
-
-        let config = Config::from_cargo_workspace(&cargo_ws)?;
+        let config = Config::from_workspace_root("../examples/workspace")?;
         let cwd = PathBuf::from("/registry/src/github.com-1ecc6299db9ec823/semver-0.9.0");
 
         assert_eq!(
@@ -212,10 +196,7 @@ mod tests {
 
     #[test]
     fn it_should_translate_env() -> CargoResult<()> {
-        let cargo_config = CargoConfig::default()?;
-        let cargo_ws = Workspace::new(&current_dir()?.join("Cargo.toml"), &cargo_config)?;
-
-        let config = Config::from_cargo_workspace(&cargo_ws)?;
+        let config = Config::from_workspace_root("../examples/workspace")?;
 
         assert_eq!(
             translate_env_value(&config, "CARGO", "/any/cargo/path"),

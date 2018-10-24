@@ -129,149 +129,157 @@ impl fmt::Display for Node {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
-    use std::env::current_dir;
     use std::path::PathBuf;
 
-    use cargo::core::Workspace;
-    use cargo::util::{CargoResult, Config as CargoConfig};
+    use maplit::btreemap;
     use semver::Version;
 
     use super::*;
-    use crate::config::Config;
-    use crate::path::TargetPath;
-    use crate::plan::Invocation;
 
     #[test]
-    fn node_should_be_constructable() -> CargoResult<()> {
-        let cargo_config = CargoConfig::default()?;
-        let cargo_ws = Workspace::new(&current_dir()?.join("Cargo.toml"), &cargo_config)?;
-
-        let config = Config::from_cargo_workspace(&cargo_ws)?;
-
-        let invocation = Invocation {
-            package_name: "semver".into(),
-            package_version: Version::parse("0.9.0")?,
-
-            outputs: vec![
-                current_dir()?
-                    .join("target")
-                    .join("debug")
-                    .join("deps")
-                    .join("libsemver-f1499887dbdabbd3.rlib"),
-            ],
-
-            links: {
-                let mut map = BTreeMap::new();
-
-                map.insert(
-                    current_dir()?
-                        .join("target")
-                        .join("debug")
-                        .join("libsemver.rlib"),
-                    current_dir()?
-                        .join("target")
-                        .join("debug")
-                        .join("deps")
-                        .join("libsemver-f1499887dbdabbd3.rlib"),
-                );
-
-                map.insert(
-                    current_dir()?
-                        .join("target")
-                        .join("debug")
-                        .join("libsemver-copy.rlib"),
-                    current_dir()?
-                        .join("target")
-                        .join("debug")
-                        .join("deps")
-                        .join("libsemver-f1499887dbdabbd3.rlib"),
-                );
-
-                map
-            },
-
-            cwd: PathBuf::from("/registry/src/github.com-1ecc6299db9ec823/semver-0.9.0"),
-
-            ..Default::default()
-        };
+    fn node_should_provide_package_details() -> CargoResult<()> {
+        let config = Config::from_workspace_root("../examples/workspace")?;
+        let invocation = default_invocation(&config);
 
         let node = Node::from_invocation(&invocation, &config)?;
 
-        assert_eq!(node.package_name, String::from("semver"));
-        assert_eq!(node.package_version, Version::parse("0.9.0")?);
+        assert_eq!(node.package_name, String::from("clap"));
+        assert_eq!(node.package_version, Version::parse("2.32.0")?);
         assert_eq!(node.kind, NodeKind::Other);
 
-        unsafe {
-            assert_eq!(
-                node.get_outputs_iter().cloned().collect::<Vec<_>>(),
+        assert_eq!(
+            node.source,
+            SourceKind::RegistryUrl(String::from(
+                "https://crates.io/api/v1/crates/clap/2.32.0/download"
+            ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn node_should_provide_outputs() -> CargoResult<()> {
+        let config = Config::from_workspace_root("../examples/workspace")?;
+        let invocation = default_invocation(&config);
+
+        let node = Node::from_invocation(&invocation, &config)?;
+
+        assert_eq!(
+            node.get_outputs_iter().cloned().collect::<Vec<_>>(),
+            unsafe {
                 vec![TargetPath::from_path(
                     &PathBuf::from("/rust-out")
                         .join("debug")
                         .join("deps")
-                        .join("libsemver-f1499887dbdabbd3.rlib"),
+                        .join("libclap-f1499887dbdabbd3.rlib"),
                 )]
-            );
-        }
+            }
+        );
 
-        unsafe {
-            assert_eq!(
-                node.get_links_iter().collect::<Vec<_>>(),
-                vec![
-                    (
-                        &TargetPath::from_path(
-                            &PathBuf::from("/rust-out")
-                                .join("debug")
-                                .join("libsemver-copy.rlib")
-                        ),
-                        &TargetPath::from_path(
-                            &PathBuf::from("/rust-out")
-                                .join("debug")
-                                .join("deps")
-                                .join("libsemver-f1499887dbdabbd3.rlib")
-                        ),
-                    ),
-                    (
-                        &TargetPath::from_path(
-                            &PathBuf::from("/rust-out")
-                                .join("debug")
-                                .join("libsemver.rlib")
-                        ),
-                        &TargetPath::from_path(
-                            &PathBuf::from("/rust-out")
-                                .join("debug")
-                                .join("deps")
-                                .join("libsemver-f1499887dbdabbd3.rlib")
-                        ),
-                    ),
-                ]
-            );
-        }
+        Ok(())
+    }
 
-        unsafe {
-            assert_eq!(
-                node.get_exports_iter().cloned().collect::<Vec<_>>(),
+    #[test]
+    fn node_should_provide_links() -> CargoResult<()> {
+        let config = Config::from_workspace_root("../examples/workspace")?;
+        let invocation = default_invocation(&config);
+
+        let node = Node::from_invocation(&invocation, &config)?;
+
+        assert_eq!(node.get_links_iter().collect::<Vec<_>>(), unsafe {
+            vec![
+                (
+                    &TargetPath::from_path(
+                        &PathBuf::from("/rust-out")
+                            .join("debug")
+                            .join("libclap-copy.rlib"),
+                    ),
+                    &TargetPath::from_path(
+                        &PathBuf::from("/rust-out")
+                            .join("debug")
+                            .join("deps")
+                            .join("libclap-f1499887dbdabbd3.rlib"),
+                    ),
+                ),
+                (
+                    &TargetPath::from_path(
+                        &PathBuf::from("/rust-out")
+                            .join("debug")
+                            .join("libclap.rlib"),
+                    ),
+                    &TargetPath::from_path(
+                        &PathBuf::from("/rust-out")
+                            .join("debug")
+                            .join("deps")
+                            .join("libclap-f1499887dbdabbd3.rlib"),
+                    ),
+                ),
+            ]
+        });
+
+        Ok(())
+    }
+
+    #[test]
+    fn node_should_provide_exports() -> CargoResult<()> {
+        let config = Config::from_workspace_root("../examples/workspace")?;
+        let invocation = default_invocation(&config);
+
+        let node = Node::from_invocation(&invocation, &config)?;
+
+        assert_eq!(
+            node.get_exports_iter().cloned().collect::<Vec<_>>(),
+            unsafe {
                 vec![
                     TargetPath::from_path(
                         &PathBuf::from("/rust-out")
                             .join("debug")
                             .join("deps")
-                            .join("libsemver-f1499887dbdabbd3.rlib")
+                            .join("libclap-f1499887dbdabbd3.rlib"),
                     ),
                     TargetPath::from_path(
                         &PathBuf::from("/rust-out")
                             .join("debug")
-                            .join("libsemver-copy.rlib")
+                            .join("libclap-copy.rlib"),
                     ),
                     TargetPath::from_path(
                         &PathBuf::from("/rust-out")
                             .join("debug")
-                            .join("libsemver.rlib")
+                            .join("libclap.rlib"),
                     ),
                 ]
-            );
-        }
+            }
+        );
 
         Ok(())
+    }
+
+    fn default_invocation(config: &Config) -> Invocation {
+        Invocation {
+            package_name: "clap".into(),
+            package_version: Version::parse("2.32.0").unwrap(),
+
+            outputs: vec![
+                config
+                    .get_local_outdir()
+                    .join("debug")
+                    .join("deps")
+                    .join("libclap-f1499887dbdabbd3.rlib"),
+            ],
+
+            links: btreemap!{
+                config.get_local_outdir().join("debug").join("libclap.rlib") => {
+                    config.get_local_outdir().join("debug").join("deps").join("libclap-f1499887dbdabbd3.rlib")
+                },
+
+                config.get_local_outdir().join("debug").join("libclap-copy.rlib") => {
+                    config.get_local_outdir().join("debug").join("deps").join("libclap-f1499887dbdabbd3.rlib")
+                },
+            },
+
+            cwd: PathBuf::from("/registry/src/github.com-1ecc6299db9ec823/semver-0.9.0"),
+
+            ..Default::default()
+        }
     }
 }

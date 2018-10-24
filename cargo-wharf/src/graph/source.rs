@@ -58,26 +58,15 @@ impl SourceKind {
 
 #[cfg(test)]
 mod tests {
-    use std::env::current_dir;
-
-    use cargo::core::Workspace;
-    use cargo::util::{CargoResult, Config as CargoConfig};
-    use semver::Version;
-
     use super::*;
-    use crate::config::Config;
-    use crate::plan::Invocation;
+    use semver::Version;
 
     #[test]
     fn registry_source() -> CargoResult<()> {
-        let cargo_config = CargoConfig::default()?;
-        let cargo_ws = Workspace::new(&current_dir()?.join("Cargo.toml"), &cargo_config)?;
-
-        let config = Config::from_cargo_workspace(&cargo_ws)?;
-
+        let config = Config::from_workspace_root("../examples/workspace")?;
         let invocation = Invocation {
-            package_name: "semver".into(),
-            package_version: Version::parse("0.9.0")?,
+            package_name: "clap".into(),
+            package_version: Version::parse("2.32.0")?,
             ..Default::default()
         };
 
@@ -86,7 +75,7 @@ mod tests {
         assert_eq!(
             source,
             SourceKind::RegistryUrl(String::from(
-                "https://crates.io/api/v1/crates/semver/0.9.0/download"
+                "https://crates.io/api/v1/crates/clap/2.32.0/download"
             ))
         );
 
@@ -95,13 +84,9 @@ mod tests {
 
     #[test]
     fn path_source() -> CargoResult<()> {
-        let cargo_config = CargoConfig::default()?;
-        let cargo_ws = Workspace::new(&current_dir()?.join("Cargo.toml"), &cargo_config)?;
-
-        let config = Config::from_cargo_workspace(&cargo_ws)?;
-
+        let config = Config::from_workspace_root("../examples/workspace")?;
         let invocation = Invocation {
-            package_name: "cargo-dockerfile".into(),
+            package_name: "binary-1".into(),
             package_version: Version::parse("0.1.0")?,
             ..Default::default()
         };
@@ -115,14 +100,10 @@ mod tests {
 
     #[test]
     fn git_source() -> CargoResult<()> {
-        let cargo_config = CargoConfig::default()?;
-        let cargo_ws = Workspace::new(&current_dir()?.join("Cargo.toml"), &cargo_config)?;
-
-        let config = Config::from_cargo_workspace(&cargo_ws)?;
-
+        let config = Config::from_workspace_root("../examples/workspace")?;
         let invocation = Invocation {
-            package_name: "cargo".into(),
-            package_version: Version::parse("0.32.0")?,
+            package_name: "log".into(),
+            package_version: Version::parse("0.4.5")?,
             ..Default::default()
         };
 
@@ -131,9 +112,9 @@ mod tests {
         assert_eq!(
             source,
             SourceKind::GitCheckout {
-                repo: String::from("https://github.com/rust-lang/cargo.git"),
+                repo: String::from("https://github.com/rust-lang-nursery/log.git"),
                 reference: GitReference::Rev(String::from(
-                    "8522a88fbd192aed9d8e82630e77940421c404f5"
+                    "5f3cb9e144d8fd41362b6a1c9e1c6192e232a1eb"
                 )),
             }
         );

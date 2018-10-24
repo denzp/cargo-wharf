@@ -1,11 +1,9 @@
 use std::env::current_dir;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use cargo::core::{Shell, Workspace};
-use cargo::util::{homedir, CargoResult, Config as CargoConfig};
-
+use cargo::util::CargoResult;
 use clap::{crate_version, App, AppSettings, Arg, ArgMatches};
-use failure::{bail, format_err};
+use failure::bail;
 
 mod commands;
 mod config;
@@ -54,29 +52,12 @@ fn get_cli_app() -> App<'static, 'static> {
 }
 
 fn run_command(matches: ArgMatches<'static>) -> CargoResult<()> {
-    let cargo_config = match matches.value_of("crate_root") {
-        None => CargoConfig::default()?,
-
-        Some(path) => {
-            let crate_path = if Path::new(path).is_absolute() {
-                PathBuf::from(path)
-            } else {
-                current_dir()?.join(path)
-            };
-
-            let homedir = homedir(&crate_path).ok_or_else(|| {
-                format_err!(
-                    "Cargo couldn't find your home directory. \
-                     This probably means that $HOME was not set."
-                )
-            })?;
-
-            CargoConfig::new(Shell::new(), crate_path, homedir)
-        }
+    let root_path = match matches.value_of("crate_root") {
+        None => current_dir()?,
+        Some(path) => PathBuf::from(path),
     };
 
-    let workspace = Workspace::new(&cargo_config.cwd().join("Cargo.toml"), &cargo_config)?;
-    let config = Config::from_cargo_workspace(&workspace)?;
+    let config = Config::from_workspace_root(root_path)?;
 
     match matches.subcommand() {
         ("generate", Some(matches)) => commands::GenerateCommand::run(&config, matches),
