@@ -1,0 +1,19 @@
+[package]
+name = "cargo-wharf"
+version = "0.1.0"
+authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.32"
+cargo = { git = "https://github.com/rust-lang/cargo.git" }
+semver = "0.9"
+failure = "0.1"
+petgraph = "0.4"
+pathdiff = "0.1"
+env_logger = "0.5"
+lazy_static = "1.0"
+
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = "1.0"

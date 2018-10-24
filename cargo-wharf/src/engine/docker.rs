@@ -3,9 +3,9 @@ use cargo::core::GitReference;
 use crate::graph::{BuildGraph, SourceKind};
 
 #[derive(Default)]
-pub struct DockerPrinter;
+pub struct DockerfilePrinter;
 
-impl DockerPrinter {
+impl DockerfilePrinter {
     pub fn print(&self, graph: &BuildGraph) {
         println!("FROM rustlang/rust:nightly as builder");
         println!("");

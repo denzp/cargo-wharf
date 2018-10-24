@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::io::stdin;
+use std::io::Read;
 use std::path::PathBuf;
 
 use cargo::util::CargoResult;
@@ -36,8 +36,8 @@ struct SerializedBuildPlan {
     invocations: Vec<Invocation>,
 }
 
-pub fn invocations_from_stdio() -> CargoResult<Vec<Invocation>> {
-    Ok(serde_json::from_reader::<_, SerializedBuildPlan>(stdin())?.invocations)
+pub fn invocations_from_reader(reader: impl Read) -> CargoResult<Vec<Invocation>> {
+    Ok(serde_json::from_reader::<_, SerializedBuildPlan>(reader)?.invocations)
 }
 
 impl Default for Invocation {

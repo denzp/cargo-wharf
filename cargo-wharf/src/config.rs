@@ -57,6 +57,7 @@ impl fmt::Debug for Config {
     /// For easier interpretation, we omit `resolved` field.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Config")
+            .field("local_root", &self.local_root)
             .field("local_targetdir", &self.local_outdir)
             .field("remote_root", &self.remote_root)
             .field("remote_targetdir", &self.remote_outdir)
