@@ -18,6 +18,9 @@ pub use self::command::CommandDetails;
 mod source;
 pub use self::source::SourceKind;
 
+#[allow(dead_code)]
+type NodeRef<'a> = (NodeIndex<u32>, &'a Node);
+
 pub struct BuildGraph {
     graph: Graph<Node, usize>,
 }
@@ -45,16 +48,16 @@ impl BuildGraph {
         Ok(Self { graph })
     }
 
-    pub fn nodes(&self) -> impl Iterator<Item = (NodeIndex<u32>, &Node)> {
+    pub fn nodes(&self) -> impl Iterator<Item = NodeRef> {
         self.graph
             .node_indices()
             .map(move |index| (index, self.graph.node_weight(index).unwrap()))
     }
 
-    pub fn dependencies(&self, index: NodeIndex<u32>) -> impl Iterator<Item = &Node> {
+    pub fn dependencies(&self, index: NodeIndex<u32>) -> impl Iterator<Item = NodeRef> {
         self.graph
             .neighbors_directed(index, Direction::Outgoing)
-            .map(move |index| self.graph.node_weight(index).unwrap())
+            .map(move |index| (index, self.graph.node_weight(index).unwrap()))
     }
 }
 

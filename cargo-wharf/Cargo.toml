@@ -8,11 +8,11 @@ edition = "2018"
 clap = "2.32"
 cargo = { git = "https://github.com/rust-lang/cargo.git" }
 semver = "0.9"
+either = "1.5"
 failure = "0.1"
 petgraph = "0.4"
 pathdiff = "0.1"
 env_logger = "0.5"
-lazy_static = "1.0"
 path-absolutize = "1.1"
 
 serde = "1.0"
@@ -21,3 +21,4 @@ serde_derive = "1.0"
 
 [dev-dependencies]
 maplit = "1.0"
+pretty_assertions = "0.5"

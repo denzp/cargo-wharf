@@ -59,13 +59,11 @@ mod tests {
             package_name: "semver".into(),
             package_version: Version::parse("0.9.0")?,
 
-            outputs: vec![
-                current_dir()?
-                    .join("target")
-                    .join("debug")
-                    .join("deps")
-                    .join("libsemver-f1499887dbdabbd3.rlib"),
-            ],
+            outputs: vec![current_dir()?
+                .join("target")
+                .join("debug")
+                .join("deps")
+                .join("libsemver-f1499887dbdabbd3.rlib")],
 
             program: format!(
                 "{}/debug/build/libnghttp2-sys/build-script-build",

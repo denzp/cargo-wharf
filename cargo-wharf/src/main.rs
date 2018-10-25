@@ -18,7 +18,7 @@ use crate::config::Config;
 fn main() {
     let matches = get_cli_app().get_matches();
 
-    run_command(matches).unwrap(); // TODO(denzp): handle errors here correctly
+    run_command(&matches).unwrap(); // TODO(denzp): handle errors here correctly
 }
 
 fn get_cli_app() -> App<'static, 'static> {
@@ -51,7 +51,7 @@ fn get_cli_app() -> App<'static, 'static> {
         ])
 }
 
-fn run_command(matches: ArgMatches<'static>) -> CargoResult<()> {
+fn run_command(matches: &ArgMatches<'static>) -> CargoResult<()> {
     let root_path = match matches.value_of("crate_root") {
         None => current_dir()?,
         Some(path) => PathBuf::from(path),

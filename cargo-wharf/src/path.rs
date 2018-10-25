@@ -10,7 +10,6 @@ use crate::config::Config;
 pub struct TargetPath(PathBuf);
 
 impl TargetPath {
-    #[cfg(test)]
     pub unsafe fn from_path<P: AsRef<Path>>(path: P) -> Self {
         TargetPath(path.as_ref().into())
     }
@@ -45,7 +44,11 @@ pub fn translate_command_program(config: &Config, program: &str) -> String {
 }
 
 pub fn translate_command_arg(config: &Config, cwd: &Path, arg: &str) -> String {
-    translate_pathes(config, Some(cwd), arg)
+    if cwd == Path::new("") {
+        translate_pathes(config, None, arg)
+    } else {
+        translate_pathes(config, Some(cwd), arg)
+    }
 }
 
 pub fn translate_env_value(config: &Config, name: &str, value: &str) -> String {

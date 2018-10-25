@@ -1,10 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 use cargo::util::errors::CargoResult;
-
-use lazy_static::*;
 use semver::Version;
 
 use super::{CommandDetails, SourceKind};
@@ -13,8 +10,6 @@ use crate::path::TargetPath;
 use crate::plan::{Invocation, TargetKind};
 
 pub struct Node {
-    id: usize,
-
     package_name: String,
     package_version: Version,
 
@@ -35,10 +30,6 @@ enum NodeKind {
 
 impl Node {
     pub fn from_invocation(invocation: &Invocation, config: &Config) -> CargoResult<Self> {
-        lazy_static! {
-            pub static ref LAST_NODE_ID: AtomicUsize = AtomicUsize::new(0);
-        };
-
         let outputs = {
             invocation
                 .outputs
@@ -63,7 +54,6 @@ impl Node {
         };
 
         Ok(Self {
-            id: LAST_NODE_ID.fetch_add(1, Ordering::Relaxed),
             kind: invocation.into(),
 
             package_name: invocation.package_name.clone(),
@@ -75,10 +65,6 @@ impl Node {
             outputs,
             links,
         })
-    }
-
-    pub fn id(&self) -> usize {
-        self.id
     }
 
     pub fn get_outputs_iter(&self) -> impl Iterator<Item = &TargetPath> {
@@ -121,8 +107,8 @@ impl fmt::Display for Node {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         write!(
             formatter,
-            "{} = {}\n[{:?}, id: {}]",
-            self.package_name, self.package_version, self.kind, self.id,
+            "{} = {}\n[{:?}]",
+            self.package_name, self.package_version, self.kind,
         )
     }
 }
@@ -259,13 +245,11 @@ mod tests {
             package_name: "clap".into(),
             package_version: Version::parse("2.32.0").unwrap(),
 
-            outputs: vec![
-                config
-                    .get_local_outdir()
-                    .join("debug")
-                    .join("deps")
-                    .join("libclap-f1499887dbdabbd3.rlib"),
-            ],
+            outputs: vec![config
+                .get_local_outdir()
+                .join("debug")
+                .join("deps")
+                .join("libclap-f1499887dbdabbd3.rlib")],
 
             links: btreemap!{
                 config.get_local_outdir().join("debug").join("libclap.rlib") => {
