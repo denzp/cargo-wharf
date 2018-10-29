@@ -15,7 +15,12 @@ cargo build -Z unstable-options --build-plan --manifest-path=examples/workspace/
 cargo run --bin cargo-wharf -- --crate-root examples/workspace generate plan.json > examples/workspace/Dockerfile
 ```
 
-3. Build the image:
+3. Build `container-tools` image:
+```
+docker build -t denzp/cargo-container-tools:`cargo pkgid --manifest-path=cargo-container-tools/Cargo.toml | cut -d\# -f2 | cut -d: -f2` .
+```
+
+4. Build the example image:
 ```
 docker build -t TAG examples/workspace
 ```

@@ -5,7 +5,9 @@ authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+log = "0.4"
 clap = "2.32"
+toml = "0.4"
 cargo = { git = "https://github.com/rust-lang/cargo.git" }
 semver = "0.9"
 either = "1.5"

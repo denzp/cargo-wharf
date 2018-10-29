@@ -70,6 +70,6 @@ impl super::SubCommand for GenerateCommand {
             return writeln!(output, "{:?}", graph).map_err(Error::from);
         }
 
-        DockerfilePrinter::new(OutputMode::All).write(&graph, output)
+        DockerfilePrinter::new(OutputMode::All, &graph, output).write()
     }
 }

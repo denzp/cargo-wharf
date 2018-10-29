@@ -22,7 +22,7 @@ pub struct Node {
 }
 
 #[derive(Debug, PartialEq)]
-enum NodeKind {
+pub enum NodeKind {
     Test,
     Binary,
     Other,
@@ -78,6 +78,10 @@ impl Node {
     pub fn get_exports_iter(&self) -> impl Iterator<Item = &TargetPath> {
         self.get_outputs_iter()
             .chain(self.get_links_iter().map(|pair| pair.0))
+    }
+
+    pub fn kind(&self) -> &NodeKind {
+        &self.kind
     }
 
     pub fn command(&self) -> &CommandDetails {

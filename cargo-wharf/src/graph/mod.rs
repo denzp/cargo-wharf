@@ -10,7 +10,7 @@ use crate::config::Config;
 use crate::plan::Invocation;
 
 mod node;
-pub use self::node::Node;
+pub use self::node::{Node, NodeKind};
 
 mod command;
 pub use self::command::CommandDetails;
