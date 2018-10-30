@@ -41,7 +41,7 @@ impl super::SubCommand for GenerateCommand {
                         .long("template")
                         .takes_value(true)
                         .value_name("PATH")
-                        .default_value("Dockerfile.j2")
+                        .default_value("Dockerfile.hbs")
                         .help("Dockerfile template location")
                 },
                 {

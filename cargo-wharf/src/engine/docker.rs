@@ -3,9 +3,9 @@ use std::path::{Path, PathBuf};
 
 use cargo::core::GitReference;
 use cargo::util::CargoResult;
-use failure::SyncFailure;
+use handlebars::{Context, Handlebars, Helper, HelperDef, HelperResult, Output, RenderContext};
 use petgraph::graph::NodeIndex;
-use tera::Tera;
+use serde_derive::Serialize;
 
 use crate::engine::OutputMode;
 use crate::graph::{BuildGraph, Node, NodeKind, SourceKind};
@@ -16,47 +16,75 @@ const DEFAULT_TOOLS_IMAGE: &str = "denzp/cargo-container-tools";
 const DEFAULT_TOOLS_STAGE: &str = "container-tools";
 
 pub struct DockerfilePrinter<'a, W: Write> {
-    tera: Tera,
+    handlebars: Handlebars,
     mode: OutputMode,
     graph: &'a BuildGraph,
     writer: W,
 }
 
+#[derive(Default, Serialize)]
+struct DummyContext;
+
+struct GenerateBuildStagesHelper;
+struct BinariesHelper;
+struct TestsHelper;
+
+impl HelperDef for GenerateBuildStagesHelper {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper,
+        _: &Handlebars,
+        _: &Context,
+        rc: &mut RenderContext,
+        out: &mut Output,
+    ) -> HelperResult {
+        out.write("TODO")?;
+        Ok(())
+    }
+}
+
+impl HelperDef for BinariesHelper {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper,
+        _: &Handlebars,
+        _: &Context,
+        rc: &mut RenderContext,
+        out: &mut Output,
+    ) -> HelperResult {
+        out.write("TODO")?;
+        Ok(())
+    }
+}
+
+impl HelperDef for TestsHelper {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper,
+        _: &Handlebars,
+        _: &Context,
+        rc: &mut RenderContext,
+        out: &mut Output,
+    ) -> HelperResult {
+        out.write("TODO")?;
+        Ok(())
+    }
+}
+
 impl<'a, W: Write> DockerfilePrinter<'a, W> {
     pub fn new(mode: OutputMode, graph: &'a BuildGraph, writer: W) -> Self {
-        let mut tera = Tera::new("/non/existing/path/*").unwrap();
+        let mut handlebars = Handlebars::new();
 
-        tera.register_function(
-            "generate_build_stages",
-            Box::new(move |_| -> tera::Result<tera::Value> {
-                Ok(tera::Value::String("TODO".into()))
-            }),
+        handlebars.register_helper(
+            "generate_build_stages_with",
+            Box::new(GenerateBuildStagesHelper),
         );
 
-        tera.register_function(
-            "copy_binaries",
-            Box::new(move |_| -> tera::Result<tera::Value> {
-                Ok(tera::Value::String("TODO".into()))
-            }),
-        );
-
-        tera.register_function(
-            "create_tests_entrypoint",
-            Box::new(move |_| -> tera::Result<tera::Value> {
-                Ok(tera::Value::String("TODO".into()))
-            }),
-        );
-
-        tera.register_filter("binaries", move |value, _| -> tera::Result<tera::Value> {
-            Ok(value)
-        });
-
-        tera.register_filter("tests", move |value, _| -> tera::Result<tera::Value> {
-            Ok(value)
-        });
+        handlebars.register_helper("binaries", Box::new(BinariesHelper));
+        handlebars.register_helper("tests", Box::new(TestsHelper));
 
         DockerfilePrinter {
-            tera,
+            handlebars,
             mode,
             graph,
             writer,
@@ -64,32 +92,24 @@ impl<'a, W: Write> DockerfilePrinter<'a, W> {
     }
 
     pub fn write<P: AsRef<Path>>(mut self, template_path: P) -> CargoResult<()> {
-        self.tera
-            .add_template_file(template_path, Some("dockerfile"))
-            .map_err(SyncFailure::new)?;
-
-        let mut context = tera::Context::new();
-
-        write!(
+        writeln!(
             self.writer,
-            "{}",
-            self.tera
-                .render("dockerfile", &context)
-                .map_err(SyncFailure::new)?
+            "# syntax = tonistiigi/dockerfile:runmount20180618"
         )?;
+        writeln!(
+            self.writer,
+            "FROM {}:{} as {}",
+            DEFAULT_TOOLS_IMAGE,
+            container_tools_version()?,
+            DEFAULT_TOOLS_STAGE
+        )?;
+        writeln!(self.writer, "")?;
 
-        // writeln!(
-        //     self.writer,
-        //     "# syntax = tonistiigi/dockerfile:runmount20180618"
-        // )?;
-        // writeln!(
-        //     self.writer,
-        //     "FROM {}:{} as {}",
-        //     DEFAULT_TOOLS_IMAGE,
-        //     container_tools_version()?,
-        //     DEFAULT_TOOLS_STAGE
-        // )?;
-        // writeln!(self.writer, "")?;
+        self.handlebars
+            .register_template_file("Dockerfile", template_path)?;
+
+        self.handlebars
+            .render_to_write("Dockerfile", &DummyContext::default(), self.writer)?;
 
         // writeln!(self.writer, "FROM rustlang/rust:nightly as builder")?;
 
@@ -343,7 +363,7 @@ mod tests {
         let mut output = Vec::new();
 
         DockerfilePrinter::new(OutputMode::All, &graph, &mut output)
-            .write("../examples/workspace/Dockerfile.j2")?;
+            .write("../examples/workspace/Dockerfile.handlebars")?;
 
         let output_contents = String::from_utf8_lossy(&output);
 
@@ -366,7 +386,7 @@ mod tests {
         let mut output = Vec::new();
 
         DockerfilePrinter::new(OutputMode::Tests, &graph, &mut output)
-            .write("../examples/workspace/Dockerfile.j2")?;
+            .write("../examples/workspace/Dockerfile.hbs")?;
 
         let output_contents = String::from_utf8_lossy(&output);
 
@@ -389,7 +409,7 @@ mod tests {
         let mut output = Vec::new();
 
         DockerfilePrinter::new(OutputMode::Binaries, &graph, &mut output)
-            .write("../examples/workspace/Dockerfile.j2")?;
+            .write("../examples/workspace/Dockerfile.hbs")?;
 
         let output_contents = String::from_utf8_lossy(&output);
 
