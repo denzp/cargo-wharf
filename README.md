@@ -1,9 +1,9 @@
-# Container builder for Rust ecosystem
+# Docker Container builder for Rust ecosystem
 
 ## Hacking and Debugging
 So far the debugging and testing workflow is next:
 
-0. Ensure Docker builds with BuildKit (this provides an incredible build time improvements).
+0. Ensure Docker uses BuildKit (this provides an incredible build time improvement).
 
 1. Create and inspect build plan:
 ```
