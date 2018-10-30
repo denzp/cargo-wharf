@@ -1,0 +1,17 @@
+FROM rustlang/rust:nightly as my-custom-builder
+RUN apt-get update
+RUN echo "Some build-time system dependencies can be installed here."
+
+{{ generate_build_stages(builder = "my-custom-builder") }}
+
+{% filter binaries %}
+FROM debian:stable-slim as my-awesome-binaries
+RUN echo "Can setup binaries image here."
+{{ copy_binaries(into = "/usr/local/bin") }}
+{% endfilter %}
+
+{% filter tests %}
+FROM debian:stable-slim as my-awesome-tests
+RUN echo "Can setup tests image here: copy static fixtures or install dependencies."
+{{ create_tests_entrypoint() }}
+{% endfilter %}
