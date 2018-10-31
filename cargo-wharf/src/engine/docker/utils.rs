@@ -1,11 +1,13 @@
 use cargo::util::CargoResult;
+use petgraph::graph::NodeIndex;
 use semver::Version;
 use serde_derive::Deserialize;
 
+use crate::graph::{Node, NodeKind};
 use crate::path::TargetPath;
 
 pub fn container_tools_version() -> CargoResult<Version> {
-    let tools_manifest_str = include_str!("../../../cargo-container-tools/Cargo.toml");
+    let tools_manifest_str = include_str!("../../../../cargo-container-tools/Cargo.toml");
     let tools_manifest: TomlManifest = toml::from_str(tools_manifest_str)?;
 
     Ok(tools_manifest.package.version)
@@ -37,6 +39,14 @@ pub fn find_unique_base_paths<'b>(
     }
 
     output_paths.into_iter()
+}
+
+pub fn is_binary(pair: &(NodeIndex<u32>, &Node)) -> bool {
+    pair.1.kind() == &NodeKind::Binary
+}
+
+pub fn is_test(pair: &(NodeIndex<u32>, &Node)) -> bool {
+    pair.1.kind() == &NodeKind::Test
 }
 
 #[derive(Debug, Deserialize)]

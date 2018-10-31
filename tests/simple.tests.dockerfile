@@ -57,6 +57,9 @@ RUN ["mkdir", "-p", "/rust-out/debug/deps"]
 RUN ["rustc", "--crate-name", "binary-2", "--test"]
 RUN ["ln", "-sf", "deps/binary-2-test-hash", "/rust-out/debug/binary-2-test-hash"]
 
+
+
+
 FROM debian:stable-slim as my-awesome-tests
 RUN echo "Can setup tests image here: copy static fixtures or install dependencies."
 COPY --from=builder-node-4 /rust-out/debug/deps/binary-1-test-hash /rust-tests/binary-1-test-hash

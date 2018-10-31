@@ -70,7 +70,7 @@ impl super::SubCommand for GenerateCommand {
             return writeln!(output, "{:?}", graph).map_err(Error::from);
         }
 
-        DockerfilePrinter::new(OutputMode::All, &graph, output)
-            .write(matches.value_of("template").unwrap())
+        DockerfilePrinter::new(OutputMode::All, matches.value_of("template").unwrap())
+            .write(graph, &mut output)
     }
 }
