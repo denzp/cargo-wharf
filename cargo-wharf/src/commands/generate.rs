@@ -4,7 +4,7 @@ use std::io::{stdin, stdout, Write};
 use cargo::util::CargoResult;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use either::Either;
-use failure::Error;
+use failure::{Error, ResultExt};
 
 use crate::config::Config;
 use crate::engine::{DockerfilePrinter, OutputMode};
@@ -55,22 +55,45 @@ impl super::SubCommand for GenerateCommand {
     fn run(config: &Config, matches: &ArgMatches<'static>) -> CargoResult<()> {
         let input = match matches.value_of("build_plan") {
             None | Some("stdin") | Some("-") => Either::Left(stdin()),
-            Some(path) => Either::Right(File::open(path)?),
+
+            Some(path) => {
+                let file = File::open(path).with_context(|_| {
+                    format!("Unable to open Cargo build plan input file '{}'", path)
+                })?;
+
+                Either::Right(file)
+            }
         };
 
         let mut output = match matches.value_of("output") {
             None | Some("stdout") | Some("-") => Either::Left(stdout()),
-            Some(path) => Either::Right(File::create(path)?),
+
+            Some(path) => {
+                let file = File::create(path).with_context(|_| {
+                    format!("Unable to create Dockerfile output file '{}'", path)
+                })?;
+
+                Either::Right(file)
+            }
         };
 
-        let invocations = invocations_from_reader(input)?;
-        let graph = BuildGraph::from_invocations(&invocations, &config)?;
+        let invocations =
+            invocations_from_reader(input).context("Unable to read Cargo build plan")?;
+
+        let graph = {
+            BuildGraph::from_invocations(&invocations, &config)
+                .context("Unable to construct Build Graph")?
+        };
 
         if matches.is_present("dump_graph") {
             return writeln!(output, "{:?}", graph).map_err(Error::from);
         }
 
-        DockerfilePrinter::new(OutputMode::All, matches.value_of("template").unwrap())
+        DockerfilePrinter::from_template(OutputMode::All, matches.value_of("template").unwrap())
+            .context("Unable to initialize Dockerfile template")?
             .write(graph, &mut output)
+            .context("Unable to generate Dockerfile")?;
+
+        Ok(())
     }
 }

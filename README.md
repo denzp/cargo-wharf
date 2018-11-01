@@ -12,7 +12,7 @@ cargo build -Z unstable-options --build-plan --manifest-path=examples/workspace/
 
 2. Generate and inspect Dockerfile:
 ```
-cargo run --bin cargo-wharf -- --crate-root examples/workspace generate plan.json > examples/workspace/Dockerfile
+cargo run --bin cargo-wharf -- --crate-root examples/workspace generate plan.json --template examples/workspace/Dockerfile.hbs > examples/workspace/Dockerfile
 ```
 
 3. Build `container-tools` image:

@@ -1,6 +1,8 @@
 use std::env::current_dir;
 use std::path::PathBuf;
+use std::process::exit;
 
+use cargo::core::Shell;
 use cargo::util::CargoResult;
 use clap::{crate_version, App, AppSettings, Arg, ArgMatches};
 use failure::bail;
@@ -18,7 +20,10 @@ use crate::config::Config;
 fn main() {
     let matches = get_cli_app().get_matches();
 
-    run_command(&matches).unwrap(); // TODO(denzp): handle errors here correctly
+    if let Err(error) = run_command(&matches) {
+        cargo::handle_error(&error, &mut Shell::new());
+        exit(1);
+    }
 }
 
 fn get_cli_app() -> App<'static, 'static> {

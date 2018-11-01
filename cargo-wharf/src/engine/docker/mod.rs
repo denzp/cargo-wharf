@@ -1,8 +1,9 @@
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 
 use cargo::util::CargoResult;
+use failure::ResultExt;
 use handlebars::{Handlebars, HelperDef};
 use serde_derive::Serialize;
 
@@ -24,19 +25,25 @@ struct DummyContext;
 pub struct DockerfilePrinter {
     mode: OutputMode,
     handlebars: Handlebars,
-    template_path: PathBuf,
 }
 
 impl DockerfilePrinter {
-    pub fn new<P>(mode: OutputMode, template_path: P) -> Self
+    pub fn from_template<P>(mode: OutputMode, template_path: P) -> CargoResult<Self>
     where
         P: AsRef<Path>,
     {
-        DockerfilePrinter {
-            mode,
-            handlebars: Handlebars::new(),
-            template_path: template_path.as_ref().into(),
-        }
+        let mut handlebars = Handlebars::new();
+
+        handlebars
+            .register_template_file("Dockerfile", &template_path)
+            .with_context(|_| {
+                format!(
+                    "Unable to open Dockerfile template at '{}'",
+                    template_path.as_ref().display()
+                )
+            })?;
+
+        Ok(DockerfilePrinter { mode, handlebars })
     }
 
     pub fn write(mut self, graph: BuildGraph, writer: &mut Write) -> CargoResult<()> {
@@ -70,10 +77,8 @@ impl DockerfilePrinter {
         self.write_header(writer)?;
 
         self.handlebars
-            .register_template_file("Dockerfile", &self.template_path)?;
-
-        self.handlebars
-            .render_to_write("Dockerfile", &DummyContext::default(), writer)?;
+            .render_to_write("Dockerfile", &DummyContext::default(), writer)
+            .with_context(|_| "There is a problem with Dockerfile syntax")?;
 
         Ok(())
     }
@@ -111,10 +116,13 @@ mod tests {
         let invocations = default_invocations(&config);
         let graph = BuildGraph::from_invocations(&invocations, &config)?;
 
-        let mut output = Vec::new();
+        let printer = DockerfilePrinter::from_template(
+            OutputMode::All,
+            "../examples/workspace/Dockerfile.hbs",
+        )?;
 
-        DockerfilePrinter::new(OutputMode::All, "../examples/workspace/Dockerfile.hbs")
-            .write(graph, &mut output)?;
+        let mut output = Vec::new();
+        printer.write(graph, &mut output)?;
 
         let output_contents = String::from_utf8_lossy(&output);
 
@@ -134,10 +142,13 @@ mod tests {
         let invocations = default_invocations(&config);
         let graph = BuildGraph::from_invocations(&invocations, &config)?;
 
-        let mut output = Vec::new();
+        let printer = DockerfilePrinter::from_template(
+            OutputMode::Tests,
+            "../examples/workspace/Dockerfile.hbs",
+        )?;
 
-        DockerfilePrinter::new(OutputMode::Tests, "../examples/workspace/Dockerfile.hbs")
-            .write(graph, &mut output)?;
+        let mut output = Vec::new();
+        printer.write(graph, &mut output)?;
 
         let output_contents = String::from_utf8_lossy(&output);
 
@@ -157,10 +168,13 @@ mod tests {
         let invocations = default_invocations(&config);
         let graph = BuildGraph::from_invocations(&invocations, &config)?;
 
-        let mut output = Vec::new();
+        let printer = DockerfilePrinter::from_template(
+            OutputMode::Binaries,
+            "../examples/workspace/Dockerfile.hbs",
+        )?;
 
-        DockerfilePrinter::new(OutputMode::Binaries, "../examples/workspace/Dockerfile.hbs")
-            .write(graph, &mut output)?;
+        let mut output = Vec::new();
+        printer.write(graph, &mut output)?;
 
         let output_contents = String::from_utf8_lossy(&output);
 
