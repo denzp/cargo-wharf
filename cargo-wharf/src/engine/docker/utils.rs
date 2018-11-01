@@ -5,7 +5,7 @@ use serde_derive::Deserialize;
 use crate::path::TargetPath;
 
 pub fn container_tools_version() -> CargoResult<Version> {
-    let tools_manifest_str = include_str!("../../../cargo-container-tools/Cargo.toml");
+    let tools_manifest_str = include_str!("../../../../cargo-container-tools/Cargo.toml");
     let tools_manifest: TomlManifest = toml::from_str(tools_manifest_str)?;
 
     Ok(tools_manifest.package.version)

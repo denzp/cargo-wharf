@@ -35,15 +35,15 @@ impl super::SubCommand for GenerateCommand {
                         .value_name("PATH")
                         .help("Output Dockerfile to a file")
                 },
-                // {
-                //     Arg::with_name("template")
-                //         .short("t")
-                //         .long("template")
-                //         .takes_value(true)
-                //         .value_name("PATH")
-                //         .default_value("Dockerfile.template") // TODO(denzp): change extension after a template engine decision
-                //         .help("Dockerfile template location")
-                // },
+                {
+                    Arg::with_name("template")
+                        .short("t")
+                        .long("template")
+                        .takes_value(true)
+                        .value_name("PATH")
+                        .default_value("Dockerfile.hbs")
+                        .help("Dockerfile template location")
+                },
                 {
                     Arg::with_name("dump_graph")
                         .long("dump-graph")
@@ -70,6 +70,7 @@ impl super::SubCommand for GenerateCommand {
             return writeln!(output, "{:?}", graph).map_err(Error::from);
         }
 
-        DockerfilePrinter::new(OutputMode::All, &graph, output).write()
+        DockerfilePrinter::new(OutputMode::All, matches.value_of("template").unwrap())
+            .write(graph, &mut output)
     }
 }
