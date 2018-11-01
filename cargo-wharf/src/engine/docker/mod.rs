@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use cargo::util::CargoResult;
-use handlebars::Handlebars;
+use handlebars::{Handlebars, HelperDef};
 use serde_derive::Serialize;
 
 use crate::engine::OutputMode;
@@ -47,40 +47,31 @@ impl DockerfilePrinter {
             Box::new(DockerfileHelper(BuildStagesHelper::new(graph.clone()))),
         );
 
-        match self.mode {
-            OutputMode::All => {
-                self.handlebars.register_helper(
-                    "binaries",
-                    Box::new(DockerfileHelper(BinariesHelper::new(graph.clone()))),
-                );
+        let (binaries_helper, tests_helper): (Box<HelperDef>, Box<HelperDef>) = match self.mode {
+            OutputMode::All => (
+                Box::new(DockerfileHelper(BinariesHelper::new(graph.clone()))),
+                Box::new(DockerfileHelper(TestsHelper::new(graph))),
+            ),
 
-                self.handlebars
-                    .register_helper("tests", Box::new(DockerfileHelper(TestsHelper::new(graph))));
-            }
+            OutputMode::Binaries => (
+                Box::new(DockerfileHelper(BinariesHelper::new(graph.clone()))),
+                Box::new(DockerfileHelper(DummyHelper)),
+            ),
 
-            OutputMode::Binaries => {
-                self.handlebars.register_helper(
-                    "binaries",
-                    Box::new(DockerfileHelper(BinariesHelper::new(graph.clone()))),
-                );
+            OutputMode::Tests => (
+                Box::new(DockerfileHelper(DummyHelper)),
+                Box::new(DockerfileHelper(TestsHelper::new(graph))),
+            ),
+        };
 
-                self.handlebars
-                    .register_helper("tests", Box::new(DockerfileHelper(DummyHelper)));
-            }
+        self.handlebars.register_helper("binaries", binaries_helper);
+        self.handlebars.register_helper("tests", tests_helper);
 
-            OutputMode::Tests => {
-                self.handlebars
-                    .register_helper("tests", Box::new(DockerfileHelper(TestsHelper::new(graph))));
-
-                self.handlebars
-                    .register_helper("binaries", Box::new(DockerfileHelper(DummyHelper)));
-            }
-        }
+        self.write_header(writer)?;
 
         self.handlebars
             .register_template_file("Dockerfile", &self.template_path)?;
 
-        self.write_header(writer)?;
         self.handlebars
             .render_to_write("Dockerfile", &DummyContext::default(), writer)?;
 

@@ -10,9 +10,9 @@ use handlebars::{
     Renderable,
 };
 
-use super::utils::{find_unique_base_paths, is_binary, is_test};
+use super::utils::find_unique_base_paths;
 use super::DEFAULT_TOOLS_STAGE;
-use crate::graph::{BuildGraph, Node, SourceKind};
+use crate::graph::{BuildGraph, Node, NodeKind, SourceKind};
 
 pub struct DockerfileHelper<H: HandlebarsHelper>(pub H);
 
@@ -316,4 +316,12 @@ where
 
         Ok(())
     }
+}
+
+fn is_binary(pair: &(NodeIndex<u32>, &Node)) -> bool {
+    pair.1.kind() == &NodeKind::Binary
+}
+
+fn is_test(pair: &(NodeIndex<u32>, &Node)) -> bool {
+    pair.1.kind() == &NodeKind::Test
 }
