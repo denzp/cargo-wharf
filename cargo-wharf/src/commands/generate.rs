@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{stdin, stdout, Write};
+use std::io::{stdin, stdout, Read, Write};
 
 use cargo::util::CargoResult;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -8,8 +8,8 @@ use failure::{Error, ResultExt};
 
 use crate::config::Config;
 use crate::engine::{DockerfilePrinter, OutputMode};
-use crate::graph::BuildGraph;
-use crate::plan::invocations_from_reader;
+
+use super::construct_build_graph;
 
 #[derive(Default)]
 pub struct GenerateCommand;
@@ -32,12 +32,11 @@ impl super::SubCommand for GenerateCommand {
                         .long("output")
                         .short("o")
                         .takes_value(true)
-                        .value_name("PATH")
+                        .value_name("OUTPUT")
                         .help("Output Dockerfile to a file")
                 },
                 {
                     Arg::with_name("template")
-                        .short("t")
                         .long("template")
                         .takes_value(true)
                         .value_name("PATH")
@@ -53,47 +52,56 @@ impl super::SubCommand for GenerateCommand {
     }
 
     fn run(config: &Config, matches: &ArgMatches<'static>) -> CargoResult<()> {
-        let input = match matches.value_of("build_plan") {
-            None | Some("stdin") | Some("-") => Either::Left(stdin()),
-
-            Some(path) => {
-                let file = File::open(path).with_context(|_| {
-                    format!("Unable to open Cargo build plan input file '{}'", path)
-                })?;
-
-                Either::Right(file)
-            }
-        };
-
-        let mut output = match matches.value_of("output") {
-            None | Some("stdout") | Some("-") => Either::Left(stdout()),
-
-            Some(path) => {
-                let file = File::create(path).with_context(|_| {
-                    format!("Unable to create Dockerfile output file '{}'", path)
-                })?;
-
-                Either::Right(file)
-            }
-        };
-
-        let invocations =
-            invocations_from_reader(input).context("Unable to read Cargo build plan")?;
-
-        let graph = {
-            BuildGraph::from_invocations(&invocations, &config)
-                .context("Unable to construct Build Graph")?
-        };
+        let input = open_input(matches.value_of("build_plan"))?;
+        let mut output = open_output(matches.value_of("output"))?;
+        let graph = construct_build_graph(config, input)?;
 
         if matches.is_present("dump_graph") {
             return writeln!(output, "{:?}", graph).map_err(Error::from);
         }
 
-        DockerfilePrinter::from_template(OutputMode::All, matches.value_of("template").unwrap())
-            .context("Unable to initialize Dockerfile template")?
+        let dockerfile_template = matches.value_of("template").unwrap();
+        let dockerfile = {
+            DockerfilePrinter::from_template(OutputMode::All, dockerfile_template)
+                .context("Unable to initialize Dockerfile template")?
+        };
+
+        dockerfile
             .write(graph, &mut output)
             .context("Unable to generate Dockerfile")?;
 
         Ok(())
+    }
+}
+
+fn open_input(path: Option<&str>) -> CargoResult<impl Read> {
+    match path {
+        None | Some("stdin") | Some("-") => Ok(Either::Left(stdin())),
+
+        Some(path) => {
+            let file = {
+                File::open(path).with_context(|_| {
+                    format!("Unable to open Cargo build plan input file '{}'", path)
+                })?
+            };
+
+            Ok(Either::Right(file))
+        }
+    }
+}
+
+fn open_output(path: Option<&str>) -> CargoResult<impl Write> {
+    match path {
+        None | Some("stdout") | Some("-") => Ok(Either::Left(stdout())),
+
+        Some(path) => {
+            let file = {
+                File::create(path).with_context(|_| {
+                    format!("Unable to create Dockerfile output file '{}'", path)
+                })?
+            };
+
+            Ok(Either::Right(file))
+        }
     }
 }
