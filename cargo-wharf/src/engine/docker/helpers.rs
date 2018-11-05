@@ -12,7 +12,10 @@ use handlebars::{
 
 use super::utils::find_unique_base_paths;
 use super::DEFAULT_TOOLS_STAGE;
-use crate::graph::{BuildGraph, Node, NodeKind, SourceKind};
+use crate::graph::{BuildGraph, Command, Node, NodeKind, SourceKind};
+
+const DEFAULT_LDD_TOOL_PATH: &str = "/usr/local/bin/cargo-ldd";
+const DEFAULT_BUILDSCRIPT_TOOL_PATH: &str = "/usr/local/bin/cargo-buildscript";
 
 pub struct DockerfileHelper<H: HandlebarsHelper>(pub H);
 
@@ -132,17 +135,19 @@ impl BuildStagesHelper {
     }
 
     fn write_env_vars(&self, node: &Node, writer: &mut Write) -> HelperResult {
-        for env in &node.command().env {
-            writeln!(
-                writer,
-                r#"ENV {} "{}""#,
-                env.0,
-                env.1
-                    .trim()
-                    .replace('\n', "\\n")
-                    .replace('"', "\\\"")
-                    .replace('\'', "\\'")
-            )?;
+        if let Command::Simple(ref command) = node.command() {
+            for env in &command.env {
+                writeln!(
+                    writer,
+                    r#"ENV {} "{}""#,
+                    env.0,
+                    env.1
+                        .trim()
+                        .replace('\n', "\\n")
+                        .replace('"', "\\\"")
+                        .replace('\'', "\\'")
+                )?;
+            }
         }
 
         Ok(())
@@ -157,22 +162,59 @@ impl BuildStagesHelper {
     }
 
     fn write_command(&self, node: &Node, writer: &mut Write) -> HelperResult {
-        writeln!(writer, r#"RUN ["{}"{}]"#, node.command().program, {
-            let args = {
-                node.command()
-                    .args
-                    .iter()
-                    .map(|arg| arg.replace('"', "\\\""))
-                    .collect::<Vec<_>>()
-                    .join(r#"", ""#)
-            };
+        match node.command() {
+            Command::Simple(command) => writeln!(writer, r#"RUN ["{}"{}]"#, command.program, {
+                let args = {
+                    command
+                        .args
+                        .iter()
+                        .map(|arg| arg.replace('"', "\\\""))
+                        .collect::<Vec<_>>()
+                        .join(r#"", ""#)
+                };
 
-            if !args.is_empty() {
-                format!(r#", "{}""#, args)
-            } else {
-                String::new()
+                if !args.is_empty() {
+                    format!(r#", "{}""#, args)
+                } else {
+                    String::new()
+                }
+            })?,
+
+            Command::WithBuildscript {
+                buildscript,
+                command,
+            } => {
+                if let Some(out_dir) = buildscript.env.get("OUT_DIR") {
+                    writeln!(writer, r#"RUN ["mkdir", "-p", "{}"]"#, out_dir)?;
+                }
+
+                writeln!(
+                    writer,
+                    r#"RUN ["sh", "-c", "echo '{}' > /tmp/.buildscript-env"]"#,
+                    escape_run_argument(&serde_json::to_string(&buildscript.env)?),
+                );
+
+                writeln!(
+                    writer,
+                    r#"RUN ["sh", "-c", "echo '{}' > /tmp/.rustc-args"]"#,
+                    escape_run_argument(&serde_json::to_string(&command.args)?),
+                );
+
+                writeln!(
+                    writer,
+                    r#"RUN ["sh", "-c", "echo '{}' > /tmp/.rustc-env"]"#,
+                    escape_run_argument(&serde_json::to_string(&command.env)?),
+                );
+
+                writeln!(
+                    writer,
+                    r#"RUN --mount=target={tool},source={tool},from={tools_stage} ["{tool}", "{}", "--build-script-env", "/tmp/.buildscript-env", "--rustc-args", "/tmp/.rustc-args", "--rustc-env", "/tmp/.rustc-env"]"#,
+                    buildscript.program,
+                    tool = DEFAULT_BUILDSCRIPT_TOOL_PATH,
+                    tools_stage = DEFAULT_TOOLS_STAGE,
+                );
             }
-        })?;
+        };
 
         Ok(())
     }
@@ -210,9 +252,10 @@ impl HandlebarsHelper for BinariesHelper {
 
                 writeln!(
                     writer,
-                    "RUN --mount=target=/usr/bin/cargo-ldd,source=/usr/local/bin/cargo-ldd,from={} [\"cargo-ldd\", \"{}\"]",
-                    DEFAULT_TOOLS_STAGE,
-                    final_path.display()
+                    "RUN --mount=target={tool},source={tool},from={tools_stage} [\"{tool}\", \"{}\"]",
+                    final_path.display(),
+                    tool = DEFAULT_LDD_TOOL_PATH,
+                    tools_stage = DEFAULT_TOOLS_STAGE,
                 )?;
             }
         }
@@ -324,4 +367,8 @@ fn is_binary(pair: &(NodeIndex<u32>, &Node)) -> bool {
 
 fn is_test(pair: &(NodeIndex<u32>, &Node)) -> bool {
     pair.1.kind() == &NodeKind::Test
+}
+
+fn escape_run_argument(input: &str) -> String {
+    input.replace("\"", "\\\"")
 }

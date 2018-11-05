@@ -188,6 +188,32 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn it_should_handle_build_scripts() -> CargoResult<()> {
+        let config = Config::from_workspace_root("../examples/workspace")?;
+        let invocations = build_script_invocations(&config);
+        let graph = BuildGraph::from_invocations(&invocations, &config)?;
+
+        let printer = DockerfilePrinter::from_template(
+            OutputMode::Binaries,
+            "../examples/workspace/Dockerfile.hbs",
+        )?;
+
+        let mut output = Vec::new();
+        printer.write(graph, &mut output)?;
+
+        let output_contents = String::from_utf8_lossy(&output);
+
+        assert_eq!(
+            output_contents.lines().collect::<Vec<_>>(),
+            include_str!("../../../../tests/build-script.binaries.dockerfile")
+                .lines()
+                .collect::<Vec<_>>()
+        );
+
+        Ok(())
+    }
+
     fn default_invocations(config: &Config) -> Vec<Invocation> {
         vec![
             Invocation {
@@ -212,6 +238,7 @@ mod tests {
 
                 deps: vec![0],
                 outputs: vec![config.get_local_outdir().join("debug/deps/log.rlib")],
+
                 links: btreemap!{
                     config.get_local_outdir().join("log.rlib") => config.get_local_outdir().join("debug/deps/log.rlib")
                 },
@@ -229,6 +256,7 @@ mod tests {
 
                 deps: vec![1],
                 outputs: vec![config.get_local_outdir().join("debug/deps/binary-1-hash")],
+
                 links: btreemap!{
                     config.get_local_outdir().join("debug/binary-1") => config.get_local_outdir().join("debug/deps/binary-1-hash")
                 },
@@ -246,6 +274,7 @@ mod tests {
 
                 deps: vec![0],
                 outputs: vec![config.get_local_outdir().join("debug/deps/binary-2-hash")],
+
                 links: btreemap!{
                     config.get_local_outdir().join("debug/binary-2") => config.get_local_outdir().join("debug/deps/binary-2-hash")
                 },
@@ -271,6 +300,7 @@ mod tests {
                         .get_local_outdir()
                         .join("debug/deps/binary-1-test-hash")
                 }],
+
                 links: btreemap!{
                     config.get_local_outdir().join("debug/binary-1-test-hash") => config.get_local_outdir().join("debug/deps/binary-1-test-hash")
                 },
@@ -296,8 +326,101 @@ mod tests {
                         .get_local_outdir()
                         .join("debug/deps/binary-2-test-hash")
                 }],
+
                 links: btreemap!{
                     config.get_local_outdir().join("debug/binary-2-test-hash") => config.get_local_outdir().join("debug/deps/binary-2-test-hash")
+                },
+
+                ..Default::default()
+            },
+        ]
+    }
+
+    fn build_script_invocations(config: &Config) -> Vec<Invocation> {
+        vec![
+            Invocation {
+                package_name: "lazy_static".into(),
+                package_version: "1.1.0".parse().unwrap(),
+
+                target_kind: vec![TargetKind::CustomBuild],
+
+                program: String::from("rustc"),
+                args: vec![
+                    String::from("--crate-name"),
+                    String::from("build_script_build"),
+                ],
+
+                outputs: vec![{
+                    config
+                        .get_local_outdir()
+                        .join("debug/deps/build_script_build-6b781e25beddd7bd")
+                }],
+
+                links: btreemap!{
+                    config.get_local_outdir().join("debug/build-script-build") => config.get_local_outdir().join("debug/deps/build_script_build-6b781e25beddd7bd")
+                },
+
+                ..Default::default()
+            },
+            Invocation {
+                package_name: "lazy_static".into(),
+                package_version: "1.1.0".parse().unwrap(),
+
+                target_kind: vec![TargetKind::CustomBuild],
+
+                program: String::from("debug/build-script-build"),
+                env: btreemap!{
+                    "CARGO_MANIFEST_DIR".into() => "any".into(),
+                    "ANY_ENV_VAR".into() => "value".into(),
+                    "OUT_DIR".into() => config.get_local_outdir().join("somewhere/out").display().to_string(),
+                },
+
+                deps: vec![0],
+
+                ..Default::default()
+            },
+            Invocation {
+                package_name: "lazy_static".into(),
+                package_version: "1.1.0".parse().unwrap(),
+
+                target_kind: vec![TargetKind::Lib],
+
+                program: String::from("rustc"),
+                args: vec![String::from("--crate-name"), String::from("lazy_static")],
+
+                env: btreemap!{
+                    "CARGO_MANIFEST_DIR".into() => "any".into(),
+                    "ANY_OTHER_ENV_VAR".into() => "value".into(),
+                    "OUT_DIR".into() => config.get_local_outdir().join("somewhere/out").display().to_string(),
+                },
+
+                deps: vec![1],
+                outputs: vec![{
+                    config
+                        .get_local_outdir()
+                        .join("debug/deps/lazy_static-hash.rlib")
+                }],
+
+                links: btreemap!{
+                    config.get_local_outdir().join("debug/lazy_static.rlib") => config.get_local_outdir().join("debug/deps/lazy_static-hash.rlib")
+                },
+
+                ..Default::default()
+            },
+            Invocation {
+                package_name: "binary-1".into(),
+                package_version: "0.1.0".parse().unwrap(),
+
+                target_kind: vec![TargetKind::Bin],
+
+                program: String::from("rustc"),
+                args: vec![String::from("--crate-name"), String::from("binary-1")],
+
+                deps: vec![2],
+                outputs: vec![config.get_local_outdir().join("debug/deps/binary-1-hash")],
+
+                links: btreemap!{
+                    config.get_local_outdir().join("debug/binary-1") => config.get_local_outdir().join("debug/deps/binary-1-hash")
                 },
 
                 ..Default::default()

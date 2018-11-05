@@ -5,4 +5,7 @@ authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-log = { git = "https://github.com/rust-lang-nursery/log.git" }
+lazy_static = "1.0"
+
+[dependencies.log]
+git = "https://github.com/rust-lang-nursery/log.git"

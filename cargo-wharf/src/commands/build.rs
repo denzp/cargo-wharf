@@ -97,12 +97,12 @@ fn build_docker_image(config: &Config, tags: &[&str], mut output: impl Read) -> 
 
     command.args(&["build"]);
     command.args(&["-f", "-"]);
+    command.arg(config.get_local_root());
 
     for tag in tags {
         command.args(&["-t", tag]);
     }
 
-    command.arg(config.get_local_root());
     command.stderr(Stdio::inherit());
     command.stdin(Stdio::piped());
 

@@ -4,17 +4,28 @@ use crate::config::Config;
 use crate::path::{translate_command_arg, translate_command_program, translate_env_value};
 use crate::plan::Invocation;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CommandDetails {
     pub env: BTreeMap<String, String>,
     pub program: String,
     pub args: Vec<String>,
 }
 
-// pub enum Command {
-//     Simple(CommandDetails),
-//     Complex(Vec<CommandDetails>),
-// }
+#[derive(Clone, Debug, PartialEq)]
+pub enum Command {
+    Simple(CommandDetails),
+
+    WithBuildscript {
+        buildscript: CommandDetails,
+        command: CommandDetails,
+    },
+}
+
+impl Command {
+    pub fn from_invocation(invocation: &Invocation, config: &Config) -> Self {
+        Command::Simple(CommandDetails::from_invocation(invocation, config))
+    }
+}
 
 impl CommandDetails {
     pub fn from_invocation(invocation: &Invocation, config: &Config) -> Self {

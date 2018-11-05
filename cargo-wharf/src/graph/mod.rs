@@ -3,8 +3,7 @@ use std::fmt;
 use cargo::util::CargoResult;
 
 use petgraph::dot;
-use petgraph::graph::NodeIndex;
-use petgraph::{Direction, Graph};
+use petgraph::prelude::*;
 
 use crate::config::Config;
 use crate::plan::Invocation;
@@ -13,21 +12,24 @@ mod node;
 pub use self::node::{Node, NodeKind};
 
 mod command;
-pub use self::command::CommandDetails;
+pub use self::command::{Command, CommandDetails};
 
 mod source;
 pub use self::source::SourceKind;
+
+mod ops;
+use self::ops::merge_build_script_nodes;
 
 #[allow(dead_code)]
 type NodeRef<'a> = (NodeIndex<u32>, &'a Node);
 
 pub struct BuildGraph {
-    graph: Graph<Node, usize>,
+    graph: StableGraph<Node, usize>,
 }
 
 impl BuildGraph {
     pub fn from_invocations(invocations: &[Invocation], config: &Config) -> CargoResult<Self> {
-        let mut graph = Graph::<Node, usize>::new();
+        let mut graph = StableGraph::<Node, usize>::new();
 
         let nodes = {
             invocations
@@ -44,6 +46,8 @@ impl BuildGraph {
                 graph.add_edge(nodes[index], nodes[*dep as usize], 0);
             }
         }
+
+        merge_build_script_nodes(&mut graph);
 
         Ok(Self { graph })
     }

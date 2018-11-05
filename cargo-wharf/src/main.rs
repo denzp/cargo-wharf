@@ -30,7 +30,7 @@ fn get_cli_app() -> App<'static, 'static> {
     App::new("cargo-wharf")
         .version(crate_version!())
         .author("Denys Zariaiev <denys.zariaiev@gmail.com>")
-        .about("Container builder for Rust ecosystem")
+        .about("Container builder for Rust ecosystem.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .setting(AppSettings::VersionlessSubcommands)
         .subcommands(vec![
