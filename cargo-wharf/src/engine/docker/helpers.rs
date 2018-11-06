@@ -192,27 +192,27 @@ impl BuildStagesHelper {
                     writer,
                     r#"RUN ["sh", "-c", "echo '{}' > /tmp/.buildscript-env"]"#,
                     escape_run_argument(&serde_json::to_string(&buildscript.env)?),
-                );
+                )?;
 
                 writeln!(
                     writer,
                     r#"RUN ["sh", "-c", "echo '{}' > /tmp/.rustc-args"]"#,
                     escape_run_argument(&serde_json::to_string(&command.args)?),
-                );
+                )?;
 
                 writeln!(
                     writer,
                     r#"RUN ["sh", "-c", "echo '{}' > /tmp/.rustc-env"]"#,
                     escape_run_argument(&serde_json::to_string(&command.env)?),
-                );
+                )?;
 
                 writeln!(
                     writer,
-                    r#"RUN --mount=target={tool},source={tool},from={tools_stage} ["{tool}", "{}", "--build-script-env", "/tmp/.buildscript-env", "--rustc-args", "/tmp/.rustc-args", "--rustc-env", "/tmp/.rustc-env"]"#,
+                    r#"RUN --mount=target={tool},source={tool},from={tools_stage} ["{tool}", "{}", "--buildscript-env", "/tmp/.buildscript-env", "--rustc-args", "/tmp/.rustc-args", "--rustc-env", "/tmp/.rustc-env"]"#,
                     buildscript.program,
                     tool = DEFAULT_BUILDSCRIPT_TOOL_PATH,
                     tools_stage = DEFAULT_TOOLS_STAGE,
-                );
+                )?;
             }
         };
 

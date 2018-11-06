@@ -1,10 +1,20 @@
-FROM rustlang/rust:nightly as builder
-COPY cargo-container-tools /rust-src
-
-USER root
+FROM ekidd/rust-musl-builder:nightly as builder
 WORKDIR /rust-src
-RUN rustup target add x86_64-unknown-linux-musl
-RUN cargo build --release --target x86_64-unknown-linux-musl
+
+# Fix permissions
+USER root
+RUN ["sudo", "chown", "-R", "rust:rust", "/rust-src"]
+
+# Old good caching approach
+USER rust
+ENV USER "rust"
+RUN ["cargo", "init", "--bin"]
+COPY cargo-container-tools/Cargo.toml /rust-src/Cargo.toml
+RUN ["cargo", "build", "--release", "--target", "x86_64-unknown-linux-musl"]
+
+# Real build
+COPY cargo-container-tools/src /rust-src/src
+RUN ["cargo", "build", "--release", "--target", "x86_64-unknown-linux-musl"]
 
 # Ensure the binaries can be run on normal container
 RUN ldd /rust-src/target/x86_64-unknown-linux-musl/release/cargo-buildscript | grep -qzv "not found"
