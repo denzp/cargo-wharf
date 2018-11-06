@@ -20,8 +20,8 @@ COPY --from=builder-node-0 /rust-out/debug/deps/build_script_build-6b781e25beddd
 RUN ["mkdir", "-p", "/rust-out/debug/deps"]
 RUN ["mkdir", "-p", "/rust-out/somewhere/out"]
 RUN ["sh", "-c", "echo '{\"ANY_ENV_VAR\":\"value\",\"CARGO_MANIFEST_DIR\":\"/rust-src\",\"OUT_DIR\":\"/rust-out/somewhere/out\"}' > /tmp/.buildscript-env"]
-RUN ["sh", "-c", "echo '[\"--crate-name\",\"lazy_static\"]' > /tmp/.rustc-args"]
-RUN ["sh", "-c", "echo '{\"ANY_OTHER_ENV_VAR\":\"value\",\"CARGO_MANIFEST_DIR\":\"/rust-src\",\"OUT_DIR\":\"/rust-out/somewhere/out\"}' > /tmp/.rustc-env"]
+RUN ["sh", "-c", "echo '[\"--crate-name\",\"lazy_static\",\"--feature=\\\"any\\\"\"]' > /tmp/.rustc-args"]
+RUN ["sh", "-c", "echo '{\"ANY_OTHER_ENV_VAR\":\"\'quotes\\\" and multiple \\nlines\",\"CARGO_MANIFEST_DIR\":\"/rust-src\",\"OUT_DIR\":\"/rust-out/somewhere/out\"}' > /tmp/.rustc-env"]
 RUN --mount=target=/usr/local/bin/cargo-buildscript,source=/usr/local/bin/cargo-buildscript,from=container-tools ["/usr/local/bin/cargo-buildscript", "debug/build-script-build", "--buildscript-env", "/tmp/.buildscript-env", "--rustc-args", "/tmp/.rustc-args", "--rustc-env", "/tmp/.rustc-env"]
 RUN ["ln", "-sf", "deps/lazy_static-hash.rlib", "/rust-out/debug/lazy_static.rlib"]
 

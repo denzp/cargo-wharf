@@ -192,19 +192,19 @@ impl BuildStagesHelper {
                 writeln!(
                     writer,
                     "RUN [\"sh\", \"-c\", \"echo '{}' > /tmp/.buildscript-env\"]",
-                    escape_argument(&serde_json::to_string(&buildscript.env)?),
+                    escape_json(&serde_json::to_string(&buildscript.env)?),
                 )?;
 
                 writeln!(
                     writer,
                     "RUN [\"sh\", \"-c\", \"echo '{}' > /tmp/.rustc-args\"]",
-                    escape_argument(&serde_json::to_string(&command.args)?),
+                    escape_json(&serde_json::to_string(&command.args)?),
                 )?;
 
                 writeln!(
                     writer,
                     "RUN [\"sh\", \"-c\", \"echo '{}' > /tmp/.rustc-env\"]",
-                    escape_argument(&serde_json::to_string(&command.env)?),
+                    escape_json(&serde_json::to_string(&command.env)?),
                 )?;
 
                 writeln!(
@@ -368,4 +368,14 @@ fn escape_argument<S: AsRef<str>>(input: S) -> String {
         .replace('"', "\\\"")
         .replace('\n', "\\n")
         .replace('\'', "\\'")
+}
+
+// TODO(denzp): not really sure how reliable is this. additional testing is needed.
+fn escape_json<S: AsRef<str>>(input: S) -> String {
+    escape_argument(
+        input
+            .as_ref()
+            .replace(r#"\""#, r#"\\""#)
+            .replace(r#"\n"#, r#"\\n"#),
+    )
 }

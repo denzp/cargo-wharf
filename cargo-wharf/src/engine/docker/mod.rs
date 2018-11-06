@@ -386,11 +386,15 @@ mod tests {
                 target_kind: vec![TargetKind::Lib],
 
                 program: String::from("rustc"),
-                args: vec![String::from("--crate-name"), String::from("lazy_static")],
+                args: vec![
+                    String::from("--crate-name"),
+                    String::from("lazy_static"),
+                    String::from("--feature=\"any\""),
+                ],
 
                 env: btreemap!{
                     "CARGO_MANIFEST_DIR".into() => "any".into(),
-                    "ANY_OTHER_ENV_VAR".into() => "value".into(),
+                    "ANY_OTHER_ENV_VAR".into() => "'quotes\" and multiple \nlines".into(),
                     "OUT_DIR".into() => config.get_local_outdir().join("somewhere/out").display().to_string(),
                 },
 
