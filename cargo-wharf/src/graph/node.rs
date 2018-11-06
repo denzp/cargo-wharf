@@ -4,16 +4,17 @@ use std::fmt;
 use cargo::util::errors::CargoResult;
 use semver::Version;
 
-use super::{CommandDetails, SourceKind};
+use super::{Command, CommandDetails, SourceKind};
 use crate::config::Config;
 use crate::path::TargetPath;
 use crate::plan::{Invocation, TargetKind};
 
+#[derive(Debug)]
 pub struct Node {
     package_name: String,
     package_version: Version,
 
-    command: CommandDetails,
+    command: Command,
 
     kind: NodeKind,
     source: SourceKind,
@@ -26,6 +27,7 @@ pub enum NodeKind {
     Test,
     Binary,
     Other,
+    BuildScript,
 }
 
 impl Node {
@@ -60,7 +62,7 @@ impl Node {
             package_version: invocation.package_version.clone(),
 
             source: SourceKind::from_invocation(invocation, config)?,
-            command: CommandDetails::from_invocation(invocation, config),
+            command: Command::from_invocation(invocation, config),
 
             outputs,
             links,
@@ -84,12 +86,21 @@ impl Node {
         &self.kind
     }
 
-    pub fn command(&self) -> &CommandDetails {
+    pub fn command(&self) -> &Command {
         &self.command
     }
 
     pub fn source(&self) -> &SourceKind {
         &self.source
+    }
+
+    pub fn add_buildscript_command(&mut self, buildscript: CommandDetails) {
+        if let Command::Simple(command) = self.command.clone() {
+            self.command = Command::WithBuildscript {
+                buildscript,
+                command,
+            };
+        }
     }
 }
 
@@ -101,6 +112,12 @@ impl From<&Invocation> for NodeKind {
 
         if invocation.target_kind.contains(&TargetKind::Bin) {
             return NodeKind::Binary;
+        }
+
+        if invocation.target_kind.contains(&TargetKind::CustomBuild)
+            && invocation.program != "rustc"
+        {
+            return NodeKind::BuildScript;
         }
 
         NodeKind::Other
@@ -142,6 +159,27 @@ mod tests {
             SourceKind::RegistryUrl(String::from(
                 "https://crates.io/api/v1/crates/clap/2.32.0/download"
             ))
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn node_should_distinguish_build_scripts() -> CargoResult<()> {
+        let config = Config::from_workspace_root("../examples/workspace")?;
+        let invocation = Invocation {
+            package_name: "lazy_static".into(),
+            package_version: Version::parse("1.1.0").unwrap(),
+
+            target_kind: vec![TargetKind::CustomBuild],
+            program: "not-rustc".into(),
+
+            ..Default::default()
+        };
+
+        assert_eq!(
+            Node::from_invocation(&invocation, &config)?.kind,
+            NodeKind::BuildScript
         );
 
         Ok(())

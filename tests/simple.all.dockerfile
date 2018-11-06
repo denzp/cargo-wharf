@@ -61,9 +61,9 @@ RUN ["ln", "-sf", "deps/binary-2-test-hash", "/rust-out/debug/binary-2-test-hash
 FROM debian:stable-slim as my-awesome-binaries
 RUN echo "Can setup binaries image here."
 COPY --from=builder-node-2 /rust-out/debug/deps/binary-1-hash /usr/local/bin/binary-1
-RUN --mount=target=/usr/bin/cargo-ldd,source=/usr/local/bin/cargo-ldd,from=container-tools ["cargo-ldd", "/usr/local/bin/binary-1"]
+RUN --mount=target=/usr/local/bin/cargo-ldd,source=/usr/local/bin/cargo-ldd,from=container-tools ["/usr/local/bin/cargo-ldd", "/usr/local/bin/binary-1"]
 COPY --from=builder-node-3 /rust-out/debug/deps/binary-2-hash /usr/local/bin/binary-2
-RUN --mount=target=/usr/bin/cargo-ldd,source=/usr/local/bin/cargo-ldd,from=container-tools ["cargo-ldd", "/usr/local/bin/binary-2"]
+RUN --mount=target=/usr/local/bin/cargo-ldd,source=/usr/local/bin/cargo-ldd,from=container-tools ["/usr/local/bin/cargo-ldd", "/usr/local/bin/binary-2"]
 
 
 FROM debian:stable-slim as my-awesome-tests
