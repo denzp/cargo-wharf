@@ -84,6 +84,7 @@ impl BuildStagesHelper {
             builder_name,
             index.index()
         )?;
+
         writeln!(writer, "WORKDIR /rust-src")?;
 
         Ok(())
@@ -125,7 +126,7 @@ impl BuildStagesHelper {
 
                 writeln!(
                     writer,
-                    r#"RUN git clone {} /rust-src && git checkout {}"#,
+                    "RUN git clone {} /rust-src && git checkout {}",
                     repo, checkout
                 )?
             }
@@ -139,13 +140,9 @@ impl BuildStagesHelper {
             for env in &command.env {
                 writeln!(
                     writer,
-                    r#"ENV {} "{}""#,
+                    "ENV {} \"{}\"",
                     env.0,
-                    env.1
-                        .trim()
-                        .replace('\n', "\\n")
-                        .replace('"', "\\\"")
-                        .replace('\'', "\\'")
+                    escape_argument(env.1.trim()),
                 )?;
             }
         }
@@ -155,7 +152,7 @@ impl BuildStagesHelper {
 
     fn write_tree_creation(&self, node: &Node, writer: &mut Write) -> HelperResult {
         for path in find_unique_base_paths(node.get_exports_iter()) {
-            writeln!(writer, r#"RUN ["mkdir", "-p", "{}"]"#, path.display())?;
+            writeln!(writer, "RUN [\"mkdir\", \"-p\", \"{}\"]", path.display())?;
         }
 
         Ok(())
@@ -163,47 +160,45 @@ impl BuildStagesHelper {
 
     fn write_command(&self, node: &Node, writer: &mut Write) -> HelperResult {
         match node.command() {
-            Command::Simple(command) => writeln!(writer, r#"RUN ["{}"{}]"#, command.program, {
-                let args = {
+            Command::Simple(command) if command.args.is_empty() => {
+                writeln!(writer, "RUN [\"{}\"]", command.program)?
+            }
+
+            Command::Simple(command) => {
+                writeln!(writer, "RUN [\"{}\", \"{}\"]", command.program, {
                     command
                         .args
                         .iter()
-                        .map(|arg| arg.replace('"', "\\\""))
+                        .map(escape_argument)
                         .collect::<Vec<_>>()
-                        .join(r#"", ""#)
-                };
-
-                if !args.is_empty() {
-                    format!(r#", "{}""#, args)
-                } else {
-                    String::new()
-                }
-            })?,
+                        .join("\", \"")
+                })?
+            }
 
             Command::WithBuildscript {
                 buildscript,
                 command,
             } => {
                 if let Some(out_dir) = buildscript.env.get("OUT_DIR") {
-                    writeln!(writer, r#"RUN ["mkdir", "-p", "{}"]"#, out_dir)?;
+                    writeln!(writer, "RUN [\"mkdir\", \"-p\", \"{}\"]", out_dir)?;
                 }
 
                 writeln!(
                     writer,
-                    r#"RUN ["sh", "-c", "echo '{}' > /tmp/.buildscript-env"]"#,
-                    escape_run_argument(&serde_json::to_string(&buildscript.env)?),
+                    "RUN [\"sh\", \"-c\", \"echo '{}' > /tmp/.buildscript-env\"]",
+                    escape_argument(&serde_json::to_string(&buildscript.env)?),
                 )?;
 
                 writeln!(
                     writer,
-                    r#"RUN ["sh", "-c", "echo '{}' > /tmp/.rustc-args"]"#,
-                    escape_run_argument(&serde_json::to_string(&command.args)?),
+                    "RUN [\"sh\", \"-c\", \"echo '{}' > /tmp/.rustc-args\"]",
+                    escape_argument(&serde_json::to_string(&command.args)?),
                 )?;
 
                 writeln!(
                     writer,
-                    r#"RUN ["sh", "-c", "echo '{}' > /tmp/.rustc-env"]"#,
-                    escape_run_argument(&serde_json::to_string(&command.env)?),
+                    "RUN [\"sh\", \"-c\", \"echo '{}' > /tmp/.rustc-env\"]",
+                    escape_argument(&serde_json::to_string(&command.env)?),
                 )?;
 
                 writeln!(
@@ -223,7 +218,7 @@ impl BuildStagesHelper {
         for (destination, source) in node.get_links_iter() {
             writeln!(
                 writer,
-                r#"RUN ["ln", "-sf", "{}", "{}"]"#,
+                "RUN [\"ln\", \"-sf\", \"{}\", \"{}\"]",
                 source.as_relative_for(destination).display(),
                 destination.display()
             )?;
@@ -299,20 +294,12 @@ impl HandlebarsHelper for TestsHelper {
             DEFAULT_TOOLS_STAGE,
         )?;
 
-        writeln!(writer, "ENTRYPOINT [\"cargo-test-runner\"{}]", {
-            let paths = {
-                binaries
-                    .iter()
-                    .map(|item| item.display().to_string())
-                    .collect::<Vec<_>>()
-                    .join(r#"", ""#)
-            };
-
-            if !paths.is_empty() {
-                format!(r#", "{}""#, paths)
-            } else {
-                String::new()
-            }
+        writeln!(writer, "ENTRYPOINT [\"cargo-test-runner\", \"{}\"]", {
+            binaries
+                .iter()
+                .map(|item| item.display().to_string())
+                .collect::<Vec<_>>()
+                .join("\", \"")
         })?;
 
         Ok(())
@@ -369,6 +356,10 @@ fn is_test(pair: &(NodeIndex<u32>, &Node)) -> bool {
     pair.1.kind() == &NodeKind::Test
 }
 
-fn escape_run_argument(input: &str) -> String {
-    input.replace("\"", "\\\"")
+fn escape_argument<S: AsRef<str>>(input: S) -> String {
+    input
+        .as_ref()
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\'', "\\'")
 }

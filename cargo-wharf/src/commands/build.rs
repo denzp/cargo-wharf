@@ -100,7 +100,7 @@ fn build_docker_image(config: &Config, tags: &[&str], mut output: impl Read) -> 
     command.arg(config.get_local_root());
 
     for tag in tags {
-        command.args(&["-t", tag]);
+        command.arg("-t").arg(tag);
     }
 
     command.stderr(Stdio::inherit());
