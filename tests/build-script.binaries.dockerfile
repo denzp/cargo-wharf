@@ -15,8 +15,8 @@ RUN ["ln", "-sf", "deps/build_script_build-6b781e25beddd7bd", "/rust-out/debug/b
 FROM my-custom-builder as builder-node-2
 WORKDIR /rust-src
 RUN curl -L https://crates.io/api/v1/crates/lazy_static/1.1.0/download | tar -xvzC /rust-src --strip-components=1
-COPY --from=builder-node-0 /rust-out/debug/deps/build_script_build-6b781e25beddd7bd /rust-out/debug/deps/build_script_build-6b781e25beddd7bd
 COPY --from=builder-node-0 /rust-out/debug/build-script-build /rust-out/debug/build-script-build
+COPY --from=builder-node-0 /rust-out/debug/deps/build_script_build-6b781e25beddd7bd /rust-out/debug/deps/build_script_build-6b781e25beddd7bd
 RUN ["mkdir", "-p", "/rust-out/debug/deps"]
 RUN ["mkdir", "-p", "/rust-out/somewhere/out"]
 RUN ["sh", "-c", "echo '{\"ANY_ENV_VAR\":\"value\",\"CARGO_MANIFEST_DIR\":\"/rust-src\",\"OUT_DIR\":\"/rust-out/somewhere/out\"}' > /tmp/.buildscript-env"]
@@ -28,8 +28,8 @@ RUN ["ln", "-sf", "deps/lazy_static-hash.rlib", "/rust-out/debug/lazy_static.rli
 FROM my-custom-builder as builder-node-3
 WORKDIR /rust-src
 COPY . /rust-src
-COPY --from=builder-node-0 /rust-out/debug/deps/build_script_build-6b781e25beddd7bd /rust-out/debug/deps/build_script_build-6b781e25beddd7bd
 COPY --from=builder-node-0 /rust-out/debug/build-script-build /rust-out/debug/build-script-build
+COPY --from=builder-node-0 /rust-out/debug/deps/build_script_build-6b781e25beddd7bd /rust-out/debug/deps/build_script_build-6b781e25beddd7bd
 COPY --from=builder-node-2 /rust-out/debug/deps/lazy_static-hash.rlib /rust-out/debug/deps/lazy_static-hash.rlib
 COPY --from=builder-node-2 /rust-out/debug/lazy_static.rlib /rust-out/debug/lazy_static.rlib
 RUN ["mkdir", "-p", "/rust-out/debug/deps"]

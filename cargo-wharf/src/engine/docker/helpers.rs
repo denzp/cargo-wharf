@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -91,20 +92,25 @@ impl BuildStagesHelper {
     }
 
     fn write_deps_copy(&self, index: NodeIndex<u32>, writer: &mut Write) -> HelperResult {
-        for (inner_index, dependency) in self.graph.dependencies(index) {
-            self.write_deps_copy(inner_index, writer)?;
-
-            for output in dependency.get_exports_iter() {
-                writeln!(
-                    writer,
-                    "COPY --from=builder-node-{id} {path} {path}",
-                    id = inner_index.index(),
-                    path = output.display(),
-                )?;
-            }
+        for dep in self.find_deps_recursive(index) {
+            writeln!(writer, "COPY --from=builder-node-{0} {1} {1}", dep.0, dep.1)?;
         }
 
         Ok(())
+    }
+
+    fn find_deps_recursive(&self, index: NodeIndex<u32>) -> BTreeSet<(usize, String)> {
+        let mut result = BTreeSet::new();
+
+        for (inner_index, dependency) in self.graph.dependencies(index) {
+            result.append(&mut self.find_deps_recursive(inner_index));
+
+            for output in dependency.get_exports_iter() {
+                result.insert((inner_index.index(), output.display().to_string()));
+            }
+        }
+
+        result
     }
 
     fn write_sources(&self, node: &Node, writer: &mut Write) -> HelperResult {

@@ -254,7 +254,7 @@ mod tests {
                 program: String::from("rustc"),
                 args: vec![String::from("--crate-name"), String::from("binary-1")],
 
-                deps: vec![1],
+                deps: vec![0, 1],
                 outputs: vec![config.get_local_outdir().join("debug/deps/binary-1-hash")],
 
                 links: btreemap!{
