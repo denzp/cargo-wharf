@@ -84,7 +84,7 @@ impl DockerfilePrinter {
     }
 
     fn write_header(&mut self, writer: &mut Write) -> CargoResult<()> {
-        writeln!(writer, "# syntax = tonistiigi/dockerfile:runmount20180618")?;
+        writeln!(writer, "# syntax=docker/dockerfile-upstream:experimental")?;
 
         writeln!(
             writer,

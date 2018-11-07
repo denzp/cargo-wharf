@@ -1,4 +1,4 @@
-# syntax = tonistiigi/dockerfile:runmount20180618
+# syntax=docker/dockerfile-upstream:experimental
 FROM denzp/cargo-container-tools:0.1.0 as container-tools
 
 FROM rustlang/rust:nightly as my-custom-builder

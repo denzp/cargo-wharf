@@ -209,7 +209,7 @@ impl BuildStagesHelper {
 
                 writeln!(
                     writer,
-                    r#"RUN --mount=target={tool},source={tool},from={tools_stage} ["{tool}", "{}", "--buildscript-env", "/tmp/.buildscript-env", "--rustc-args", "/tmp/.rustc-args", "--rustc-env", "/tmp/.rustc-env"]"#,
+                    r#"RUN --mount=from={tools_stage},target={tool} ["{tool}", "{}", "--buildscript-env", "/tmp/.buildscript-env", "--rustc-args", "/tmp/.rustc-args", "--rustc-env", "/tmp/.rustc-env"]"#,
                     buildscript.program,
                     tool = DEFAULT_BUILDSCRIPT_TOOL_PATH,
                     tools_stage = DEFAULT_TOOLS_STAGE,
@@ -253,7 +253,7 @@ impl HandlebarsHelper for BinariesHelper {
 
                 writeln!(
                     writer,
-                    "RUN --mount=target={tool},source={tool},from={tools_stage} [\"{tool}\", \"{}\"]",
+                    "RUN --mount=from={tools_stage},target={tool} [\"{tool}\", \"{}\"]",
                     final_path.display(),
                     tool = DEFAULT_LDD_TOOL_PATH,
                     tools_stage = DEFAULT_TOOLS_STAGE,

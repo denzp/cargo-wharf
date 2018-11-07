@@ -1,4 +1,4 @@
-# syntax = tonistiigi/dockerfile:runmount20180618
+# syntax=docker/dockerfile-upstream:experimental
 FROM denzp/cargo-container-tools:0.1.0 as container-tools
 
 FROM rustlang/rust:nightly as my-custom-builder
@@ -22,7 +22,7 @@ RUN ["mkdir", "-p", "/rust-out/somewhere/out"]
 RUN ["sh", "-c", "echo '{\"ANY_ENV_VAR\":\"value\",\"CARGO_MANIFEST_DIR\":\"/rust-src\",\"OUT_DIR\":\"/rust-out/somewhere/out\"}' > /tmp/.buildscript-env"]
 RUN ["sh", "-c", "echo '[\"--crate-name\",\"lazy_static\",\"--feature=\\\"any\\\"\"]' > /tmp/.rustc-args"]
 RUN ["sh", "-c", "echo '{\"ANY_OTHER_ENV_VAR\":\"\'quotes\\\" and multiple \\nlines\",\"CARGO_MANIFEST_DIR\":\"/rust-src\",\"OUT_DIR\":\"/rust-out/somewhere/out\"}' > /tmp/.rustc-env"]
-RUN --mount=target=/usr/local/bin/cargo-buildscript,source=/usr/local/bin/cargo-buildscript,from=container-tools ["/usr/local/bin/cargo-buildscript", "debug/build-script-build", "--buildscript-env", "/tmp/.buildscript-env", "--rustc-args", "/tmp/.rustc-args", "--rustc-env", "/tmp/.rustc-env"]
+RUN --mount=from=container-tools,target=/usr/local/bin/cargo-buildscript ["/usr/local/bin/cargo-buildscript", "debug/build-script-build", "--buildscript-env", "/tmp/.buildscript-env", "--rustc-args", "/tmp/.rustc-args", "--rustc-env", "/tmp/.rustc-env"]
 RUN ["ln", "-sf", "deps/lazy_static-hash.rlib", "/rust-out/debug/lazy_static.rlib"]
 
 FROM my-custom-builder as builder-node-3
@@ -40,5 +40,5 @@ RUN ["ln", "-sf", "deps/binary-1-hash", "/rust-out/debug/binary-1"]
 FROM debian:stable-slim as my-awesome-binaries
 RUN echo "Can setup binaries image here."
 COPY --from=builder-node-3 /rust-out/debug/deps/binary-1-hash /usr/local/bin/binary-1
-RUN --mount=target=/usr/local/bin/cargo-ldd,source=/usr/local/bin/cargo-ldd,from=container-tools ["/usr/local/bin/cargo-ldd", "/usr/local/bin/binary-1"]
+RUN --mount=from=container-tools,target=/usr/local/bin/cargo-ldd ["/usr/local/bin/cargo-ldd", "/usr/local/bin/binary-1"]
 
