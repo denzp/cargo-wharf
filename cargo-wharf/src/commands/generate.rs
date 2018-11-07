@@ -33,6 +33,7 @@ impl super::SubCommand for GenerateCommand {
                         .short("o")
                         .takes_value(true)
                         .value_name("OUTPUT")
+                        .default_value("stdout")
                         .help("Output Dockerfile to a file")
                 },
                 {

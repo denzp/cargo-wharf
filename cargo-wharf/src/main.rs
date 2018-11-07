@@ -20,7 +20,7 @@ use crate::config::Config;
 fn main() {
     let matches = get_cli_app().get_matches();
 
-    if let Err(error) = run_command(&matches) {
+    if let Err(error) = run_command(&matches.subcommand_matches("wharf").unwrap()) {
         cargo::handle_error(&error, &mut Shell::new());
         exit(1);
     }
@@ -28,32 +28,38 @@ fn main() {
 
 fn get_cli_app() -> App<'static, 'static> {
     App::new("cargo-wharf")
+        .bin_name("cargo")
         .version(crate_version!())
-        .author("Denys Zariaiev <denys.zariaiev@gmail.com>")
-        .about("Container builder for Rust ecosystem.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .setting(AppSettings::VersionlessSubcommands)
-        .subcommands(vec![
-            commands::GenerateCommand::api(),
-            commands::BuildCommand::api(),
-            commands::TestCommand::api(),
-        ])
-        .args(&[
-            {
-                Arg::with_name("crate_root")
-                    .long("crate-root")
-                    .value_name("PATH")
-                    .takes_value(true)
-            },
-            {
-                Arg::with_name("engine")
-                    .long("engine")
-                    .value_name("NAME")
-                    .takes_value(true)
-                    .possible_values(&["docker"])
-                    .default_value("docker")
-            },
-        ])
+        .subcommand(
+            clap::SubCommand::with_name("wharf")
+                .version(crate_version!())
+                .author("Denys Zariaiev <denys.zariaiev@gmail.com>")
+                .about("Container builder for Rust ecosystem.")
+                .setting(AppSettings::SubcommandRequiredElseHelp)
+                .setting(AppSettings::VersionlessSubcommands)
+                .subcommands(vec![
+                    commands::GenerateCommand::api(),
+                    commands::BuildCommand::api(),
+                    commands::TestCommand::api(),
+                ])
+                .args(&[
+                    {
+                        Arg::with_name("crate_root")
+                            .long("crate-root")
+                            .value_name("PATH")
+                            .takes_value(true)
+                    },
+                    {
+                        Arg::with_name("engine")
+                            .long("engine")
+                            .value_name("NAME")
+                            .takes_value(true)
+                            .possible_values(&["docker"])
+                            .default_value("docker")
+                    },
+                ]),
+        )
 }
 
 fn run_command(matches: &ArgMatches<'static>) -> CargoResult<()> {
