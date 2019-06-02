@@ -1,0 +1,14 @@
+[package]
+name = "buildkit-llb"
+version = "0.1.0"
+authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+sha2 = "0.8"
+prost = "0.5"
+unzip3 = "1.0"
+either = "1.5"
+
+[dependencies.buildkit-proto]
+path = "../buildkit-proto"
