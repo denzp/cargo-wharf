@@ -11,5 +11,5 @@ pub mod utils;
 
 pub mod prelude {
     pub use crate::ops::*;
-    pub use crate::utils::OutputIndex;
+    pub use crate::utils::{OutputIndex, OwnOutputIndex};
 }

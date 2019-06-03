@@ -4,7 +4,7 @@ mod source;
 mod terminal;
 
 pub use self::exec::{Command, Mount};
-pub use self::fs::FileSystem;
+pub use self::fs::{Destination, FileSystem};
 pub use self::source::Source;
 pub use self::terminal::Terminal;
 

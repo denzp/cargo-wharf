@@ -14,17 +14,20 @@ fn main() {
             .mount(Mount::Scratch(OutputIndex(0), "/out"))
     };
 
-    let file1 = {
-        FileSystem::copy(command.output(0), "/file0", command.output(0), "/file1")
-            .custom_name("copy the dummy file to other location (1)")
+    let fs = {
+        FileSystem::sequence()
+            .custom_name("do multiple file system manipulations")
+            .append(FileSystem::copy().from(command.output(0), "/file0").to(
+                OutputIndex(0),
+                Destination::Layer(command.output(0), "/file1"),
+            ))
+            .append(FileSystem::copy().from(command.output(0), "/file0").to(
+                OutputIndex(1),
+                Destination::OwnOutput(OwnOutputIndex(0), "/file2"),
+            ))
     };
 
-    let file2 = {
-        FileSystem::copy(command.output(0), "/file0", file1.output(), "/file2")
-            .custom_name("copy the dummy file to other location (2)")
-    };
-
-    Terminal::with(file2.output())
+    Terminal::with(fs.output(1))
         .write_definition(stdout())
         .unwrap()
 }
