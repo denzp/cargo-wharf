@@ -2,23 +2,16 @@ use std::collections::HashMap;
 use std::iter::{empty, once};
 use std::path::{Path, PathBuf};
 
-use buildkit_proto::pb::{self, op::Op, ExecOp, Input, Meta, NetMode, OpMetadata, SecurityMode};
+use buildkit_proto::pb::{self, op::Op, ExecOp, Input, NetMode, OpMetadata, SecurityMode};
 use either::Either;
 use unzip3::Unzip3;
 
-use super::OperationBuilder;
+use super::context::Context;
+use super::mount::Mount;
+
+use crate::ops::OperationBuilder;
 use crate::serialization::{Operation, Output, SerializedNode};
-use crate::utils::{Mount, OperationOutput, OutputIndex};
-
-#[derive(Debug, Clone)]
-struct Context {
-    name: String,
-    args: Vec<String>,
-    env: Vec<String>,
-
-    cwd: PathBuf,
-    user: String,
-}
+use crate::utils::{OperationOutput, OutputIndex};
 
 #[derive(Debug)]
 pub struct Command<'a> {
@@ -94,23 +87,6 @@ impl<'a> Command<'a> {
         // TODO: check if the requested index available.
 
         OperationOutput(self, OutputIndex(index))
-    }
-}
-
-impl Context {
-    pub fn new<S>(name: S) -> Self
-    where
-        S: Into<String>,
-    {
-        Self {
-            name: name.into(),
-
-            cwd: PathBuf::from("/"),
-            user: "root".into(),
-
-            args: vec![],
-            env: vec![],
-        }
     }
 }
 
@@ -226,23 +202,5 @@ impl<'a> Operation for Command<'a> {
             head: SerializedNode::new(head, metadata),
             tail: tails.into_iter().flatten().collect(),
         })
-    }
-}
-
-impl Into<Meta> for Context {
-    fn into(self) -> Meta {
-        Meta {
-            args: {
-                once(self.name.clone())
-                    .chain(self.args.iter().cloned())
-                    .collect()
-            },
-
-            env: self.env,
-            cwd: self.cwd.to_string_lossy().into(),
-            user: self.user,
-
-            ..Default::default()
-        }
     }
 }
