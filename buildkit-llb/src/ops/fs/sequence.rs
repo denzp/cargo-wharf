@@ -6,7 +6,7 @@ use super::FileOperation;
 
 use crate::ops::OperationBuilder;
 use crate::serialization::{Operation, Output, SerializedNode};
-use crate::utils::{OperationOutput, OutputIndex};
+use crate::utils::{OperationOutput, OutputIdx};
 
 #[derive(Debug)]
 pub struct SequenceOperation<'a> {
@@ -42,7 +42,7 @@ impl<'a> SequenceOperation<'a> {
     pub fn output(&self, index: u32) -> OperationOutput {
         // TODO: check if the requested index available.
 
-        OperationOutput(self, OutputIndex(index))
+        OperationOutput(self, OutputIdx(index))
     }
 }
 

@@ -1,7 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use crate::utils::{OperationOutput, OutputIndex};
+use crate::utils::{OperationOutput, OutputIdx};
 
+/// Operand of *command execution operation* that specifies how are input sources mounted.
 #[derive(Debug)]
 pub enum Mount<'a, P: AsRef<Path>> {
     /// Read-only output of another operation.
@@ -11,13 +12,14 @@ pub enum Mount<'a, P: AsRef<Path>> {
     ReadOnlySelector(OperationOutput<'a>, P, P),
 
     /// Empty layer that produces an output.
-    Scratch(OutputIndex, P),
+    Scratch(OutputIdx, P),
 
     /// Writable output of another operation.
-    Layer(OutputIndex, OperationOutput<'a>, P),
+    Layer(OutputIdx, OperationOutput<'a>, P),
 }
 
 impl<'a, P: AsRef<Path>> Mount<'a, P> {
+    /// Transform the mount into owned variant (basically, with `PathBuf` as the path).
     pub fn into_owned(self) -> Mount<'a, PathBuf> {
         use Mount::*;
 

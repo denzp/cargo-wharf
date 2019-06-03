@@ -8,8 +8,10 @@ mod copy;
 mod path;
 mod sequence;
 
-pub use self::path::{Destination, UnsetPath};
+pub use self::path::{LayerPath, UnsetPath};
 
+/// Umbrella operation that handles file system related routines.
+/// Dockerfile's `COPY` directive is a partial case of this.
 pub struct FileSystem;
 
 impl FileSystem {

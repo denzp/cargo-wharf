@@ -1,31 +1,31 @@
 use crate::serialization::Operation;
 
 #[derive(Copy, Clone, Debug)]
-pub struct OutputIndex(pub u32);
+pub struct OutputIdx(pub u32);
 
 #[derive(Copy, Clone, Debug)]
-pub struct OwnOutputIndex(pub u32);
+pub struct OwnOutputIdx(pub u32);
 
 #[derive(Copy, Clone, Debug)]
-pub struct OperationOutput<'a>(pub(crate) &'a Operation, pub(crate) OutputIndex);
+pub struct OperationOutput<'a>(pub(crate) &'a Operation, pub(crate) OutputIdx);
 
-impl Into<i64> for OutputIndex {
+impl Into<i64> for OutputIdx {
     fn into(self) -> i64 {
         self.0.into()
     }
 }
-impl Into<i64> for &OutputIndex {
+impl Into<i64> for &OutputIdx {
     fn into(self) -> i64 {
         self.0.into()
     }
 }
 
-impl Into<i64> for OwnOutputIndex {
+impl Into<i64> for OwnOutputIdx {
     fn into(self) -> i64 {
         self.0.into()
     }
 }
-impl Into<i64> for &OwnOutputIndex {
+impl Into<i64> for &OwnOutputIdx {
     fn into(self) -> i64 {
         self.0.into()
     }

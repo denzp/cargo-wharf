@@ -4,7 +4,7 @@ use buildkit_proto::pb::{self, op::Op, OpMetadata, SourceOp};
 
 use super::OperationBuilder;
 use crate::serialization::{Operation, Output, SerializedNode};
-use crate::utils::{OperationOutput, OutputIndex};
+use crate::utils::{OperationOutput, OutputIdx};
 
 #[derive(Debug)]
 enum SourceKind {
@@ -12,6 +12,7 @@ enum SourceKind {
     GitRepo(String),
 }
 
+/// Provide an input for other operations. For example: `FROM` directive in Dockerfile.
 #[derive(Debug)]
 pub struct Source {
     kind: SourceKind,
@@ -40,7 +41,7 @@ impl Source {
     }
 
     pub fn output(&self) -> OperationOutput {
-        OperationOutput(self, OutputIndex(0))
+        OperationOutput(self, OutputIdx(0))
     }
 }
 

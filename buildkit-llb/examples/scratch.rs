@@ -11,20 +11,22 @@ fn main() {
             .args(&["-c", "echo 'test string 5' > /out/file0"])
             .custom_name("create a dummy file")
             .mount(Mount::ReadOnlyLayer(builder_image.output(), "/"))
-            .mount(Mount::Scratch(OutputIndex(0), "/out"))
+            .mount(Mount::Scratch(OutputIdx(0), "/out"))
     };
 
     let fs = {
         FileSystem::sequence()
             .custom_name("do multiple file system manipulations")
-            .append(FileSystem::copy().from(command.output(0), "/file0").to(
-                OutputIndex(0),
-                Destination::Layer(command.output(0), "/file1"),
-            ))
-            .append(FileSystem::copy().from(command.output(0), "/file0").to(
-                OutputIndex(1),
-                Destination::OwnOutput(OwnOutputIndex(0), "/file2"),
-            ))
+            .append(
+                FileSystem::copy()
+                    .from(LayerPath::Other(command.output(0), "/file0"))
+                    .to(OutputIdx(0), LayerPath::Other(command.output(0), "/file1")),
+            )
+            .append(
+                FileSystem::copy()
+                    .from(LayerPath::Own(OwnOutputIdx(0), "/file0"))
+                    .to(OutputIdx(1), LayerPath::Own(OwnOutputIdx(0), "/file2")),
+            )
     };
 
     Terminal::with(fs.output(1))

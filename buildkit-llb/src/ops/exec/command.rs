@@ -11,8 +11,9 @@ use super::mount::Mount;
 
 use crate::ops::OperationBuilder;
 use crate::serialization::{Operation, Output, SerializedNode};
-use crate::utils::{OperationOutput, OutputIndex};
+use crate::utils::{OperationOutput, OutputIdx};
 
+/// Command execution operation. This is what a Dockerfile's `RUN` directive being translated to.
 #[derive(Debug)]
 pub struct Command<'a> {
     context: Context,
@@ -86,7 +87,7 @@ impl<'a> Command<'a> {
     pub fn output(&self, index: u32) -> OperationOutput {
         // TODO: check if the requested index available.
 
-        OperationOutput(self, OutputIndex(index))
+        OperationOutput(self, OutputIdx(index))
     }
 }
 
