@@ -4,5 +4,5 @@ members = [
     #"cargo-container-tools",
     "buildkit-proto",
     "buildkit-llb",
-    #"buildkit-cargo-frontend",
+    "buildkit-cargo-frontend",
 ]

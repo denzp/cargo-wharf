@@ -10,7 +10,7 @@ use crate::utils::{OperationOutput, OutputIdx};
 
 #[derive(Debug)]
 pub struct SequenceOperation<'a> {
-    inner: Vec<Box<FileOperation + 'a>>,
+    inner: Vec<Box<dyn FileOperation + 'a>>,
 
     description: HashMap<String, String>,
     caps: HashMap<String, bool>,

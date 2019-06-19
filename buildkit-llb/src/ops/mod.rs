@@ -14,4 +14,6 @@ pub trait OperationBuilder {
     fn custom_name<S>(self, name: S) -> Self
     where
         S: Into<String>;
+
+    // TODO: implement cache ignoring
 }

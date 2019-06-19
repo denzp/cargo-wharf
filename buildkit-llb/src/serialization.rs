@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::iter::once;
 
 use buildkit_proto::pb;
@@ -17,7 +18,7 @@ pub struct SerializedNode {
     pub metadata: pb::OpMetadata,
 }
 
-pub trait Operation: std::fmt::Debug {
+pub trait Operation: Debug + Send + Sync {
     fn serialize(&self) -> Result<Output, ()>;
 }
 

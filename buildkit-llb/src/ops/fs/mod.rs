@@ -24,7 +24,7 @@ impl FileSystem {
     }
 }
 
-pub trait FileOperation: Debug {
+pub trait FileOperation: Debug + Send + Sync {
     fn output(&self) -> i64;
 
     fn serialize_inputs(&self) -> Result<(Vec<pb::Input>, Vec<SerializedNode>), ()>;
