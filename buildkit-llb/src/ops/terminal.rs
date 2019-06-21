@@ -7,6 +7,7 @@ use crate::serialization::{Output, SerializedNode};
 use crate::utils::OperationOutput;
 
 /// Final operation in the graph. Responsible for printing the complete LLB definition.
+#[derive(Debug)]
 pub struct Terminal<'a> {
     input: OperationOutput<'a>,
 }

@@ -1,3 +1,4 @@
+use failure::{bail, format_err, Error};
 use futures::compat::*;
 use log::*;
 use tokio::executor::DefaultExecutor;
@@ -8,11 +9,11 @@ use tower_h2::client::Connection;
 
 use buildkit_proto::google::rpc::Status;
 use buildkit_proto::moby::buildkit::v1::frontend::{
-    client::LlbBridge, ReturnRequest, SolveRequest,
+    client::LlbBridge, result::Result as RefResult, Result as Output, ReturnRequest, SolveRequest,
 };
 
+use super::{OutputRef, StdioSocket};
 use crate::ops::Terminal;
-use super::StdioSocket;
 
 type BridgeConnection = tower_request_modifier::RequestModifier<
     Connection<StdioSocket, DefaultExecutor, BoxBody>,
@@ -30,40 +31,72 @@ impl Bridge {
         }
     }
 
-    pub async fn solve<'a, 'b: 'a>(&'a mut self, graph: Terminal<'b>) {
-        debug!("requesting to solve a definition");
+    pub async fn solve<'a, 'b: 'a>(&'a mut self, graph: Terminal<'b>) -> Result<OutputRef, Error> {
+        debug!("requesting to solve a graph: {:#?}", graph);
 
-        dbg!(self
-            .client
-            .solve(Request::new(SolveRequest {
-                definition: Some(graph.into_definition()),
-                exporter_attr: vec![],
+        let request = SolveRequest {
+            definition: Some(graph.into_definition()),
+            exporter_attr: vec![],
+            allow_result_return: true,
 
-                ..Default::default()
-            }))
-            .compat()
-            .await
-            .unwrap());
+            ..Default::default()
+        };
+
+        let response = {
+            self.client
+                .solve(Request::new(request))
+                .compat()
+                .await?
+                .into_inner()
+                .result
+                .ok_or_else(|| format_err!("Unable to extract solve result"))?
+        };
+
+        debug!("got response: {:#?}", response);
+
+        let inner = {
+            response
+                .result
+                .ok_or_else(|| format_err!("Unable to extract solve result"))?
+        };
+
+        match inner {
+            RefResult::Ref(inner) => Ok(OutputRef(inner)),
+            other => bail!("Unexpected solve response: {:?}", other),
+        }
     }
 
-    pub(crate) async fn finish_with_error<S>(mut self, code: i32, message: S)
+    pub(crate) async fn finish_with_success(mut self, output: OutputRef) -> Result<(), Error> {
+        let request = ReturnRequest {
+            error: None,
+            result: Some(Output {
+                result: Some(RefResult::Ref(output.0)),
+                metadata: Default::default(),
+            }),
+        };
+
+        debug!("sending a success result: {:#?}", request);
+        self.client.r#return(Request::new(request)).compat().await?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn finish_with_error<S>(mut self, code: i32, message: S) -> Result<(), Error>
     where
         S: Into<String>,
     {
-        debug!("sending error result");
+        let request = ReturnRequest {
+            result: None,
+            error: Some(Status {
+                code,
+                message: message.into(),
+                details: vec![],
+            }),
+        };
 
-        dbg!(self
-            .client
-            .r#return(Request::new(ReturnRequest {
-                result: None,
-                error: Some(Status {
-                    code,
-                    message: message.into(),
-                    details: vec![],
-                }),
-            }))
-            .compat()
-            .await
-            .unwrap());
+        debug!("sending an error result: {:#?}", request);
+        self.client.r#return(Request::new(request)).compat().await?;
+
+        Ok(())
     }
 }

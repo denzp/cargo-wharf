@@ -3,21 +3,24 @@
 #![feature(async_await, existential_type)]
 
 use env_logger::Env;
-use failure::Error;
+use failure::{Error, ResultExt};
 use futures::prelude::*;
 use log::*;
 
-use buildkit_llb::frontend::{run_frontend, Bridge, Frontend};
+use buildkit_llb::frontend::{run_frontend, Bridge, Frontend, OutputRef};
 use buildkit_llb::prelude::*;
 
 #[runtime::main(runtime_tokio::Tokio)]
 async fn main() {
-    env_logger::init_from_env(
-        Env::default().filter_or("RUST_LOG", "info,buildkit_cargo_frontend=debug"),
-    );
+    env_logger::init_from_env(Env::default().filter_or("RUST_LOG", "info,buildkit=debug"));
 
     if let Err(error) = run_frontend(CargoFrontend).await {
-        error!("error: {:?}", error);
+        error!("{}", error);
+
+        for cause in error.iter_causes() {
+            error!("  caused by: {}", cause);
+        }
+
         std::process::exit(1);
     }
 }
@@ -25,7 +28,7 @@ async fn main() {
 struct CargoFrontend;
 
 impl Frontend for CargoFrontend {
-    existential type RunFuture: Future<Output = Result<(), Error>>;
+    existential type RunFuture: Future<Output = Result<OutputRef, Error>>;
 
     fn run(self, mut bridge: Bridge) -> Self::RunFuture {
         async move {
@@ -57,8 +60,11 @@ impl Frontend for CargoFrontend {
                     )
             };
 
-            bridge.solve(Terminal::with(fs.output(1))).await;
-            Ok(())
+            bridge
+                .solve(Terminal::with(fs.output(1)))
+                .await
+                .context("Crate build error")
+                .map_err(Error::from)
         }
     }
 }

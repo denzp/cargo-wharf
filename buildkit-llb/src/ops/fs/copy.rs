@@ -192,7 +192,7 @@ impl<'a> FileOperation for OpWithDestination<'a> {
             input: dest_idx,
             secondary_input: src_idx,
 
-            output: self.output().into(),
+            output: self.output(),
 
             action: Some(pb::file_action::Action::Copy(pb::FileActionCopy {
                 src,
