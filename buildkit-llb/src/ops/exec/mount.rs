@@ -16,6 +16,9 @@ pub enum Mount<'a, P: AsRef<Path>> {
 
     /// Writable output of another operation.
     Layer(OutputIdx, OperationOutput<'a>, P),
+
+    /// Writable persistent cache.
+    SharedCache(P),
 }
 
 impl<'a, P: AsRef<Path>> Mount<'a, P> {
@@ -31,6 +34,7 @@ impl<'a, P: AsRef<Path>> Mount<'a, P> {
             ReadOnlyLayer(op, path) => ReadOnlyLayer(op, path.as_ref().into()),
             Scratch(output, path) => Scratch(output, path.as_ref().into()),
             Layer(output, input, path) => Layer(output, input, path.as_ref().into()),
+            SharedCache(path) => SharedCache(path.as_ref().into()),
         }
     }
 }

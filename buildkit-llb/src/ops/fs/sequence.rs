@@ -14,6 +14,7 @@ pub struct SequenceOperation<'a> {
 
     description: HashMap<String, String>,
     caps: HashMap<String, bool>,
+    ignore_cache: bool,
 }
 
 impl<'a> SequenceOperation<'a> {
@@ -26,6 +27,7 @@ impl<'a> SequenceOperation<'a> {
 
             caps,
             description: Default::default(),
+            ignore_cache: false,
         }
     }
 
@@ -54,6 +56,11 @@ impl<'a> OperationBuilder for SequenceOperation<'a> {
         self.description
             .insert("llb.customname".into(), name.into());
 
+        self
+    }
+
+    fn ignore_cache(mut self, ignore: bool) -> Self {
+        self.ignore_cache = ignore;
         self
     }
 }
@@ -88,6 +95,7 @@ impl<'a> Operation for SequenceOperation<'a> {
         let metadata = pb::OpMetadata {
             description: self.description.clone(),
             caps: self.caps.clone(),
+            ignore_cache: self.ignore_cache,
 
             ..Default::default()
         };

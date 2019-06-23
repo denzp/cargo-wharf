@@ -1,4 +1,6 @@
-use failure::{bail, format_err, Error};
+use std::path::PathBuf;
+
+use failure::{bail, format_err, Error, ResultExt};
 use futures::compat::*;
 use log::*;
 use tokio::executor::DefaultExecutor;
@@ -9,10 +11,15 @@ use tower_h2::client::Connection;
 
 use buildkit_proto::google::rpc::Status;
 use buildkit_proto::moby::buildkit::v1::frontend::{
-    client::LlbBridge, result::Result as RefResult, Result as Output, ReturnRequest, SolveRequest,
+    client, result::Result as RefResult, ReadFileRequest, Result as Output, ReturnRequest,
+    SolveRequest,
 };
 
-use super::{OutputRef, StdioSocket};
+pub use buildkit_proto::moby::buildkit::v1::frontend::FileRange;
+
+use super::error::ErrorCode;
+use super::stdio::StdioSocket;
+use super::utils::OutputRef;
 use crate::ops::Terminal;
 
 type BridgeConnection = tower_request_modifier::RequestModifier<
@@ -20,14 +27,15 @@ type BridgeConnection = tower_request_modifier::RequestModifier<
     BoxBody,
 >;
 
+#[derive(Clone)]
 pub struct Bridge {
-    client: LlbBridge<BridgeConnection>,
+    client: client::LlbBridge<BridgeConnection>,
 }
 
 impl Bridge {
     pub(crate) fn new(client: BridgeConnection) -> Self {
         Self {
-            client: LlbBridge::new(client),
+            client: client::LlbBridge::new(client),
         }
     }
 
@@ -46,7 +54,8 @@ impl Bridge {
             self.client
                 .solve(Request::new(request))
                 .compat()
-                .await?
+                .await
+                .context("Unable to solve the graph")?
                 .into_inner()
                 .result
                 .ok_or_else(|| format_err!("Unable to extract solve result"))?
@@ -66,6 +75,37 @@ impl Bridge {
         }
     }
 
+    pub async fn read_file<'a, 'b: 'a, P>(
+        &'a mut self,
+        layer: &'b OutputRef,
+        path: P,
+        range: Option<FileRange>,
+    ) -> Result<Vec<u8>, Error>
+    where
+        P: Into<PathBuf>,
+    {
+        let file_path = path.into().display().to_string();
+        debug!("requesting a file contents: {:#?}", file_path);
+
+        let request = ReadFileRequest {
+            r#ref: layer.0.clone(),
+            file_path,
+            range,
+        };
+
+        let response = {
+            self.client
+                .read_file(Request::new(request))
+                .compat()
+                .await
+                .context("Unable to read the file")?
+                .into_inner()
+                .data
+        };
+
+        Ok(response)
+    }
+
     pub(crate) async fn finish_with_success(mut self, output: OutputRef) -> Result<(), Error> {
         let request = ReturnRequest {
             error: None,
@@ -78,17 +118,23 @@ impl Bridge {
         debug!("sending a success result: {:#?}", request);
         self.client.r#return(Request::new(request)).compat().await?;
 
+        // TODO: gracefully shutdown the HTTP/2 connection
+
         Ok(())
     }
 
-    pub(crate) async fn finish_with_error<S>(mut self, code: i32, message: S) -> Result<(), Error>
+    pub(crate) async fn finish_with_error<S>(
+        mut self,
+        code: ErrorCode,
+        message: S,
+    ) -> Result<(), Error>
     where
         S: Into<String>,
     {
         let request = ReturnRequest {
             result: None,
             error: Some(Status {
-                code,
+                code: code as i32,
                 message: message.into(),
                 details: vec![],
             }),
@@ -96,6 +142,8 @@ impl Bridge {
 
         debug!("sending an error result: {:#?}", request);
         self.client.r#return(Request::new(request)).compat().await?;
+
+        // TODO: gracefully shutdown the HTTP/2 connection
 
         Ok(())
     }

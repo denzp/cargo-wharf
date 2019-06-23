@@ -4,7 +4,6 @@
 #![deny(clippy::all)]
 
 // FIXME: get rid of the unwraps
-// TODO: support cache disabling for each operation.
 
 mod serialization;
 

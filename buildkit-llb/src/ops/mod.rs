@@ -15,5 +15,6 @@ pub trait OperationBuilder {
     where
         S: Into<String>;
 
-    // TODO: implement cache ignoring
+    /// Sets caching behavior.
+    fn ignore_cache(self, ignore: bool) -> Self;
 }

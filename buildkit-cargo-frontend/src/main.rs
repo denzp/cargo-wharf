@@ -2,8 +2,10 @@
 #![warn(clippy::all)]
 #![feature(async_await, existential_type)]
 
+use std::path::PathBuf;
+
 use env_logger::Env;
-use failure::{Error, ResultExt};
+use failure::{bail, Error, ResultExt};
 use futures::prelude::*;
 use log::*;
 
@@ -13,6 +15,10 @@ use buildkit_llb::prelude::*;
 #[runtime::main(runtime_tokio::Tokio)]
 async fn main() {
     env_logger::init_from_env(Env::default().filter_or("RUST_LOG", "info,buildkit=debug"));
+
+    for var in std::env::vars() {
+        info!("env var: {:?}", var);
+    }
 
     if let Err(error) = run_frontend(CargoFrontend).await {
         error!("{}", error);
@@ -33,38 +39,56 @@ impl Frontend for CargoFrontend {
     fn run(self, mut bridge: Bridge) -> Self::RunFuture {
         async move {
             let builder_image = {
-                Source::image("library/alpine:latest")
-                    .custom_name("Using alpine:latest as a builder")
+                Source::image("rustlang/rust:nightly")
+                    .custom_name("Using Nightly Rust as a builder")
             };
+
+            let context = {
+                Source::local("context")
+                    .custom_name("Using context")
+                    .add_exclude_pattern("**/target")
+            };
+
+            let cargo_home = "/usr/local/cargo";
 
             let command = {
                 Command::run("/bin/sh")
-                    .args(&["-c", "echo 'test string 5' > /out/file0"])
-                    .custom_name("create a dummy file")
-                    .mount(Mount::ReadOnlyLayer(builder_image.output(), "/"))
-                    .mount(Mount::Scratch(OutputIdx(0), "/out"))
+                    .args(&[
+                        "-c",
+                        "cargo build -Z unstable-options --build-plan --all-targets > /output/build-plan.json",
+                    ])
+                    .env("PATH", "/usr/local/cargo/bin")  // TODO: get it from Rust image config
+                    .env("RUSTUP_HOME", "/usr/local/rustup") // TODO: get it from Rust image config
+                    .env("CARGO_HOME", cargo_home) // TODO: get it from Rust image config
+                    .env("CARGO_TARGET_DIR", "/target")
+                    .cwd("/context")
+                    .mount(Mount::Layer(OutputIdx(0), builder_image.output(), "/"))
+                    .mount(Mount::ReadOnlyLayer(context.output(), "/context"))
+                    .mount(Mount::Scratch(OutputIdx(1), "/output"))
+                    .mount(Mount::SharedCache(PathBuf::from(cargo_home).join("git")))
+                    .mount(Mount::SharedCache(PathBuf::from(cargo_home).join("registry")))
+                    .custom_name("Making a build plan")
             };
 
-            let fs = {
-                FileSystem::sequence()
-                    .custom_name("do multiple file system manipulations")
-                    .append(
-                        FileSystem::copy()
-                            .from(LayerPath::Other(command.output(0), "/file0"))
-                            .to(OutputIdx(0), LayerPath::Other(command.output(0), "/file1")),
-                    )
-                    .append(
-                        FileSystem::copy()
-                            .from(LayerPath::Own(OwnOutputIdx(0), "/file0"))
-                            .to(OutputIdx(1), LayerPath::Own(OwnOutputIdx(0), "/file2")),
-                    )
+            let build_plan_layer = {
+                bridge
+                    .solve(Terminal::with(command.output(1)))
+                    .await
+                    .context("Unable to evaluate a build plan")
+                    .map_err(Error::from)?
             };
 
-            bridge
-                .solve(Terminal::with(fs.output(1)))
-                .await
-                .context("Crate build error")
-                .map_err(Error::from)
+            let build_plan = {
+                bridge
+                    .read_file(&build_plan_layer, "/build-plan.json", None)
+                    .await
+                    .context("Unable to read a build plan")
+                    .map_err(Error::from)?
+            };
+
+            info!("{}", String::from_utf8_lossy(&build_plan));
+
+            bail!("TBD");
         }
     }
 }

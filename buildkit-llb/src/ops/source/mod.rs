@@ -1,89 +1,34 @@
-use std::collections::HashMap;
+mod git;
+mod image;
+mod local;
 
-use buildkit_proto::pb::{self, op::Op, OpMetadata, SourceOp};
-
-use super::OperationBuilder;
-use crate::serialization::{Operation, Output, SerializedNode};
-use crate::utils::{OperationOutput, OutputIdx};
-
-#[derive(Debug)]
-enum SourceKind {
-    DockerImage(String),
-    GitRepo(String),
-}
+use self::git::GitSource;
+use self::image::ImageSource;
+use self::local::LocalSource;
 
 /// Provide an input for other operations. For example: `FROM` directive in Dockerfile.
 #[derive(Debug)]
-pub struct Source {
-    kind: SourceKind,
-    description: HashMap<String, String>,
-}
+pub struct Source;
 
 impl Source {
-    pub fn image<S>(name: S) -> Self
+    pub fn image<S>(name: S) -> ImageSource
     where
         S: Into<String>,
     {
-        Self {
-            kind: SourceKind::DockerImage(name.into()),
-            description: Default::default(),
-        }
+        ImageSource::new(name)
     }
 
-    pub fn git<S>(url: S) -> Self
+    pub fn git<S>(url: S) -> GitSource
     where
         S: Into<String>,
     {
-        Self {
-            kind: SourceKind::GitRepo(url.into()),
-            description: Default::default(),
-        }
+        GitSource::new(url)
     }
 
-    pub fn output(&self) -> OperationOutput {
-        OperationOutput(self, OutputIdx(0))
-    }
-}
-
-impl OperationBuilder for Source {
-    fn custom_name<S>(mut self, name: S) -> Self
+    pub fn local<S>(name: S) -> LocalSource
     where
         S: Into<String>,
     {
-        self.description
-            .insert("llb.customname".into(), name.into());
-
-        self
-    }
-}
-
-impl Operation for Source {
-    fn serialize(&self) -> Result<Output, ()> {
-        let head = pb::Op {
-            op: Some(Op::Source(match self.kind {
-                SourceKind::DockerImage(ref name) => SourceOp {
-                    identifier: format!("docker-image://docker.io/{}", name),
-                    attrs: Default::default(),
-                },
-
-                SourceKind::GitRepo(ref url) => SourceOp {
-                    identifier: format!("git://{}", url),
-                    attrs: Default::default(),
-                },
-            })),
-
-            ..Default::default()
-        };
-
-        let metadata = OpMetadata {
-            description: self.description.clone(),
-
-            ..Default::default()
-        };
-
-        Ok(Output {
-            head: SerializedNode::new(head, metadata),
-            tail: vec![],
-        })
+        LocalSource::new(name)
     }
 }

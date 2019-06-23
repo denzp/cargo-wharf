@@ -9,6 +9,7 @@ frontend = [
     "futures-preview",
     "libc",
     "mio",
+    "serde_json",
     "tokio",
     "tower-grpc",
     "tower-h2",
@@ -26,6 +27,7 @@ unzip3 = "1.0"
 
 libc = { version = "0.2", optional = true }
 mio = { version = "0.6", optional = true }
+serde_json = { version = "1.0", optional = true }
 tokio = { version ="0.1", optional = true }
 tower-grpc = { git = "https://github.com/tower-rs/tower-grpc", optional = true }
 tower-h2 = { git = "https://github.com/tower-rs/tower-h2", optional = true }

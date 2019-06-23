@@ -6,10 +6,12 @@ use tokio::executor::DefaultExecutor;
 use tower_h2::client::Connection;
 
 mod bridge;
+mod error;
 mod stdio;
 mod utils;
 
 pub use self::bridge::Bridge;
+pub use self::error::ErrorCode;
 pub use self::stdio::StdioSocket;
 pub use self::utils::{OutputRef, ToErrorString};
 
@@ -37,29 +39,29 @@ pub async fn run_frontend<F: Frontend>(frontend: F) -> Result<(), Error> {
             .unwrap()
     };
 
-    let client_bridge = Bridge::new(connection.clone());
-    let controlling_bridge = Bridge::new(connection);
+    let bridge = Bridge::new(connection);
 
     debug!("running a frontend entrypoint");
-    match frontend.run(client_bridge).await {
+    match frontend.run(bridge.clone()).await {
         Ok(output) => {
-            controlling_bridge
+            bridge
                 .finish_with_success(output)
                 .await
                 .context("Unable to send a success result")?;
         }
 
         Err(error) => {
-            // TODO: log full error here...
             error!("Frontend entrypoint failed: {}", error.to_error_string());
 
             // https://godoc.org/google.golang.org/grpc/codes#Code
-            controlling_bridge
-                .finish_with_error(2, error.to_string())
+            bridge
+                .finish_with_error(ErrorCode::Unknown, error.to_string())
                 .await
                 .context("Unable to send an error result")?;
         }
     }
+
+    // TODO: gracefully shutdown the HTTP/2 connection
 
     Ok(())
 }

@@ -2,7 +2,9 @@ use std::collections::HashMap;
 use std::iter::{empty, once};
 use std::path::{Path, PathBuf};
 
-use buildkit_proto::pb::{self, op::Op, ExecOp, Input, NetMode, OpMetadata, SecurityMode};
+use buildkit_proto::pb::{
+    self, op::Op, ExecOp, Input, MountType, NetMode, OpMetadata, SecurityMode,
+};
 use either::Either;
 use unzip3::Unzip3;
 
@@ -21,6 +23,7 @@ pub struct Command<'a> {
 
     description: HashMap<String, String>,
     caps: HashMap<String, bool>,
+    ignore_cache: bool,
 }
 
 impl<'a> Command<'a> {
@@ -34,6 +37,7 @@ impl<'a> Command<'a> {
 
             description: Default::default(),
             caps: Default::default(),
+            ignore_cache: false,
         }
     }
 
@@ -78,6 +82,11 @@ impl<'a> Command<'a> {
                 self.caps.insert("exec.mount.bind".into(), true);
                 self.caps.insert("exec.mount.selector".into(), true);
             }
+
+            Mount::SharedCache(..) => {
+                self.caps.insert("exec.mount.cache".into(), true);
+                self.caps.insert("exec.mount.cache.sharing".into(), true);
+            }
         }
 
         self.mounts.push(mount.into_owned());
@@ -101,6 +110,11 @@ impl<'a> OperationBuilder for Command<'a> {
 
         self
     }
+
+    fn ignore_cache(mut self, ignore: bool) -> Self {
+        self.ignore_cache = ignore;
+        self
+    }
 }
 
 impl<'a> Operation for Command<'a> {
@@ -117,6 +131,7 @@ impl<'a> Operation for Command<'a> {
                             dest: destination.to_string_lossy().into(),
                             output: -1,
                             readonly: true,
+                            mount_type: MountType::Bind as i32,
 
                             ..Default::default()
                         },
@@ -127,6 +142,7 @@ impl<'a> Operation for Command<'a> {
                             output: -1,
                             readonly: true,
                             selector: source.to_string_lossy().into(),
+                            mount_type: MountType::Bind as i32,
 
                             ..Default::default()
                         },
@@ -135,6 +151,7 @@ impl<'a> Operation for Command<'a> {
                             input: last_input_index,
                             dest: path.to_string_lossy().into(),
                             output: output.into(),
+                            mount_type: MountType::Bind as i32,
 
                             ..Default::default()
                         },
@@ -144,6 +161,27 @@ impl<'a> Operation for Command<'a> {
                                 input: -1,
                                 dest: path.to_string_lossy().into(),
                                 output: output.into(),
+                                mount_type: MountType::Bind as i32,
+
+                                ..Default::default()
+                            };
+
+                            return (Either::Right(empty()), mount, Either::Right(empty()));
+                        }
+
+                        Mount::SharedCache(path) => {
+                            use buildkit_proto::pb::{CacheOpt, CacheSharingOpt};
+
+                            let mount = pb::Mount {
+                                input: -1,
+                                dest: path.to_string_lossy().into(),
+                                output: -1,
+                                mount_type: MountType::Cache as i32,
+
+                                cache_opt: Some(CacheOpt {
+                                    id: path.display().to_string(),
+                                    sharing: CacheSharingOpt::Shared as i32,
+                                }),
 
                                 ..Default::default()
                             };
@@ -157,7 +195,11 @@ impl<'a> Operation for Command<'a> {
                         Mount::ReadOnlySelector(input, ..) => input,
                         Mount::Layer(_, input, ..) => input,
 
-                        Mount::Scratch(_, _) => {
+                        Mount::SharedCache(..) => {
+                            unreachable!();
+                        }
+
+                        Mount::Scratch(..) => {
                             unreachable!();
                         }
                     };
@@ -195,6 +237,7 @@ impl<'a> Operation for Command<'a> {
         let metadata = OpMetadata {
             description: self.description.clone(),
             caps: self.caps.clone(),
+            ignore_cache: self.ignore_cache,
 
             ..Default::default()
         };
