@@ -15,7 +15,7 @@ use crate::ops::OperationBuilder;
 use crate::serialization::{Operation, Output, SerializedNode};
 use crate::utils::{OperationOutput, OutputIdx};
 
-/// Command execution operation. This is what a Dockerfile's `RUN` directive being translated to.
+/// Command execution operation. This is what a Dockerfile's `RUN` directive is translated to.
 #[derive(Debug)]
 pub struct Command<'a> {
     context: Context,

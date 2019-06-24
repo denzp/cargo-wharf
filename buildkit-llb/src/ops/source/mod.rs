@@ -2,9 +2,9 @@ mod git;
 mod image;
 mod local;
 
-use self::git::GitSource;
-use self::image::ImageSource;
-use self::local::LocalSource;
+pub use self::git::GitSource;
+pub use self::image::ImageSource;
+pub use self::local::LocalSource;
 
 /// Provide an input for other operations. For example: `FROM` directive in Dockerfile.
 #[derive(Debug)]

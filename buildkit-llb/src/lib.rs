@@ -18,6 +18,8 @@ pub mod frontend;
 
 /// Convenient re-export of a commonly used things.
 pub mod prelude {
+    pub use crate::ops::exec::Mount;
+    pub use crate::ops::fs::LayerPath;
     pub use crate::ops::*;
     pub use crate::utils::{OutputIdx, OwnOutputIdx};
 }

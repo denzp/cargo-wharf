@@ -1,8 +1,7 @@
-#![deny(warnings)]
 #![warn(clippy::all)]
+#![allow(clippy::needless_lifetimes, dead_code)]
+#![deny(warnings)]
 #![feature(async_await, existential_type)]
-
-use std::path::PathBuf;
 
 use env_logger::Env;
 use failure::{bail, Error, ResultExt};
@@ -11,6 +10,17 @@ use log::*;
 
 use buildkit_llb::frontend::{run_frontend, Bridge, Frontend, OutputRef};
 use buildkit_llb::prelude::*;
+
+mod graph;
+mod image;
+mod plan;
+
+const CONTEXT_PATH: &str = "/context";
+const TARGET_PATH: &str = "/target";
+
+use crate::graph::BuildGraph;
+use crate::image::RustDockerImage;
+use crate::plan::RawBuildPlan;
 
 #[runtime::main(runtime_tokio::Tokio)]
 async fn main() {
@@ -39,55 +49,19 @@ impl Frontend for CargoFrontend {
     fn run(self, mut bridge: Bridge) -> Self::RunFuture {
         async move {
             let builder_image = {
-                Source::image("rustlang/rust:nightly")
-                    .custom_name("Using Nightly Rust as a builder")
-            };
-
-            let context = {
-                Source::local("context")
-                    .custom_name("Using context")
-                    .add_exclude_pattern("**/target")
-            };
-
-            let cargo_home = "/usr/local/cargo";
-
-            let command = {
-                Command::run("/bin/sh")
-                    .args(&[
-                        "-c",
-                        "cargo build -Z unstable-options --build-plan --all-targets > /output/build-plan.json",
-                    ])
-                    .env("PATH", "/usr/local/cargo/bin")  // TODO: get it from Rust image config
-                    .env("RUSTUP_HOME", "/usr/local/rustup") // TODO: get it from Rust image config
-                    .env("CARGO_HOME", cargo_home) // TODO: get it from Rust image config
-                    .env("CARGO_TARGET_DIR", "/target")
-                    .cwd("/context")
-                    .mount(Mount::Layer(OutputIdx(0), builder_image.output(), "/"))
-                    .mount(Mount::ReadOnlyLayer(context.output(), "/context"))
-                    .mount(Mount::Scratch(OutputIdx(1), "/output"))
-                    .mount(Mount::SharedCache(PathBuf::from(cargo_home).join("git")))
-                    .mount(Mount::SharedCache(PathBuf::from(cargo_home).join("registry")))
-                    .custom_name("Making a build plan")
-            };
-
-            let build_plan_layer = {
-                bridge
-                    .solve(Terminal::with(command.output(1)))
+                RustDockerImage::analyse(&mut bridge, Source::image("rustlang/rust:nightly"))
                     .await
-                    .context("Unable to evaluate a build plan")
-                    .map_err(Error::from)?
+                    .context("Unable to analyse Rust builder image")?
             };
 
-            let build_plan = {
-                bridge
-                    .read_file(&build_plan_layer, "/build-plan.json", None)
+            let graph: BuildGraph = {
+                RawBuildPlan::evaluate(&mut bridge, &builder_image)
                     .await
-                    .context("Unable to read a build plan")
-                    .map_err(Error::from)?
+                    .context("Unable to evaluate the Cargo build plan")?
+                    .into()
             };
 
-            info!("{}", String::from_utf8_lossy(&build_plan));
-
+            info!("{:#?}", graph);
             bail!("TBD");
         }
     }
