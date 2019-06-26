@@ -2,7 +2,7 @@
 members = [
     #"cargo-wharf",
     #"cargo-container-tools",
+    "cargo-buildkit-frontend",
     "buildkit-proto",
     "buildkit-llb",
-    "buildkit-cargo-frontend",
 ]

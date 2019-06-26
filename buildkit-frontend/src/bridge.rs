@@ -15,12 +15,12 @@ use buildkit_proto::moby::buildkit::v1::frontend::{
     SolveRequest,
 };
 
+pub use buildkit_llb::ops::Terminal;
 pub use buildkit_proto::moby::buildkit::v1::frontend::FileRange;
 
 use super::error::ErrorCode;
 use super::stdio::StdioSocket;
 use super::utils::OutputRef;
-use crate::ops::Terminal;
 
 type BridgeConnection = tower_request_modifier::RequestModifier<
     Connection<StdioSocket, DefaultExecutor, BoxBody>,

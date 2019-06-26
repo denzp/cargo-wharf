@@ -1,3 +1,5 @@
+#![feature(async_await)]
+
 use failure::{Error, ResultExt};
 use futures::compat::*;
 use futures::prelude::*;

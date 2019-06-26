@@ -1,0 +1,26 @@
+[package]
+name = "buildkit-frontend"
+version = "0.1.0"
+authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+failure = "0.1"
+libc = "0.2"
+log = "0.4"
+mio =  "0.6"
+tokio = "0.1"
+
+tower-grpc = { git = "https://github.com/tower-rs/tower-grpc" }
+tower-h2 = { git = "https://github.com/tower-rs/tower-h2" }
+tower-request-modifier = { git = "https://github.com/tower-rs/tower-http" }
+
+[dependencies.futures-preview]
+version = "0.3.0-alpha.16"
+features = ["compat"]
+
+[dependencies.buildkit-proto]
+path = "../buildkit-proto"
+
+[dependencies.buildkit-llb]
+path = "../buildkit-llb"

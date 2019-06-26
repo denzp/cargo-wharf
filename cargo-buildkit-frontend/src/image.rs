@@ -1,9 +1,10 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use buildkit_llb::frontend::Bridge;
-use buildkit_llb::ops::{source::ImageSource, Command};
 use failure::Error;
+
+use buildkit_frontend::Bridge;
+use buildkit_llb::ops::{source::ImageSource, Command};
 
 use crate::TARGET_PATH;
 

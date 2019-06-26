@@ -1,11 +1,12 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use buildkit_llb::frontend::Bridge;
-use buildkit_llb::prelude::*;
 use failure::{Error, ResultExt};
 use semver::Version;
 use serde::Deserialize;
+
+use buildkit_frontend::Bridge;
+use buildkit_llb::prelude::*;
 
 use crate::image::RustDockerImage;
 use crate::CONTEXT_PATH;

@@ -1,5 +1,4 @@
 #![feature(existential_type)]
-#![cfg_attr(feature = "frontend", feature(async_await))]
 #![deny(warnings)]
 #![deny(clippy::all)]
 
@@ -12,9 +11,6 @@ pub mod ops;
 
 /// Various helpers and types.
 pub mod utils;
-
-#[cfg(feature = "frontend")]
-pub mod frontend;
 
 /// Convenient re-export of a commonly used things.
 pub mod prelude {

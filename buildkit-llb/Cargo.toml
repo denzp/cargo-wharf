@@ -4,39 +4,15 @@ version = "0.1.0"
 authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 
-[features]
-frontend = [
-    "futures-preview",
-    "libc",
-    "mio",
-    "serde_json",
-    "tokio",
-    "tower-grpc",
-    "tower-h2",
-    "tower-request-modifier",
-]
-
 [dependencies]
 either = "1.5"
 failure = "0.1"
 log = "0.4"
 prost = "0.5"
 prost-types = "0.5"
+serde_json = "1.0"
 sha2 = "0.8"
 unzip3 = "1.0"
-
-libc = { version = "0.2", optional = true }
-mio = { version = "0.6", optional = true }
-serde_json = { version = "1.0", optional = true }
-tokio = { version ="0.1", optional = true }
-tower-grpc = { git = "https://github.com/tower-rs/tower-grpc", optional = true }
-tower-h2 = { git = "https://github.com/tower-rs/tower-h2", optional = true }
-tower-request-modifier = { git = "https://github.com/tower-rs/tower-http", optional = true }
-
-[dependencies.futures-preview]
-version = "0.3.0-alpha.16"
-features = ["compat"]
-optional = true
 
 [dependencies.buildkit-proto]
 path = "../buildkit-proto"

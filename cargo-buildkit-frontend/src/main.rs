@@ -8,7 +8,7 @@ use failure::{bail, Error, ResultExt};
 use futures::prelude::*;
 use log::*;
 
-use buildkit_llb::frontend::{run_frontend, Bridge, Frontend, OutputRef};
+use buildkit_frontend::{run_frontend, Bridge, Frontend, OutputRef};
 use buildkit_llb::prelude::*;
 
 mod graph;
