@@ -9,7 +9,7 @@ use either::Either;
 use super::path::{LayerPath, UnsetPath};
 use super::FileOperation;
 
-use crate::serialization::SerializedNode;
+use crate::serialization::{SerializationResult, SerializedNode};
 use crate::utils::OutputIdx;
 
 #[derive(Debug)]
@@ -120,41 +120,51 @@ impl<'a> FileOperation for OpWithDestination<'a> {
         self.destination.0.into()
     }
 
-    fn serialize_inputs(&self) -> Result<(Vec<pb::Input>, Vec<SerializedNode>), ()> {
-        let (mut inputs, from_tail_iter) = if let LayerPath::Other(ref op, ..) = self.source {
-            let serialized_from = op.0.serialize()?;
-
-            let inputs = vec![pb::Input {
-                digest: serialized_from.head.digest.clone(),
-                index: op.1.into(),
-            }];
-
-            (inputs, Either::Left(serialized_from.into_iter()))
-        } else {
-            (vec![], Either::Right(empty()))
-        };
-
-        let to_tail_iter = if let LayerPath::Other(ref op, ..) = self.destination.1 {
-            let serialized_to = op.0.serialize()?;
-
-            inputs.push(pb::Input {
-                digest: serialized_to.head.digest.clone(),
-                index: op.1.into(),
-            });
-
-            Either::Left(serialized_to.into_iter())
+    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>> {
+        let from_tail_iter = if let LayerPath::Other(ref op, ..) = self.source {
+            Either::Left(op.operation().serialize().unwrap().into_iter())
         } else {
             Either::Right(empty())
         };
 
-        Ok((inputs, from_tail_iter.chain(to_tail_iter).collect()))
+        let to_tail_iter = if let LayerPath::Other(ref op, ..) = self.destination.1 {
+            Either::Left(op.operation().serialize().unwrap().into_iter())
+        } else {
+            Either::Right(empty())
+        };
+
+        Ok(from_tail_iter.chain(to_tail_iter).collect())
+    }
+
+    fn serialize_inputs(&self) -> SerializationResult<Vec<pb::Input>> {
+        let mut inputs = if let LayerPath::Other(ref op, ..) = self.source {
+            let serialized_from_head = op.operation().serialize_head()?;
+
+            vec![pb::Input {
+                digest: serialized_from_head.digest,
+                index: op.output().into(),
+            }]
+        } else {
+            vec![]
+        };
+
+        if let LayerPath::Other(ref op, ..) = self.destination.1 {
+            let serialized_to_head = op.operation().serialize_head()?;
+
+            inputs.push(pb::Input {
+                digest: serialized_to_head.digest,
+                index: op.output().into(),
+            });
+        }
+
+        Ok(inputs)
     }
 
     fn serialize_action(
         &self,
         inputs_count: usize,
         inputs_offset: usize,
-    ) -> Result<pb::FileAction, ()> {
+    ) -> SerializationResult<pb::FileAction> {
         let (src_idx, src_offset, src) = match self.source {
             LayerPath::Scratch(ref path) => (-1, 0, path.to_string_lossy().into()),
 

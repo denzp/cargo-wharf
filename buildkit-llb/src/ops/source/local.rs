@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use buildkit_proto::pb::{self, op::Op, OpMetadata, SourceOp};
 
-use crate::ops::OperationBuilder;
-use crate::serialization::{Operation, Output, SerializedNode};
+use crate::ops::{OperationBuilder, SingleBorrowedOutputOperation, SingleOwnedOutputOperation};
+use crate::serialization::{Operation, SerializationResult, SerializedNode};
 use crate::utils::{OperationOutput, OutputIdx};
 
 #[derive(Default, Debug)]
@@ -46,13 +47,21 @@ impl LocalSource {
         self.exclude.push(exclude.into());
         self
     }
+}
 
-    pub fn output(&self) -> OperationOutput {
-        OperationOutput(self, OutputIdx(0))
+impl<'a> SingleBorrowedOutputOperation<'a> for LocalSource {
+    fn output(&'a self) -> OperationOutput<'a> {
+        OperationOutput::Borrowed(self, OutputIdx(0))
     }
 }
 
-impl OperationBuilder for LocalSource {
+impl<'a> SingleOwnedOutputOperation<'static> for Arc<LocalSource> {
+    fn output(&self) -> OperationOutput<'static> {
+        OperationOutput::Owned(self.clone(), OutputIdx(0))
+    }
+}
+
+impl OperationBuilder<'static> for LocalSource {
     fn custom_name<S>(mut self, name: S) -> Self
     where
         S: Into<String>,
@@ -70,7 +79,7 @@ impl OperationBuilder for LocalSource {
 }
 
 impl Operation for LocalSource {
-    fn serialize(&self) -> Result<Output, ()> {
+    fn serialize_head(&self) -> SerializationResult<SerializedNode> {
         let mut attrs = HashMap::default();
 
         if !self.exclude.is_empty() {
@@ -103,9 +112,10 @@ impl Operation for LocalSource {
             ..Default::default()
         };
 
-        Ok(Output {
-            head: SerializedNode::new(head, metadata),
-            tail: vec![],
-        })
+        Ok(SerializedNode::new(head, metadata))
+    }
+
+    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>> {
+        Ok(Vec::with_capacity(0))
     }
 }

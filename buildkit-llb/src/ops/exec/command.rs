@@ -1,22 +1,22 @@
 use std::collections::HashMap;
 use std::iter::{empty, once};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use buildkit_proto::pb::{
     self, op::Op, ExecOp, Input, MountType, NetMode, OpMetadata, SecurityMode,
 };
 use either::Either;
-use unzip3::Unzip3;
 
 use super::context::Context;
 use super::mount::Mount;
 
-use crate::ops::OperationBuilder;
-use crate::serialization::{Operation, Output, SerializedNode};
+use crate::ops::{MultiBorrowedOutputOperation, MultiOwnedOutputOperation, OperationBuilder};
+use crate::serialization::{Operation, SerializationResult, SerializedNode};
 use crate::utils::{OperationOutput, OutputIdx};
 
 /// Command execution operation. This is what a Dockerfile's `RUN` directive is translated to.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Command<'a> {
     context: Context,
     mounts: Vec<Mount<'a, PathBuf>>,
@@ -61,6 +61,20 @@ impl<'a> Command<'a> {
         self
     }
 
+    pub fn env_iter<I, S, Q>(mut self, iter: I) -> Self
+    where
+        I: IntoIterator<Item = (S, Q)>,
+        S: AsRef<str>,
+        Q: AsRef<str>,
+    {
+        for (name, value) in iter.into_iter() {
+            let env = format!("{}={}", name.as_ref(), value.as_ref());
+            self.context.env.push(env);
+        }
+
+        self
+    }
+
     pub fn cwd<P>(mut self, path: P) -> Self
     where
         P: Into<PathBuf>,
@@ -92,15 +106,23 @@ impl<'a> Command<'a> {
         self.mounts.push(mount.into_owned());
         self
     }
+}
 
-    pub fn output(&self, index: u32) -> OperationOutput {
+impl<'a, 'b: 'a> MultiBorrowedOutputOperation<'b> for Command<'b> {
+    fn output(&'b self, index: u32) -> OperationOutput<'b> {
         // TODO: check if the requested index available.
-
-        OperationOutput(self, OutputIdx(index))
+        OperationOutput::Borrowed(self, OutputIdx(index))
     }
 }
 
-impl<'a> OperationBuilder for Command<'a> {
+impl<'a> MultiOwnedOutputOperation<'a> for Arc<Command<'a>> {
+    fn output(&self, index: u32) -> OperationOutput<'a> {
+        // TODO: check if the requested index available.
+        OperationOutput::Owned(self.clone(), OutputIdx(index))
+    }
+}
+
+impl<'a> OperationBuilder<'a> for Command<'a> {
     fn custom_name<S>(mut self, name: S) -> Self
     where
         S: Into<String>,
@@ -118,8 +140,29 @@ impl<'a> OperationBuilder for Command<'a> {
 }
 
 impl<'a> Operation for Command<'a> {
-    fn serialize(&self) -> Result<Output, ()> {
-        let (inputs, mounts, tails): (Vec<_>, Vec<_>, Vec<_>) = {
+    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>> {
+        Ok(self
+            .mounts
+            .iter()
+            .map(|mount| {
+                let operation = match mount {
+                    Mount::ReadOnlyLayer(input, ..) => input.operation(),
+                    Mount::ReadOnlySelector(input, ..) => input.operation(),
+                    Mount::Layer(_, input, ..) => input.operation(),
+
+                    Mount::SharedCache(..) | Mount::Scratch(..) => {
+                        return Either::Right(empty());
+                    }
+                };
+
+                Either::Left(operation.serialize().unwrap().into_iter())
+            })
+            .flatten()
+            .collect())
+    }
+
+    fn serialize_head(&self) -> SerializationResult<SerializedNode> {
+        let (inputs, mounts): (Vec<_>, Vec<_>) = {
             let mut last_input_index = 0;
 
             self.mounts
@@ -166,7 +209,7 @@ impl<'a> Operation for Command<'a> {
                                 ..Default::default()
                             };
 
-                            return (Either::Right(empty()), mount, Either::Right(empty()));
+                            return (Either::Right(empty()), mount);
                         }
 
                         Mount::SharedCache(path) => {
@@ -186,7 +229,7 @@ impl<'a> Operation for Command<'a> {
                                 ..Default::default()
                             };
 
-                            return (Either::Right(empty()), mount, Either::Right(empty()));
+                            return (Either::Right(empty()), mount);
                         }
                     };
 
@@ -204,21 +247,17 @@ impl<'a> Operation for Command<'a> {
                         }
                     };
 
-                    let serialized = input.0.serialize().unwrap();
+                    let serialized = input.operation().serialize().unwrap();
                     let input = Input {
                         digest: serialized.head.digest.clone(),
-                        index: input.1.into(),
+                        index: input.output().into(),
                     };
 
                     last_input_index += 1;
 
-                    (
-                        Either::Left(once(input)),
-                        inner_mount,
-                        Either::Left(serialized.into_iter()),
-                    )
+                    (Either::Left(once(input)), inner_mount)
                 })
-                .unzip3()
+                .unzip()
         };
 
         let head = pb::Op {
@@ -242,9 +281,6 @@ impl<'a> Operation for Command<'a> {
             ..Default::default()
         };
 
-        Ok(Output {
-            head: SerializedNode::new(head, metadata),
-            tail: tails.into_iter().flatten().collect(),
-        })
+        Ok(SerializedNode::new(head, metadata))
     }
 }

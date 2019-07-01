@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use buildkit_proto::pb::{self, Input};
 use prost::Message;
 
-use crate::serialization::{Output, SerializedNode};
+use crate::serialization::{Output, SerializationResult, SerializedNode};
 use crate::utils::OperationOutput;
 
 /// Final operation in the graph. Responsible for printing the complete LLB definition.
@@ -36,13 +36,13 @@ impl<'a> Terminal<'a> {
         writer.write_all(&bytes)
     }
 
-    fn serialize(&self) -> Result<Output, ()> {
-        let serialized_input = self.input.0.serialize()?;
+    fn serialize(&self) -> SerializationResult<Output> {
+        let serialized_input = self.input.operation().serialize()?;
 
         let head = pb::Op {
             inputs: vec![Input {
                 digest: serialized_input.head.digest.clone(),
-                index: self.input.1.into(),
+                index: self.input.output().into(),
             }],
 
             ..Default::default()

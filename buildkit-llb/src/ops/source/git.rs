@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use buildkit_proto::pb::{self, op::Op, OpMetadata, SourceOp};
 
-use crate::ops::OperationBuilder;
-use crate::serialization::{Operation, Output, SerializedNode};
+use crate::ops::{OperationBuilder, SingleBorrowedOutputOperation, SingleOwnedOutputOperation};
+use crate::serialization::{Operation, SerializationResult, SerializedNode};
 use crate::utils::{OperationOutput, OutputIdx};
 
 #[derive(Default, Debug)]
@@ -24,13 +25,21 @@ impl GitSource {
             ignore_cache: false,
         }
     }
+}
 
-    pub fn output(&self) -> OperationOutput {
-        OperationOutput(self, OutputIdx(0))
+impl<'a> SingleBorrowedOutputOperation<'a> for GitSource {
+    fn output(&'a self) -> OperationOutput<'a> {
+        OperationOutput::Borrowed(self, OutputIdx(0))
     }
 }
 
-impl OperationBuilder for GitSource {
+impl<'a> SingleOwnedOutputOperation<'static> for Arc<GitSource> {
+    fn output(&self) -> OperationOutput<'static> {
+        OperationOutput::Owned(self.clone(), OutputIdx(0))
+    }
+}
+
+impl OperationBuilder<'static> for GitSource {
     fn custom_name<S>(mut self, name: S) -> Self
     where
         S: Into<String>,
@@ -48,7 +57,7 @@ impl OperationBuilder for GitSource {
 }
 
 impl Operation for GitSource {
-    fn serialize(&self) -> Result<Output, ()> {
+    fn serialize_head(&self) -> SerializationResult<SerializedNode> {
         let head = pb::Op {
             op: Some(Op::Source(SourceOp {
                 identifier: format!("git://{}", self.url),
@@ -65,9 +74,10 @@ impl Operation for GitSource {
             ..Default::default()
         };
 
-        Ok(Output {
-            head: SerializedNode::new(head, metadata),
-            tail: vec![],
-        })
+        Ok(SerializedNode::new(head, metadata))
+    }
+
+    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>> {
+        Ok(Vec::with_capacity(0))
     }
 }

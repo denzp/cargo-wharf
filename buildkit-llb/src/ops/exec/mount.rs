@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::utils::{OperationOutput, OutputIdx};
 
 /// Operand of *command execution operation* that specifies how are input sources mounted.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Mount<'a, P: AsRef<Path>> {
     /// Read-only output of another operation.
     ReadOnlyLayer(OperationOutput<'a>, P),

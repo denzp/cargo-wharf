@@ -1,11 +1,12 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use buildkit_proto::pb::{self, op::Op};
 
 use super::FileOperation;
 
-use crate::ops::OperationBuilder;
-use crate::serialization::{Operation, Output, SerializedNode};
+use crate::ops::{MultiBorrowedOutputOperation, MultiOwnedOutputOperation, OperationBuilder};
+use crate::serialization::{Operation, SerializationResult, SerializedNode};
 use crate::utils::{OperationOutput, OutputIdx};
 
 #[derive(Debug)]
@@ -40,15 +41,23 @@ impl<'a> SequenceOperation<'a> {
         self.inner.push(Box::new(op));
         self
     }
+}
 
-    pub fn output(&self, index: u32) -> OperationOutput {
+impl<'a, 'b: 'a> MultiBorrowedOutputOperation<'b> for SequenceOperation<'b> {
+    fn output(&'b self, index: u32) -> OperationOutput<'b> {
         // TODO: check if the requested index available.
-
-        OperationOutput(self, OutputIdx(index))
+        OperationOutput::Borrowed(self, OutputIdx(index))
     }
 }
 
-impl<'a> OperationBuilder for SequenceOperation<'a> {
+impl<'a> MultiOwnedOutputOperation<'a> for Arc<SequenceOperation<'a>> {
+    fn output(&self, index: u32) -> OperationOutput<'a> {
+        // TODO: check if the requested index available.
+        OperationOutput::Owned(self.clone(), OutputIdx(index))
+    }
+}
+
+impl<'a> OperationBuilder<'a> for SequenceOperation<'a> {
     fn custom_name<S>(mut self, name: S) -> Self
     where
         S: Into<String>,
@@ -66,17 +75,27 @@ impl<'a> OperationBuilder for SequenceOperation<'a> {
 }
 
 impl<'a> Operation for SequenceOperation<'a> {
-    fn serialize(&self) -> Result<Output, ()> {
+    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>> {
+        let tail = {
+            self.inner
+                .iter()
+                .map(|op| op.serialize_tail().unwrap().into_iter())
+                .flatten()
+                .collect()
+        };
+
+        Ok(tail)
+    }
+
+    fn serialize_head(&self) -> SerializationResult<SerializedNode> {
         let mut inputs = vec![];
         let mut input_offsets = vec![];
-        let mut tail = vec![];
 
         for item in &self.inner {
-            let (mut inner_inputs, mut inner_tail) = item.serialize_inputs()?;
+            let mut inner_inputs = item.serialize_inputs()?;
 
             input_offsets.push(inputs.len());
             inputs.append(&mut inner_inputs);
-            tail.append(&mut inner_tail);
         }
 
         let mut actions = vec![];
@@ -100,9 +119,6 @@ impl<'a> Operation for SequenceOperation<'a> {
             ..Default::default()
         };
 
-        Ok(Output {
-            head: SerializedNode::new(head, metadata),
-            tail,
-        })
+        Ok(SerializedNode::new(head, metadata))
     }
 }

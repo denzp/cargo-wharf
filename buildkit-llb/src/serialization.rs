@@ -5,13 +5,15 @@ use buildkit_proto::pb;
 use prost::Message;
 use sha2::{Digest, Sha256};
 
-#[derive(Debug)]
+pub type SerializationResult<T> = Result<T, ()>;
+
+#[derive(Debug, Clone)]
 pub struct Output {
     pub head: SerializedNode,
     pub tail: Vec<SerializedNode>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct SerializedNode {
     pub bytes: Vec<u8>,
     pub digest: String,
@@ -19,7 +21,15 @@ pub struct SerializedNode {
 }
 
 pub trait Operation: Debug + Send + Sync {
-    fn serialize(&self) -> Result<Output, ()>;
+    fn serialize_head(&self) -> SerializationResult<SerializedNode>;
+    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>>;
+
+    fn serialize(&self) -> SerializationResult<Output> {
+        Ok(Output {
+            head: self.serialize_head()?,
+            tail: self.serialize_tail()?,
+        })
+    }
 }
 
 impl SerializedNode {
