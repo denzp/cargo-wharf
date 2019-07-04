@@ -1,38 +1,24 @@
-use std::fmt::Debug;
 use std::iter::once;
 
 use buildkit_proto::pb;
 use prost::Message;
 use sha2::{Digest, Sha256};
 
-pub type SerializationResult<T> = Result<T, ()>;
-
 #[derive(Debug, Clone)]
-pub struct Output {
-    pub head: SerializedNode,
-    pub tail: Vec<SerializedNode>,
+pub(crate) struct Output {
+    pub head: Node,
+    pub tail: Vec<Node>,
 }
 
+// TODO: make me `pub(crate)`
 #[derive(Debug, Default, Clone)]
-pub struct SerializedNode {
+pub struct Node {
     pub bytes: Vec<u8>,
     pub digest: String,
     pub metadata: pb::OpMetadata,
 }
 
-pub trait Operation: Debug + Send + Sync {
-    fn serialize_head(&self) -> SerializationResult<SerializedNode>;
-    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>>;
-
-    fn serialize(&self) -> SerializationResult<Output> {
-        Ok(Output {
-            head: self.serialize_head()?,
-            tail: self.serialize_tail()?,
-        })
-    }
-}
-
-impl SerializedNode {
+impl Node {
     pub fn new(message: pb::Op, metadata: pb::OpMetadata) -> Self {
         let mut hasher = Sha256::new();
         let mut bytes = Vec::new();
@@ -49,8 +35,8 @@ impl SerializedNode {
 }
 
 impl IntoIterator for Output {
-    type Item = SerializedNode;
-    existential type IntoIter: Iterator<Item = SerializedNode>;
+    type Item = Node;
+    existential type IntoIter: Iterator<Item = Node>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.tail.into_iter().chain(once(self.head))

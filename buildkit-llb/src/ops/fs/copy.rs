@@ -9,7 +9,7 @@ use either::Either;
 use super::path::{LayerPath, UnsetPath};
 use super::FileOperation;
 
-use crate::serialization::{SerializationResult, SerializedNode};
+use crate::serialization::{Context, Node, Result};
 use crate::utils::OutputIdx;
 
 #[derive(Debug)]
@@ -120,15 +120,15 @@ impl<'a> FileOperation for OpWithDestination<'a> {
         self.destination.0.into()
     }
 
-    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>> {
+    fn serialize_tail(&self, cx: &mut Context) -> Result<Vec<Node>> {
         let from_tail_iter = if let LayerPath::Other(ref op, ..) = self.source {
-            Either::Left(op.operation().serialize().unwrap().into_iter())
+            Either::Left(op.operation().serialize(cx).unwrap().into_iter())
         } else {
             Either::Right(empty())
         };
 
         let to_tail_iter = if let LayerPath::Other(ref op, ..) = self.destination.1 {
-            Either::Left(op.operation().serialize().unwrap().into_iter())
+            Either::Left(op.operation().serialize(cx).unwrap().into_iter())
         } else {
             Either::Right(empty())
         };
@@ -136,9 +136,9 @@ impl<'a> FileOperation for OpWithDestination<'a> {
         Ok(from_tail_iter.chain(to_tail_iter).collect())
     }
 
-    fn serialize_inputs(&self) -> SerializationResult<Vec<pb::Input>> {
+    fn serialize_inputs(&self, cx: &mut Context) -> Result<Vec<pb::Input>> {
         let mut inputs = if let LayerPath::Other(ref op, ..) = self.source {
-            let serialized_from_head = op.operation().serialize_head()?;
+            let serialized_from_head = op.operation().serialize_head_cached(cx)?;
 
             vec![pb::Input {
                 digest: serialized_from_head.digest,
@@ -149,7 +149,7 @@ impl<'a> FileOperation for OpWithDestination<'a> {
         };
 
         if let LayerPath::Other(ref op, ..) = self.destination.1 {
-            let serialized_to_head = op.operation().serialize_head()?;
+            let serialized_to_head = op.operation().serialize_head_cached(cx)?;
 
             inputs.push(pb::Input {
                 digest: serialized_to_head.digest,
@@ -164,7 +164,7 @@ impl<'a> FileOperation for OpWithDestination<'a> {
         &self,
         inputs_count: usize,
         inputs_offset: usize,
-    ) -> SerializationResult<pb::FileAction> {
+    ) -> Result<pb::FileAction> {
         let (src_idx, src_offset, src) = match self.source {
             LayerPath::Scratch(ref path) => (-1, 0, path.to_string_lossy().into()),
 

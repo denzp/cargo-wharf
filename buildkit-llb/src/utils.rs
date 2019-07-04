@@ -9,22 +9,41 @@ pub struct OutputIdx(pub u32);
 pub struct OwnOutputIdx(pub u32);
 
 #[derive(Debug, Clone)]
-pub enum OperationOutput<'a> {
+pub struct OperationOutput<'a> {
+    kind: OperationOutputKind<'a>,
+}
+
+#[derive(Debug, Clone)]
+enum OperationOutputKind<'a> {
     Owned(Arc<dyn Operation + 'a>, OutputIdx),
     Borrowed(&'a dyn Operation, OutputIdx),
 }
 
 impl<'a> OperationOutput<'a> {
-    pub fn operation(&self) -> &dyn Operation {
-        match self {
-            OperationOutput::Owned(op, ..) => op.as_ref(),
-            OperationOutput::Borrowed(op, ..) => *op,
+    pub(crate) fn owned(op: Arc<dyn Operation + 'a>, idx: OutputIdx) -> Self {
+        Self {
+            kind: OperationOutputKind::Owned(op, idx),
         }
     }
 
-    pub fn output(&self) -> OutputIdx {
-        match self {
-            OperationOutput::Owned(_, output) | OperationOutput::Borrowed(_, output) => *output,
+    pub(crate) fn borrowed(op: &'a dyn Operation, idx: OutputIdx) -> Self {
+        Self {
+            kind: OperationOutputKind::Borrowed(op, idx),
+        }
+    }
+
+    pub(crate) fn operation(&self) -> &dyn Operation {
+        match self.kind {
+            OperationOutputKind::Owned(ref op, ..) => op.as_ref(),
+            OperationOutputKind::Borrowed(ref op, ..) => *op,
+        }
+    }
+
+    pub(crate) fn output(&self) -> OutputIdx {
+        match self.kind {
+            OperationOutputKind::Owned(_, output) | OperationOutputKind::Borrowed(_, output) => {
+                output
+            }
         }
     }
 }

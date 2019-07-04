@@ -6,7 +6,7 @@ use buildkit_proto::pb;
 use super::path::LayerPath;
 use super::FileOperation;
 
-use crate::serialization::{SerializationResult, SerializedNode};
+use crate::serialization::{Context, Node, Result};
 use crate::utils::OutputIdx;
 
 #[derive(Debug)]
@@ -50,17 +50,19 @@ impl<'a> FileOperation for MakeDirOperation<'a> {
         self.output.into()
     }
 
-    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>> {
+    fn serialize_tail(&self, cx: &mut Context) -> Result<Vec<Node>> {
         if let LayerPath::Other(ref op, ..) = self.path {
-            op.operation().serialize().map(|r| r.into_iter().collect())
+            op.operation()
+                .serialize(cx)
+                .map(|r| r.into_iter().collect())
         } else {
             Ok(Vec::with_capacity(0))
         }
     }
 
-    fn serialize_inputs(&self) -> SerializationResult<Vec<pb::Input>> {
+    fn serialize_inputs(&self, cx: &mut Context) -> Result<Vec<pb::Input>> {
         if let LayerPath::Other(ref op, ..) = self.path {
-            let serialized_from_head = op.operation().serialize_head()?;
+            let serialized_from_head = op.operation().serialize_head_cached(cx)?;
 
             let inputs = vec![pb::Input {
                 digest: serialized_from_head.digest,
@@ -77,7 +79,7 @@ impl<'a> FileOperation for MakeDirOperation<'a> {
         &self,
         inputs_count: usize,
         inputs_offset: usize,
-    ) -> SerializationResult<pb::FileAction> {
+    ) -> Result<pb::FileAction> {
         let (src_idx, path) = match self.path {
             LayerPath::Scratch(ref path) => (-1, path.to_string_lossy().into()),
             LayerPath::Other(_, ref path) => (inputs_offset as i64, path.to_string_lossy().into()),

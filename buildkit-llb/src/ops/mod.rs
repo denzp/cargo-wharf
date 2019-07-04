@@ -10,7 +10,6 @@ pub use self::fs::FileSystem;
 pub use self::source::Source;
 pub use self::terminal::Terminal;
 
-use crate::serialization::Operation;
 use crate::utils::OperationOutput;
 
 pub trait MultiBorrowedOutputOperation<'a> {
@@ -41,7 +40,7 @@ pub trait OperationBuilder<'a> {
 
     fn ref_counted(self) -> Arc<Self>
     where
-        Self: Operation + Sized + 'a,
+        Self: Sized + 'a,
     {
         Arc::new(self)
     }

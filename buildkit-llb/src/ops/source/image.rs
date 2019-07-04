@@ -4,11 +4,12 @@ use std::sync::Arc;
 use buildkit_proto::pb::{self, op::Op, OpMetadata, SourceOp};
 
 use crate::ops::{OperationBuilder, SingleBorrowedOutputOperation, SingleOwnedOutputOperation};
-use crate::serialization::{Operation, SerializationResult, SerializedNode};
+use crate::serialization::{Context, Node, Operation, OperationId, Result};
 use crate::utils::{OperationOutput, OutputIdx};
 
 #[derive(Default, Debug)]
 pub struct ImageSource {
+    id: OperationId,
     name: String,
     description: HashMap<String, String>,
     ignore_cache: bool,
@@ -20,6 +21,7 @@ impl ImageSource {
         S: Into<String>,
     {
         Self {
+            id: OperationId::default(),
             name: name.into(),
             description: Default::default(),
             ignore_cache: false,
@@ -29,13 +31,13 @@ impl ImageSource {
 
 impl<'a> SingleBorrowedOutputOperation<'a> for ImageSource {
     fn output(&'a self) -> OperationOutput<'a> {
-        OperationOutput::Borrowed(self, OutputIdx(0))
+        OperationOutput::borrowed(self, OutputIdx(0))
     }
 }
 
 impl<'a> SingleOwnedOutputOperation<'static> for Arc<ImageSource> {
     fn output(&self) -> OperationOutput<'static> {
-        OperationOutput::Owned(self.clone(), OutputIdx(0))
+        OperationOutput::owned(self.clone(), OutputIdx(0))
     }
 }
 
@@ -57,7 +59,11 @@ impl OperationBuilder<'static> for ImageSource {
 }
 
 impl Operation for ImageSource {
-    fn serialize_head(&self) -> SerializationResult<SerializedNode> {
+    fn id(&self) -> &OperationId {
+        &self.id
+    }
+
+    fn serialize_head(&self, _: &mut Context) -> Result<Node> {
         let head = pb::Op {
             op: Some(Op::Source(SourceOp {
                 identifier: format!("docker-image://docker.io/{}", self.name),
@@ -74,10 +80,10 @@ impl Operation for ImageSource {
             ..Default::default()
         };
 
-        Ok(SerializedNode::new(head, metadata))
+        Ok(Node::new(head, metadata))
     }
 
-    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>> {
+    fn serialize_tail(&self, _: &mut Context) -> Result<Vec<Node>> {
         Ok(Vec::with_capacity(0))
     }
 }

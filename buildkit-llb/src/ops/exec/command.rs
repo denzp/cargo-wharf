@@ -12,12 +12,14 @@ use super::context::Context;
 use super::mount::Mount;
 
 use crate::ops::{MultiBorrowedOutputOperation, MultiOwnedOutputOperation, OperationBuilder};
-use crate::serialization::{Operation, SerializationResult, SerializedNode};
+use crate::serialization::{Context as SerializationCtx, Node, Operation, OperationId, Result};
 use crate::utils::{OperationOutput, OutputIdx};
 
 /// Command execution operation. This is what a Dockerfile's `RUN` directive is translated to.
 #[derive(Debug, Clone)]
 pub struct Command<'a> {
+    id: OperationId,
+
     context: Context,
     mounts: Vec<Mount<'a, PathBuf>>,
 
@@ -32,6 +34,8 @@ impl<'a> Command<'a> {
         S: Into<String>,
     {
         Self {
+            id: OperationId::default(),
+
             context: Context::new(name),
             mounts: vec![],
 
@@ -111,14 +115,14 @@ impl<'a> Command<'a> {
 impl<'a, 'b: 'a> MultiBorrowedOutputOperation<'b> for Command<'b> {
     fn output(&'b self, index: u32) -> OperationOutput<'b> {
         // TODO: check if the requested index available.
-        OperationOutput::Borrowed(self, OutputIdx(index))
+        OperationOutput::borrowed(self, OutputIdx(index))
     }
 }
 
 impl<'a> MultiOwnedOutputOperation<'a> for Arc<Command<'a>> {
     fn output(&self, index: u32) -> OperationOutput<'a> {
         // TODO: check if the requested index available.
-        OperationOutput::Owned(self.clone(), OutputIdx(index))
+        OperationOutput::owned(self.clone(), OutputIdx(index))
     }
 }
 
@@ -140,7 +144,11 @@ impl<'a> OperationBuilder<'a> for Command<'a> {
 }
 
 impl<'a> Operation for Command<'a> {
-    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>> {
+    fn id(&self) -> &OperationId {
+        &self.id
+    }
+
+    fn serialize_tail(&self, cx: &mut SerializationCtx) -> Result<Vec<Node>> {
         Ok(self
             .mounts
             .iter()
@@ -155,13 +163,13 @@ impl<'a> Operation for Command<'a> {
                     }
                 };
 
-                Either::Left(operation.serialize().unwrap().into_iter())
+                Either::Left(operation.serialize(cx).unwrap().into_iter())
             })
             .flatten()
             .collect())
     }
 
-    fn serialize_head(&self) -> SerializationResult<SerializedNode> {
+    fn serialize_head(&self, cx: &mut SerializationCtx) -> Result<Node> {
         let (inputs, mounts): (Vec<_>, Vec<_>) = {
             let mut last_input_index = 0;
 
@@ -247,7 +255,7 @@ impl<'a> Operation for Command<'a> {
                         }
                     };
 
-                    let serialized = input.operation().serialize().unwrap();
+                    let serialized = input.operation().serialize(cx).unwrap();
                     let input = Input {
                         digest: serialized.head.digest.clone(),
                         index: input.output().into(),
@@ -281,6 +289,6 @@ impl<'a> Operation for Command<'a> {
             ..Default::default()
         };
 
-        Ok(SerializedNode::new(head, metadata))
+        Ok(Node::new(head, metadata))
     }
 }

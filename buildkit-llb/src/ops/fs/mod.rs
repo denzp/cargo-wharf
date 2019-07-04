@@ -3,7 +3,7 @@ use std::path::Path;
 
 use buildkit_proto::pb;
 
-use crate::serialization::{SerializationResult, SerializedNode};
+use crate::serialization::{Context, Node, Result};
 use crate::utils::OutputIdx;
 
 mod copy;
@@ -26,7 +26,7 @@ impl FileSystem {
         copy::CopyOperation::new()
     }
 
-    pub fn mkdir<'a, P>(output: OutputIdx, layer: LayerPath<'a, P>) -> mkdir::MakeDirOperation<'a>
+    pub fn mkdir<P>(output: OutputIdx, layer: LayerPath<P>) -> mkdir::MakeDirOperation
     where
         P: AsRef<Path>,
     {
@@ -34,14 +34,13 @@ impl FileSystem {
     }
 }
 
+// TODO: make me `pub(crate)`
 pub trait FileOperation: Debug + Send + Sync {
     fn output(&self) -> i64;
 
-    fn serialize_tail(&self) -> SerializationResult<Vec<SerializedNode>>;
-    fn serialize_inputs(&self) -> SerializationResult<Vec<pb::Input>>;
-    fn serialize_action(
-        &self,
-        inputs_count: usize,
-        inputs_offset: usize,
-    ) -> SerializationResult<pb::FileAction>;
+    fn serialize_tail(&self, cx: &mut Context) -> Result<Vec<Node>>;
+    fn serialize_inputs(&self, cx: &mut Context) -> Result<Vec<pb::Input>>;
+
+    fn serialize_action(&self, inputs_count: usize, inputs_offset: usize)
+        -> Result<pb::FileAction>;
 }
