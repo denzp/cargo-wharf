@@ -69,3 +69,96 @@ impl Into<i64> for &OwnOutputIdx {
         self.0.into()
     }
 }
+
+#[cfg(test)]
+pub mod test {
+    #[macro_export]
+    macro_rules! check_op {
+        ($op:expr, $(|$name:ident| $value:expr,)*) => ($crate::check_op!($op, $(|$name| $value),*));
+        ($op:expr, $(|$name:ident| $value:expr),*) => {{
+            use crate::serialization::{Context, Operation};
+            let serialized = $op.serialize(&mut Context::default()).unwrap();
+
+            $(crate::check_op_property!(serialized, $name, $value));*
+        }};
+    }
+
+    #[macro_export]
+    macro_rules! check_op_property {
+        ($serialized:expr, op, $value:expr) => {{
+            use buildkit_proto::pb;
+            use prost::Message;
+
+            assert_eq!(
+                pb::Op::decode(&$serialized.head.bytes).unwrap().op,
+                Some($value),
+            );
+        }};
+
+        ($serialized:expr, inputs, $value:expr) => {{
+            use buildkit_proto::pb;
+            use prost::Message;
+
+            assert_eq!(
+                pb::Op::decode(&$serialized.head.bytes)
+                    .unwrap()
+                    .inputs
+                    .into_iter()
+                    .map(|input| (input.digest, input.index))
+                    .collect::<Vec<_>>(),
+                $value
+                    .into_iter()
+                    .map(|input: (&str, i64)| (String::from(input.0), input.1))
+                    .collect::<Vec<_>>()
+            );
+        }};
+
+        ($serialized:expr, tail, $value:expr) => {
+            assert_eq!(
+                $serialized
+                    .tail
+                    .into_iter()
+                    .map(|item| item.digest)
+                    .collect::<Vec<_>>(),
+                crate::utils::test::to_vec($value),
+            );
+        };
+
+        ($serialized:expr, caps, $value:expr) => {{
+            let mut caps = $serialized
+                .head
+                .metadata
+                .caps
+                .into_iter()
+                .map(|pair| pair.0)
+                .collect::<Vec<_>>();
+
+            caps.sort();
+            assert_eq!(caps, crate::utils::test::to_vec($value),);
+        }};
+
+        ($serialized:expr, description, $value:expr) => {
+            assert_eq!(
+                $serialized.head.metadata.description,
+                crate::utils::test::to_map($value),
+            );
+        };
+
+        ($serialized:expr, digest, $value:expr) => {
+            assert_eq!($serialized.head.digest, $value);
+        };
+    }
+
+    use std::collections::HashMap;
+
+    pub fn to_map(pairs: Vec<(&str, &str)>) -> HashMap<String, String> {
+        pairs
+            .into_iter()
+            .map(|(key, value): (&str, &str)| (key.into(), value.into()))
+            .collect()
+    }
+
+    pub fn to_vec(items: Vec<&str>) -> Vec<String> {
+        items.into_iter().map(String::from).collect()
+    }
+}

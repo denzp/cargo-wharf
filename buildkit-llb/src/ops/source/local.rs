@@ -125,3 +125,82 @@ impl Operation for LocalSource {
         Ok(Vec::with_capacity(0))
     }
 }
+
+#[test]
+fn serialization() {
+    crate::check_op!(
+        LocalSource::new("context"),
+        |digest| { "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702" },
+        |description| { vec![] },
+        |caps| { vec![] },
+        |tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "local://context".into(),
+                attrs: Default::default(),
+            })
+        },
+    );
+
+    crate::check_op!(
+        LocalSource::new("context").custom_name("context custom name"),
+        |digest| { "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702" },
+        |description| { vec![("llb.customname", "context custom name")] },
+        |caps| { vec![] },
+        |tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "local://context".into(),
+                attrs: Default::default(),
+            })
+        },
+    );
+
+    crate::check_op!(
+        {
+            LocalSource::new("context")
+                .custom_name("context custom name")
+                .add_exclude_pattern("**/target")
+                .add_exclude_pattern("Dockerfile")
+        },
+        |digest| { "sha256:f6962b8bb1659c63a2c2c3e2a7ccf0326c87530dd70c514343f127e4c20460c4" },
+        |description| { vec![("llb.customname", "context custom name")] },
+        |caps| { vec![] },
+        |tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "local://context".into(),
+                attrs: crate::utils::test::to_map(vec![(
+                    "local.excludepatterns",
+                    r#"["**/target","Dockerfile"]"#,
+                )]),
+            })
+        },
+    );
+
+    crate::check_op!(
+        {
+            LocalSource::new("context")
+                .custom_name("context custom name")
+                .add_include_pattern("Cargo.toml")
+                .add_include_pattern("inner/Cargo.toml")
+        },
+        |digest| { "sha256:a7e628333262b810572f83193bbf8554e688abfb51d44ac30bdad7fa425f3839" },
+        |description| { vec![("llb.customname", "context custom name")] },
+        |caps| { vec![] },
+        |tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "local://context".into(),
+                attrs: crate::utils::test::to_map(vec![(
+                    "local.includepattern",
+                    r#"["Cargo.toml","inner/Cargo.toml"]"#,
+                )]),
+            })
+        },
+    );
+}

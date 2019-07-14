@@ -87,6 +87,14 @@ impl<'a> Command<'a> {
         self
     }
 
+    pub fn user<S>(mut self, user: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.context.user = user.into();
+        self
+    }
+
     pub fn mount<P>(mut self, mount: Mount<'a, P>) -> Self
     where
         P: AsRef<Path>,

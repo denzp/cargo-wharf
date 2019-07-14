@@ -87,3 +87,51 @@ impl Operation for ImageSource {
         Ok(Vec::with_capacity(0))
     }
 }
+
+#[test]
+fn serialization() {
+    crate::check_op!(
+        ImageSource::new("rustlang/rust:nightly"),
+        |digest| { "sha256:dee2a3d7dd482dd8098ba543ff1dcb01efd29fcd16fdb0979ef556f38564543a" },
+        |description| { vec![] },
+        |caps| { vec![] },
+        |tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "docker-image://docker.io/rustlang/rust:nightly".into(),
+                attrs: Default::default(),
+            })
+        },
+    );
+
+    crate::check_op!(
+        ImageSource::new("library/alpine:latest"),
+        |digest| { "sha256:0e6b31ceed3e6dc542018f35a53a0e857e6a188453d32a2a5bbe7aa2971c1220" },
+        |description| { vec![] },
+        |caps| { vec![] },
+        |tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "docker-image://docker.io/library/alpine:latest".into(),
+                attrs: Default::default(),
+            })
+        },
+    );
+
+    crate::check_op!(
+        ImageSource::new("rustlang/rust:nightly").custom_name("image custom name"),
+        |digest| { "sha256:dee2a3d7dd482dd8098ba543ff1dcb01efd29fcd16fdb0979ef556f38564543a" },
+        |description| { vec![("llb.customname", "image custom name")] },
+        |caps| { vec![] },
+        |tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "docker-image://docker.io/rustlang/rust:nightly".into(),
+                attrs: Default::default(),
+            })
+        },
+    );
+}

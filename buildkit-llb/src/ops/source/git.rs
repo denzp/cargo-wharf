@@ -87,3 +87,36 @@ impl Operation for GitSource {
         Ok(Vec::with_capacity(0))
     }
 }
+
+#[test]
+fn serialization() {
+    crate::check_op!(
+        GitSource::new("any.url"),
+        |digest| { "sha256:ecde982e19ace932e5474e57b0ca71ba690ed7d28abff2a033e8f969e22bf2d8" },
+        |description| { vec![] },
+        |caps| { vec![] },
+        |tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "git://any.url".into(),
+                attrs: Default::default(),
+            })
+        },
+    );
+
+    crate::check_op!(
+        GitSource::new("any.url").custom_name("git custom name"),
+        |digest| { "sha256:ecde982e19ace932e5474e57b0ca71ba690ed7d28abff2a033e8f969e22bf2d8" },
+        |description| { vec![("llb.customname", "git custom name")] },
+        |caps| { vec![] },
+        |tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "git://any.url".into(),
+                attrs: Default::default(),
+            })
+        },
+    );
+}

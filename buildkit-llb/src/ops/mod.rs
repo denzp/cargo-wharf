@@ -38,6 +38,7 @@ pub trait OperationBuilder<'a> {
     /// Sets caching behavior.
     fn ignore_cache(self, ignore: bool) -> Self;
 
+    /// Convert the operation into `Arc` so it can be shared when efficient borrowing is not possible.
     fn ref_counted(self) -> Arc<Self>
     where
         Self: Sized + 'a,
