@@ -76,31 +76,31 @@ pub mod test {
     macro_rules! check_op {
         ($op:expr, $(|$name:ident| $value:expr,)*) => ($crate::check_op!($op, $(|$name| $value),*));
         ($op:expr, $(|$name:ident| $value:expr),*) => {{
+            #[allow(unused_imports)]
             use crate::serialization::{Context, Operation};
-            let serialized = $op.serialize(&mut Context::default()).unwrap();
 
-            $(crate::check_op_property!(serialized, $name, $value));*
+            let mut context = Context::default();
+            let serialized = $op.serialize(&mut context).unwrap();
+
+            $(crate::check_op_property!(serialized, context, $name, $value));*
         }};
     }
 
     #[macro_export]
     macro_rules! check_op_property {
-        ($serialized:expr, op, $value:expr) => {{
+        ($serialized:expr, $context:expr, op, $value:expr) => {{
             use buildkit_proto::pb;
             use prost::Message;
 
-            assert_eq!(
-                pb::Op::decode(&$serialized.head.bytes).unwrap().op,
-                Some($value),
-            );
+            assert_eq!(pb::Op::decode(&$serialized.bytes).unwrap().op, Some($value));
         }};
 
-        ($serialized:expr, inputs, $value:expr) => {{
+        ($serialized:expr, $context:expr, inputs, $value:expr) => {{
             use buildkit_proto::pb;
             use prost::Message;
 
             assert_eq!(
-                pb::Op::decode(&$serialized.head.bytes)
+                pb::Op::decode(&$serialized.bytes)
                     .unwrap()
                     .inputs
                     .into_iter()
@@ -113,20 +113,18 @@ pub mod test {
             );
         }};
 
-        ($serialized:expr, tail, $value:expr) => {
+        ($serialized:expr, $context:expr, cached_tail, $value:expr) => {
             assert_eq!(
-                $serialized
-                    .tail
-                    .into_iter()
-                    .map(|item| item.digest)
+                $context
+                    .registered_nodes_iter()
+                    .map(|node| node.digest.clone())
                     .collect::<Vec<_>>(),
                 crate::utils::test::to_vec($value),
             );
         };
 
-        ($serialized:expr, caps, $value:expr) => {{
+        ($serialized:expr, $context:expr, caps, $value:expr) => {{
             let mut caps = $serialized
-                .head
                 .metadata
                 .caps
                 .into_iter()
@@ -134,18 +132,18 @@ pub mod test {
                 .collect::<Vec<_>>();
 
             caps.sort();
-            assert_eq!(caps, crate::utils::test::to_vec($value),);
+            assert_eq!(caps, crate::utils::test::to_vec($value));
         }};
 
-        ($serialized:expr, description, $value:expr) => {
+        ($serialized:expr, $context:expr, description, $value:expr) => {
             assert_eq!(
-                $serialized.head.metadata.description,
+                $serialized.metadata.description,
                 crate::utils::test::to_map($value),
             );
         };
 
-        ($serialized:expr, digest, $value:expr) => {
-            assert_eq!($serialized.head.digest, $value);
+        ($serialized:expr, $context:expr, digest, $value:expr) => {
+            assert_eq!($serialized.digest, $value);
         };
     }
 

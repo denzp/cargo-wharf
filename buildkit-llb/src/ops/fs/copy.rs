@@ -1,15 +1,13 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::iter::empty;
 use std::path::{Path, PathBuf};
 
 use buildkit_proto::pb;
-use either::Either;
 
 use super::path::{LayerPath, UnsetPath};
 use super::FileOperation;
 
-use crate::serialization::{Context, Node, Result};
+use crate::serialization::{Context, Result};
 use crate::utils::OutputIdx;
 
 #[derive(Debug)]
@@ -120,28 +118,12 @@ impl<'a> FileOperation for OpWithDestination<'a> {
         self.destination.0.into()
     }
 
-    fn serialize_tail(&self, cx: &mut Context) -> Result<Vec<Node>> {
-        let from_tail_iter = if let LayerPath::Other(ref op, ..) = self.source {
-            Either::Left(op.operation().serialize(cx).unwrap().into_iter())
-        } else {
-            Either::Right(empty())
-        };
-
-        let to_tail_iter = if let LayerPath::Other(ref op, ..) = self.destination.1 {
-            Either::Left(op.operation().serialize(cx).unwrap().into_iter())
-        } else {
-            Either::Right(empty())
-        };
-
-        Ok(from_tail_iter.chain(to_tail_iter).collect())
-    }
-
     fn serialize_inputs(&self, cx: &mut Context) -> Result<Vec<pb::Input>> {
         let mut inputs = if let LayerPath::Other(ref op, ..) = self.source {
-            let serialized_from_head = op.operation().serialize_head_cached(cx)?;
+            let serialized_from_head = cx.register(op.operation())?;
 
             vec![pb::Input {
-                digest: serialized_from_head.digest,
+                digest: serialized_from_head.digest.clone(),
                 index: op.output().into(),
             }]
         } else {
@@ -149,10 +131,10 @@ impl<'a> FileOperation for OpWithDestination<'a> {
         };
 
         if let LayerPath::Other(ref op, ..) = self.destination.1 {
-            let serialized_to_head = op.operation().serialize_head_cached(cx)?;
+            let serialized_to_head = cx.register(op.operation())?;
 
             inputs.push(pb::Input {
-                digest: serialized_to_head.digest,
+                digest: serialized_to_head.digest.clone(),
                 index: op.output().into(),
             });
         }

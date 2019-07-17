@@ -6,7 +6,7 @@ use buildkit_proto::pb;
 use super::path::LayerPath;
 use super::FileOperation;
 
-use crate::serialization::{Context, Node, Result};
+use crate::serialization::{Context, Result};
 use crate::utils::OutputIdx;
 
 #[derive(Debug)]
@@ -50,22 +50,12 @@ impl<'a> FileOperation for MakeDirOperation<'a> {
         self.output.into()
     }
 
-    fn serialize_tail(&self, cx: &mut Context) -> Result<Vec<Node>> {
-        if let LayerPath::Other(ref op, ..) = self.path {
-            op.operation()
-                .serialize(cx)
-                .map(|r| r.into_iter().collect())
-        } else {
-            Ok(Vec::with_capacity(0))
-        }
-    }
-
     fn serialize_inputs(&self, cx: &mut Context) -> Result<Vec<pb::Input>> {
         if let LayerPath::Other(ref op, ..) = self.path {
-            let serialized_from_head = op.operation().serialize_head_cached(cx)?;
+            let serialized_from_head = cx.register(op.operation())?;
 
             let inputs = vec![pb::Input {
-                digest: serialized_from_head.digest,
+                digest: serialized_from_head.digest.clone(),
                 index: op.output().into(),
             }];
 

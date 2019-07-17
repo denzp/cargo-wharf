@@ -63,7 +63,7 @@ impl Operation for GitSource {
         &self.id
     }
 
-    fn serialize_head(&self, _: &mut Context) -> Result<Node> {
+    fn serialize(&self, _: &mut Context) -> Result<Node> {
         let head = pb::Op {
             op: Some(Op::Source(SourceOp {
                 identifier: format!("git://{}", self.url),
@@ -82,10 +82,6 @@ impl Operation for GitSource {
 
         Ok(Node::new(head, metadata))
     }
-
-    fn serialize_tail(&self, _: &mut Context) -> Result<Vec<Node>> {
-        Ok(Vec::with_capacity(0))
-    }
 }
 
 #[test]
@@ -95,7 +91,7 @@ fn serialization() {
         |digest| { "sha256:ecde982e19ace932e5474e57b0ca71ba690ed7d28abff2a033e8f969e22bf2d8" },
         |description| { vec![] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Source(SourceOp {
@@ -110,7 +106,7 @@ fn serialization() {
         |digest| { "sha256:ecde982e19ace932e5474e57b0ca71ba690ed7d28abff2a033e8f969e22bf2d8" },
         |description| { vec![("llb.customname", "git custom name")] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Source(SourceOp {

@@ -20,7 +20,7 @@ fn serialization() {
         |digest| { "sha256:dc9a5a3cd84bb1c7b633f1750fdfccd9d0a69d060f8e3babb297bc190e2d7484" },
         |description| { vec![("llb.customname", "exec custom name")] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Exec(ExecOp {
@@ -62,7 +62,7 @@ fn serialization_with_env_iter() {
         |digest| { "sha256:7675be0b02acb379d57bafee5dc749fca7e795fb1e0a92748ccc59a7bc3b491e" },
         |description| { vec![] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Exec(ExecOp {
@@ -98,7 +98,7 @@ fn serialization_with_cwd() {
         |digest| { "sha256:b8120a0e1d1f7fcaa3d6c95db292d064524dc92c6cae8b97672d4e1eafcd03fa" },
         |description| { vec![] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Exec(ExecOp {
@@ -129,7 +129,7 @@ fn serialization_with_user() {
         |digest| { "sha256:7631ea645e2126e9dbc5d9ae789e34301d9d5c80ce89bfa72bc9b82aa43b57c0" },
         |description| { vec![] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Exec(ExecOp {
@@ -185,10 +185,10 @@ fn serialization_with_mounts() {
                 "exec.mount.selector",
             ]
         },
-        |tail| {
+        |cached_tail| {
             vec![
-                "sha256:dee2a3d7dd482dd8098ba543ff1dcb01efd29fcd16fdb0979ef556f38564543a",
                 "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702",
+                "sha256:dee2a3d7dd482dd8098ba543ff1dcb01efd29fcd16fdb0979ef556f38564543a",
                 "sha256:0e6b31ceed3e6dc542018f35a53a0e857e6a188453d32a2a5bbe7aa2971c1220",
             ]
         },

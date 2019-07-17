@@ -81,19 +81,7 @@ impl<'a> Operation for SequenceOperation<'a> {
         &self.id
     }
 
-    fn serialize_tail(&self, cx: &mut Context) -> Result<Vec<Node>> {
-        let tail = {
-            self.inner
-                .iter()
-                .map(|op| op.serialize_tail(cx).unwrap().into_iter())
-                .flatten()
-                .collect()
-        };
-
-        Ok(tail)
-    }
-
-    fn serialize_head(&self, cx: &mut Context) -> Result<Node> {
+    fn serialize(&self, cx: &mut Context) -> Result<Node> {
         let mut inputs = vec![];
         let mut input_offsets = vec![];
 

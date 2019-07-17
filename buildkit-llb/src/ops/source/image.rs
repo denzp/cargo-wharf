@@ -63,7 +63,7 @@ impl Operation for ImageSource {
         &self.id
     }
 
-    fn serialize_head(&self, _: &mut Context) -> Result<Node> {
+    fn serialize(&self, _: &mut Context) -> Result<Node> {
         let head = pb::Op {
             op: Some(Op::Source(SourceOp {
                 identifier: format!("docker-image://docker.io/{}", self.name),
@@ -82,10 +82,6 @@ impl Operation for ImageSource {
 
         Ok(Node::new(head, metadata))
     }
-
-    fn serialize_tail(&self, _: &mut Context) -> Result<Vec<Node>> {
-        Ok(Vec::with_capacity(0))
-    }
 }
 
 #[test]
@@ -95,7 +91,7 @@ fn serialization() {
         |digest| { "sha256:dee2a3d7dd482dd8098ba543ff1dcb01efd29fcd16fdb0979ef556f38564543a" },
         |description| { vec![] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Source(SourceOp {
@@ -110,7 +106,7 @@ fn serialization() {
         |digest| { "sha256:0e6b31ceed3e6dc542018f35a53a0e857e6a188453d32a2a5bbe7aa2971c1220" },
         |description| { vec![] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Source(SourceOp {
@@ -125,7 +121,7 @@ fn serialization() {
         |digest| { "sha256:dee2a3d7dd482dd8098ba543ff1dcb01efd29fcd16fdb0979ef556f38564543a" },
         |description| { vec![("llb.customname", "image custom name")] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Source(SourceOp {

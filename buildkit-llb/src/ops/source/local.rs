@@ -85,7 +85,7 @@ impl Operation for LocalSource {
         &self.id
     }
 
-    fn serialize_head(&self, _: &mut Context) -> Result<Node> {
+    fn serialize(&self, _: &mut Context) -> Result<Node> {
         let mut attrs = HashMap::default();
 
         if !self.exclude.is_empty() {
@@ -120,10 +120,6 @@ impl Operation for LocalSource {
 
         Ok(Node::new(head, metadata))
     }
-
-    fn serialize_tail(&self, _: &mut Context) -> Result<Vec<Node>> {
-        Ok(Vec::with_capacity(0))
-    }
 }
 
 #[test]
@@ -133,7 +129,7 @@ fn serialization() {
         |digest| { "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702" },
         |description| { vec![] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Source(SourceOp {
@@ -148,7 +144,7 @@ fn serialization() {
         |digest| { "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702" },
         |description| { vec![("llb.customname", "context custom name")] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Source(SourceOp {
@@ -168,7 +164,7 @@ fn serialization() {
         |digest| { "sha256:f6962b8bb1659c63a2c2c3e2a7ccf0326c87530dd70c514343f127e4c20460c4" },
         |description| { vec![("llb.customname", "context custom name")] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Source(SourceOp {
@@ -191,7 +187,7 @@ fn serialization() {
         |digest| { "sha256:a7e628333262b810572f83193bbf8554e688abfb51d44ac30bdad7fa425f3839" },
         |description| { vec![("llb.customname", "context custom name")] },
         |caps| { vec![] },
-        |tail| { vec![] },
+        |cached_tail| { vec![] },
         |inputs| { vec![] },
         |op| {
             Op::Source(SourceOp {

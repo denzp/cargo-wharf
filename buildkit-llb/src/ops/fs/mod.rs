@@ -3,7 +3,7 @@ use std::path::Path;
 
 use buildkit_proto::pb;
 
-use crate::serialization::{Context, Node, Result};
+use crate::serialization::{Context, Result};
 use crate::utils::OutputIdx;
 
 mod copy;
@@ -38,9 +38,7 @@ impl FileSystem {
 pub trait FileOperation: Debug + Send + Sync {
     fn output(&self) -> i64;
 
-    fn serialize_tail(&self, cx: &mut Context) -> Result<Vec<Node>>;
     fn serialize_inputs(&self, cx: &mut Context) -> Result<Vec<pb::Input>>;
-
     fn serialize_action(&self, inputs_count: usize, inputs_offset: usize)
         -> Result<pb::FileAction>;
 }
@@ -75,7 +73,7 @@ fn copy_serialization() {
         |digest| { "sha256:c4f7fb723fa87f03788aaf660dc9110ad8748fc9971e13713f103b632c05ae96" },
         |description| { vec![] },
         |caps| { vec!["file.base"] },
-        |tail| {
+        |cached_tail| {
             vec![
                 "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702",
                 "sha256:dee2a3d7dd482dd8098ba543ff1dcb01efd29fcd16fdb0979ef556f38564543a",
@@ -194,14 +192,8 @@ fn copy_with_params_serialization() {
         |digest| { "sha256:8be9c1c8335d53c894d0f5848ef354c69a96a469a72b00aadae704b23d465022" },
         |description| { vec![] },
         |caps| { vec!["file.base"] },
-        |tail| {
-            // TODO: improve the correct, but inefficent serialization
-            vec![
-                "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702",
-                "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702",
-                "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702",
-                "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702",
-            ]
+        |cached_tail| {
+            vec!["sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702"]
         },
         |inputs| {
             // TODO: improve the correct, but inefficent serialization
@@ -334,7 +326,9 @@ fn mkdir_serialization() {
         |digest| { "sha256:bfcd58256cba441c6d9e89c439bc6640b437d47213472cf8491646af4f0aa5b2" },
         |description| { vec![] },
         |caps| { vec!["file.base"] },
-        |tail| { vec!["sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702"] },
+        |cached_tail| {
+            vec!["sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702"]
+        },
         |inputs| {
             vec![(
                 "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702",

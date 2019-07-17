@@ -156,28 +156,7 @@ impl<'a> Operation for Command<'a> {
         &self.id
     }
 
-    fn serialize_tail(&self, cx: &mut SerializationCtx) -> Result<Vec<Node>> {
-        Ok(self
-            .mounts
-            .iter()
-            .map(|mount| {
-                let operation = match mount {
-                    Mount::ReadOnlyLayer(input, ..) => input.operation(),
-                    Mount::ReadOnlySelector(input, ..) => input.operation(),
-                    Mount::Layer(_, input, ..) => input.operation(),
-
-                    Mount::SharedCache(..) | Mount::Scratch(..) => {
-                        return Either::Right(empty());
-                    }
-                };
-
-                Either::Left(operation.serialize(cx).unwrap().into_iter())
-            })
-            .flatten()
-            .collect())
-    }
-
-    fn serialize_head(&self, cx: &mut SerializationCtx) -> Result<Node> {
+    fn serialize(&self, cx: &mut SerializationCtx) -> Result<Node> {
         let (inputs, mounts): (Vec<_>, Vec<_>) = {
             let mut last_input_index = 0;
 
@@ -263,9 +242,9 @@ impl<'a> Operation for Command<'a> {
                         }
                     };
 
-                    let serialized = input.operation().serialize(cx).unwrap();
+                    let serialized = cx.register(input.operation()).unwrap();
                     let input = Input {
-                        digest: serialized.head.digest.clone(),
+                        digest: serialized.digest.clone(),
                         index: input.output().into(),
                     };
 
