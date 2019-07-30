@@ -87,6 +87,12 @@ impl<'a> OpWithSource<'a> {
     }
 }
 
+impl<'a> OpWithDestination<'a> {
+    pub fn into_operation(self) -> super::sequence::SequenceOperation<'a> {
+        super::sequence::SequenceOperation::new().append(self)
+    }
+}
+
 impl<From, To> CopyOperation<From, To>
 where
     From: Debug,

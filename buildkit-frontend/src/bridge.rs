@@ -40,8 +40,7 @@ impl Bridge {
     }
 
     pub async fn solve<'a, 'b: 'a>(&'a mut self, graph: Terminal<'b>) -> Result<OutputRef, Error> {
-        debug!("requesting to solve a graph: {:#?}", graph);
-
+        debug!("serializing a graph to request");
         let request = SolveRequest {
             definition: Some(graph.into_definition()),
             exporter_attr: vec![],
@@ -50,6 +49,7 @@ impl Bridge {
             ..Default::default()
         };
 
+        debug!("requesting to solve a graph");
         let response = {
             self.client
                 .solve(Request::new(request))

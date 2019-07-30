@@ -8,6 +8,7 @@ use crate::utils::OutputIdx;
 
 mod copy;
 mod mkdir;
+mod mkfile;
 mod path;
 mod sequence;
 
@@ -32,9 +33,15 @@ impl FileSystem {
     {
         mkdir::MakeDirOperation::new(output, layer)
     }
+
+    pub fn mkfile<P>(output: OutputIdx, layer: LayerPath<P>) -> mkfile::MakeFileOperation
+    where
+        P: AsRef<Path>,
+    {
+        mkfile::MakeFileOperation::new(output, layer)
+    }
 }
 
-// TODO: make me `pub(crate)`
 pub trait FileOperation: Debug + Send + Sync {
     fn output(&self) -> i64;
 
@@ -372,6 +379,89 @@ fn mkdir_serialization() {
                             mode: -1,
                             timestamp: -1,
                             make_parents: false,
+                        })),
+                    },
+                ],
+            })
+        },
+    );
+}
+
+#[test]
+fn mkfile_serialization() {
+    use crate::prelude::*;
+    use buildkit_proto::pb::{file_action::Action, op::Op, FileAction, FileActionMkFile, FileOp};
+
+    let context = Source::local("context");
+
+    let operation = FileSystem::sequence()
+        .append(
+            FileSystem::mkfile(
+                OutputIdx(0),
+                LayerPath::Other(context.output(), "/build-plan.json"),
+            )
+            .data(b"any bytes".to_vec()),
+        )
+        .append(FileSystem::mkfile(
+            OutputIdx(1),
+            LayerPath::Scratch("/build-graph.json"),
+        ))
+        .append(FileSystem::mkfile(
+            OutputIdx(2),
+            LayerPath::Own(OwnOutputIdx(1), "/llb.pb"),
+        ));
+
+    crate::check_op!(
+        operation,
+        |digest| { "sha256:9c0d9f741dfc9b4ea8d909ebf388bc354da0ee401eddf5633e8e4ece7e87d22d" },
+        |description| { vec![] },
+        |caps| { vec!["file.base"] },
+        |cached_tail| {
+            vec!["sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702"]
+        },
+        |inputs| {
+            vec![(
+                "sha256:a60212791641cbeaa3a49de4f7dff9e40ae50ec19d1be9607232037c1db16702",
+                0,
+            )]
+        },
+        |op| {
+            Op::File(FileOp {
+                actions: vec![
+                    FileAction {
+                        input: 0,
+                        secondary_input: -1,
+                        output: 0,
+                        action: Some(Action::Mkfile(FileActionMkFile {
+                            path: "/build-plan.json".into(),
+                            owner: None,
+                            mode: -1,
+                            timestamp: -1,
+                            data: b"any bytes".to_vec(),
+                        })),
+                    },
+                    FileAction {
+                        input: -1,
+                        secondary_input: -1,
+                        output: 1,
+                        action: Some(Action::Mkfile(FileActionMkFile {
+                            path: "/build-graph.json".into(),
+                            owner: None,
+                            mode: -1,
+                            timestamp: -1,
+                            data: vec![],
+                        })),
+                    },
+                    FileAction {
+                        input: 2,
+                        secondary_input: -1,
+                        output: 2,
+                        action: Some(Action::Mkfile(FileActionMkFile {
+                            path: "/llb.pb".into(),
+                            owner: None,
+                            mode: -1,
+                            timestamp: -1,
+                            data: vec![],
                         })),
                     },
                 ],

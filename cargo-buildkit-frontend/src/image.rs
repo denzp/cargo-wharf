@@ -4,10 +4,11 @@ use std::path::{Path, PathBuf};
 use failure::Error;
 
 use buildkit_frontend::Bridge;
-use buildkit_llb::ops::{source::ImageSource, Command};
+use buildkit_llb::ops::{exec::Mount, source::ImageSource, Command};
 
 use crate::TARGET_PATH;
 
+#[derive(Debug)]
 pub struct RustDockerImage {
     source: ImageSource,
 
@@ -21,7 +22,7 @@ impl RustDockerImage {
 
         let mut other_env = BTreeMap::default();
 
-        other_env.insert("PATH".into(), "/usr/local/cargo/bin".into());
+        other_env.insert("PATH".into(), "/usr/local/cargo/bin:/usr/bin".into());
         other_env.insert("RUSTUP_HOME".into(), "/usr/local/rustup".into());
 
         Ok(Self {
@@ -49,5 +50,7 @@ impl RustDockerImage {
         }
 
         command
+            .mount(Mount::SharedCache(self.cargo_home().join("git")))
+            .mount(Mount::SharedCache(self.cargo_home().join("registry")))
     }
 }

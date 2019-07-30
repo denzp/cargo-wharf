@@ -16,5 +16,11 @@ buildctl-container-tools:
 buildctl-cargo-frontend:
 	buildctl build --frontend=dockerfile.v0 --local context=. --local dockerfile=cargo-buildkit-frontend --output type=image,push=false,name=denzp/cargo-buildkit-frontend:$(FRONTEND_VERSION)
 
+buildctl-cargo-frontend-devel-build-plan:
+	buildctl build --opt debug=build-plan --frontend gateway.v0 --opt gateway-devel=true --opt source=dockerfile.v0 --local gateway-context=. --local gateway-dockerfile=cargo-buildkit-frontend --local context=. --output type=local,dest=.debug-output
+
+buildctl-cargo-frontend-devel-llb:
+	buildctl build --opt debug=llb --frontend gateway.v0 --opt gateway-devel=true --opt source=dockerfile.v0 --local gateway-context=. --local gateway-dockerfile=cargo-buildkit-frontend --local context=. --output type=local,dest=.debug-output
+
 buildctl-cargo-frontend-devel:
 	buildctl build --frontend gateway.v0 --opt gateway-devel=true --opt source=dockerfile.v0 --local gateway-context=. --local gateway-dockerfile=cargo-buildkit-frontend --local context=. --output type=local,dest=.debug-output

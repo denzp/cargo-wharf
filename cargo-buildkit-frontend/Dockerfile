@@ -10,13 +10,13 @@ COPY . /rust-src
 RUN --mount=type=cache,target=/rust-src/target \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/usr/local/cargo/registry \
-    ["cargo", "build", "--release", "--bin", "buildkit-cargo-frontend"]
+    ["cargo", "build", "--bin", "cargo-buildkit-frontend"]
 
 # Copy the resulting binary into a normal layer
 RUN --mount=type=cache,target=/rust-src/target \
-    ["cp", "/rust-src/target/release/buildkit-cargo-frontend", "/usr/local/bin/buildkit-cargo-frontend"]
+    ["cp", "/rust-src/target/debug/cargo-buildkit-frontend", "/usr/local/bin/cargo-buildkit-frontend"]
 
 # Copy the binaries into the final stage
 FROM debian:stable-slim
-COPY --from=builder /usr/local/bin/buildkit-cargo-frontend /usr/local/bin/buildkit-cargo-frontend
-ENTRYPOINT ["/usr/local/bin/buildkit-cargo-frontend"]
+COPY --from=builder /usr/local/bin/cargo-buildkit-frontend /usr/local/bin/cargo-buildkit-frontend
+ENTRYPOINT ["/usr/local/bin/cargo-buildkit-frontend"]

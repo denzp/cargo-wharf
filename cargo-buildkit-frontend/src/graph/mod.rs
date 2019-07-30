@@ -3,24 +3,24 @@ use petgraph::prelude::*;
 use crate::plan::RawBuildPlan;
 
 mod node;
-pub use self::node::{Node, NodeKind};
-
-mod command;
-pub use self::command::{Command, CommandDetails};
-
 mod ops;
-use self::ops::merge_build_script_nodes;
 
-type NodeRef<'a> = (NodeIndex<u32>, &'a Node);
+pub use self::node::*;
 
 #[derive(Debug)]
 pub struct BuildGraph {
-    graph: StableGraph<Node, usize>,
+    graph: StableGraph<Node, ()>,
+}
+
+impl BuildGraph {
+    pub fn inner(&self) -> &StableGraph<Node, ()> {
+        &self.graph
+    }
 }
 
 impl From<RawBuildPlan> for BuildGraph {
     fn from(plan: RawBuildPlan) -> Self {
-        let mut graph = StableGraph::<Node, usize>::new();
+        let mut graph = StableGraph::<Node, ()>::new();
 
         let nodes = {
             plan.invocations
@@ -33,27 +33,13 @@ impl From<RawBuildPlan> for BuildGraph {
             let mut deps = item.deps.clone();
 
             deps.sort();
-            for dep in deps.iter() {
-                graph.add_edge(nodes[index], nodes[*dep as usize], 0);
+            for dep in item.deps.iter() {
+                graph.add_edge(nodes[*dep as usize], nodes[index], ());
             }
         }
 
-        merge_build_script_nodes(&mut graph);
+        self::ops::merge_build_script_nodes(&mut graph);
 
         Self { graph }
-    }
-}
-
-impl BuildGraph {
-    pub fn nodes(&self) -> impl Iterator<Item = NodeRef> {
-        self.graph
-            .node_indices()
-            .map(move |index| (index, self.graph.node_weight(index).unwrap()))
-    }
-
-    pub fn dependencies(&self, index: NodeIndex<u32>) -> impl Iterator<Item = NodeRef> {
-        self.graph
-            .neighbors_directed(index, Direction::Outgoing)
-            .map(move |index| (index, self.graph.node_weight(index).unwrap()))
     }
 }

@@ -2,9 +2,8 @@ use buildkit_proto::pb;
 use prost::Message;
 use sha2::{Digest, Sha256};
 
-// TODO: make me `pub(crate)`
 #[derive(Debug, Default, Clone)]
-pub struct Node {
+pub(crate) struct Node {
     pub bytes: Vec<u8>,
     pub digest: String,
     pub metadata: pb::OpMetadata,

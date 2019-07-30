@@ -3,28 +3,44 @@ use std::path::{Path, PathBuf};
 
 use semver::Version;
 
-use super::command::{Command, CommandDetails};
 use crate::plan::{RawInvocation, RawTargetKind};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Node {
     package_name: String,
     package_version: Version,
 
-    command: Command,
+    command: NodeCommand,
 
     kind: NodeKind,
     outputs: Vec<PathBuf>,
     links: BTreeMap<PathBuf, PathBuf>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum NodeKind {
     Test,
     Binary,
     Example,
     Other,
     BuildScript,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum NodeCommand {
+    Simple(NodeCommandDetails),
+
+    WithBuildscript {
+        buildscript: NodeCommandDetails,
+        command: NodeCommandDetails,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct NodeCommandDetails {
+    pub env: BTreeMap<String, String>,
+    pub program: String,
+    pub args: Vec<String>,
 }
 
 impl Node {
@@ -43,20 +59,45 @@ impl Node {
             .chain(self.get_links_iter().map(|pair| pair.0))
     }
 
-    pub fn kind(&self) -> &NodeKind {
-        &self.kind
+    pub fn kind(&self) -> NodeKind {
+        self.kind
     }
 
-    pub fn command(&self) -> &Command {
+    pub fn command(&self) -> &NodeCommand {
         &self.command
     }
 
-    pub fn add_buildscript_command(&mut self, buildscript: CommandDetails) {
-        if let Command::Simple(command) = self.command.clone() {
-            self.command = Command::WithBuildscript {
+    pub fn into_command_details(self) -> NodeCommandDetails {
+        match self.command {
+            NodeCommand::Simple(details) => details,
+            NodeCommand::WithBuildscript { command, .. } => command,
+        }
+    }
+
+    pub fn add_buildscript_command(&mut self, buildscript: NodeCommandDetails) {
+        take_mut::take(&mut self.command, |command| {
+            command.add_buildscript(buildscript)
+        });
+    }
+}
+
+impl NodeCommand {
+    pub fn add_buildscript(self, buildscript: NodeCommandDetails) -> Self {
+        match self {
+            NodeCommand::Simple(command) => NodeCommand::WithBuildscript {
                 buildscript,
                 command,
-            };
+            },
+
+            other => other,
+        }
+    }
+
+    pub fn is_simple(&self) -> bool {
+        if let NodeCommand::Simple(_) = self {
+            true
+        } else {
+            false
         }
     }
 }
@@ -98,5 +139,21 @@ impl From<&RawInvocation> for NodeKind {
         }
 
         NodeKind::Other
+    }
+}
+
+impl From<&RawInvocation> for NodeCommand {
+    fn from(invocation: &RawInvocation) -> Self {
+        NodeCommand::Simple(NodeCommandDetails::from(invocation))
+    }
+}
+
+impl From<&RawInvocation> for NodeCommandDetails {
+    fn from(invocation: &RawInvocation) -> Self {
+        NodeCommandDetails {
+            program: invocation.program.clone(),
+            args: invocation.args.clone(),
+            env: invocation.env.clone(),
+        }
     }
 }

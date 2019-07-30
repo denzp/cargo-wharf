@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use failure::{Error, ResultExt};
 use semver::Version;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use buildkit_frontend::Bridge;
 use buildkit_llb::prelude::*;
@@ -11,11 +11,13 @@ use buildkit_llb::prelude::*;
 use crate::image::RustDockerImage;
 use crate::CONTEXT_PATH;
 
-const PLAN_EVALUATION_COMMAND: &str = "cargo build -Z unstable-options --build-plan --all-targets";
+const PLAN_EVALUATION_COMMAND: &str =
+    "cargo build -Z unstable-options --build-plan --all-targets --locked";
+
 const PLAN_OUTPUT_LAYER_PATH: &str = "/output";
 const PLAN_OUTPUT_NAME: &str = "/build-plan.json";
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RawInvocation {
     pub package_name: String,
     pub package_version: Version,
@@ -29,7 +31,7 @@ pub struct RawInvocation {
     pub cwd: PathBuf, // TODO(denzp): should this really be an "Option<PathBuf>" like in Cargo?
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum RawTargetKind {
     Lib,
@@ -40,7 +42,7 @@ pub enum RawTargetKind {
     Example,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RawBuildPlan {
     pub invocations: Vec<RawInvocation>,
 }
@@ -71,8 +73,6 @@ impl RawBuildPlan {
                 .mount(Mount::Layer(OutputIdx(0), image.source().output(), "/"))
                 .mount(Mount::ReadOnlyLayer(context.output(), CONTEXT_PATH))
                 .mount(Mount::Scratch(OutputIdx(1), PLAN_OUTPUT_LAYER_PATH))
-                .mount(Mount::SharedCache(image.cargo_home().join("git")))
-                .mount(Mount::SharedCache(image.cargo_home().join("registry")))
                 .custom_name("Evaluating the build plan")
         };
 

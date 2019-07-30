@@ -9,18 +9,20 @@ use tower_h2::client::Connection;
 
 mod bridge;
 mod error;
+mod options;
 mod stdio;
 mod utils;
 
 pub use self::bridge::Bridge;
 pub use self::error::ErrorCode;
+pub use self::options::Options;
 pub use self::stdio::StdioSocket;
 pub use self::utils::{OutputRef, ToErrorString};
 
 pub trait Frontend {
     type RunFuture: Future<Output = Result<OutputRef, Error>>;
 
-    fn run(self, bridge: Bridge) -> Self::RunFuture;
+    fn run(self, bridge: Bridge, options: Vec<String>) -> Self::RunFuture;
 }
 
 pub async fn run_frontend<F: Frontend>(frontend: F) -> Result<(), Error> {
@@ -42,9 +44,10 @@ pub async fn run_frontend<F: Frontend>(frontend: F) -> Result<(), Error> {
     };
 
     let bridge = Bridge::new(connection);
+    let options = Options::analyse();
 
     debug!("running a frontend entrypoint");
-    match frontend.run(bridge.clone()).await {
+    match frontend.run(bridge.clone(), options.into()).await {
         Ok(output) => {
             bridge
                 .finish_with_success(output)

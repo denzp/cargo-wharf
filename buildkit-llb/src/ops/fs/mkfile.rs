@@ -10,17 +10,17 @@ use crate::serialization::{Context, Result};
 use crate::utils::OutputIdx;
 
 #[derive(Debug)]
-pub struct MakeDirOperation<'a> {
+pub struct MakeFileOperation<'a> {
     path: LayerPath<'a, PathBuf>,
     output: OutputIdx,
 
-    make_parents: bool,
+    data: Option<Vec<u8>>,
 
     description: HashMap<String, String>,
     caps: HashMap<String, bool>,
 }
 
-impl<'a> MakeDirOperation<'a> {
+impl<'a> MakeFileOperation<'a> {
     pub(crate) fn new<P>(output: OutputIdx, path: LayerPath<'a, P>) -> Self
     where
         P: AsRef<Path>,
@@ -28,19 +28,19 @@ impl<'a> MakeDirOperation<'a> {
         let mut caps = HashMap::<String, bool>::new();
         caps.insert("file.base".into(), true);
 
-        MakeDirOperation {
+        MakeFileOperation {
             path: path.into_owned(),
             output,
 
-            make_parents: false,
+            data: None,
 
             caps,
             description: Default::default(),
         }
     }
 
-    pub fn make_parents(mut self, value: bool) -> Self {
-        self.make_parents = value;
+    pub fn data(mut self, bytes: Vec<u8>) -> Self {
+        self.data = Some(bytes);
         self
     }
 
@@ -49,7 +49,7 @@ impl<'a> MakeDirOperation<'a> {
     }
 }
 
-impl<'a> FileOperation for MakeDirOperation<'a> {
+impl<'a> FileOperation for MakeFileOperation<'a> {
     fn output(&self) -> i64 {
         self.output.into()
     }
@@ -91,10 +91,10 @@ impl<'a> FileOperation for MakeDirOperation<'a> {
 
             output: self.output(),
 
-            action: Some(pb::file_action::Action::Mkdir(pb::FileActionMkDir {
+            action: Some(pb::file_action::Action::Mkfile(pb::FileActionMkFile {
                 path,
 
-                make_parents: self.make_parents,
+                data: self.data.clone().unwrap_or_else(|| Vec::with_capacity(0)),
 
                 // TODO: make this configurable
                 mode: -1,

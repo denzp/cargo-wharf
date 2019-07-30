@@ -3,6 +3,8 @@
 #![deny(clippy::all)]
 
 // FIXME: get rid of the unwraps
+// TODO: implement warnings for op hash collisions (will incredibly help to debug problems).
+// TODO: implement efficient `std::fmt::Debug` for the ops (naive implementation can't handle huge nested graphs).
 
 mod serialization;
 
