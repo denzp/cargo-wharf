@@ -37,4 +37,18 @@ impl<'a, P: AsRef<Path>> Mount<'a, P> {
             SharedCache(path) => SharedCache(path.as_ref().into()),
         }
     }
+
+    pub fn is_root(&self) -> bool {
+        use Mount::*;
+
+        let path = match self {
+            ReadOnlySelector(_, path, ..) => path,
+            ReadOnlyLayer(_, path) => path,
+            Scratch(_, path) => path,
+            Layer(_, _, path) => path,
+            SharedCache(path) => path,
+        };
+
+        path.as_ref() == Path::new("/")
+    }
 }

@@ -21,7 +21,8 @@ pub struct Command<'a> {
     id: OperationId,
 
     context: Context,
-    mounts: Vec<Mount<'a, PathBuf>>,
+    root_mount: Option<Mount<'a, PathBuf>>,
+    other_mounts: Vec<Mount<'a, PathBuf>>,
 
     description: HashMap<String, String>,
     caps: HashMap<String, bool>,
@@ -37,7 +38,8 @@ impl<'a> Command<'a> {
             id: OperationId::default(),
 
             context: Context::new(name),
-            mounts: vec![],
+            root_mount: None,
+            other_mounts: vec![],
 
             description: Default::default(),
             caps: Default::default(),
@@ -115,7 +117,12 @@ impl<'a> Command<'a> {
             }
         }
 
-        self.mounts.push(mount.into_owned());
+        if mount.is_root() {
+            self.root_mount = Some(mount.into_owned());
+        } else {
+            self.other_mounts.push(mount.into_owned());
+        }
+
         self
     }
 }
@@ -160,8 +167,10 @@ impl<'a> Operation for Command<'a> {
         let (inputs, mounts): (Vec<_>, Vec<_>) = {
             let mut last_input_index = 0;
 
-            self.mounts
-                .iter()
+            self.root_mount
+                .as_ref()
+                .into_iter()
+                .chain(self.other_mounts.iter())
                 .map(|mount| {
                     let inner_mount = match mount {
                         Mount::ReadOnlyLayer(_, destination) => pb::Mount {

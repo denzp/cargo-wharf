@@ -285,3 +285,85 @@ fn serialization_with_mounts() {
         },
     );
 }
+
+#[test]
+fn serialization_with_several_root_mounts() {
+    use crate::prelude::*;
+    use buildkit_proto::pb::{op::Op, ExecOp, Meta, MountType, NetMode, SecurityMode};
+
+    let builder_image = Source::image("rustlang/rust:nightly");
+    let final_image = Source::image("library/alpine:latest");
+
+    let command = Command::run("cargo")
+        .args(&["build"])
+        .mount(Mount::Scratch(OutputIdx(0), "/tmp"))
+        .mount(Mount::ReadOnlyLayer(builder_image.output(), "/"))
+        .mount(Mount::Scratch(OutputIdx(1), "/var"))
+        .mount(Mount::ReadOnlyLayer(final_image.output(), "/"));
+
+    crate::check_op!(
+        command,
+        // |digest| { "sha256:54a66b514361b13b17f8b5aaaa2392a4c07b55ac53303e4f50584f3dfef6add0" },
+        |description| { vec![] },
+        |caps| { vec!["exec.mount.bind"] },
+        |cached_tail| {
+            vec!["sha256:0e6b31ceed3e6dc542018f35a53a0e857e6a188453d32a2a5bbe7aa2971c1220"]
+        },
+        |inputs| {
+            vec![(
+                "sha256:0e6b31ceed3e6dc542018f35a53a0e857e6a188453d32a2a5bbe7aa2971c1220",
+                0,
+            )]
+        },
+        |op| {
+            Op::Exec(ExecOp {
+                mounts: vec![
+                    pb::Mount {
+                        input: 0,
+                        selector: "".into(),
+                        dest: "/".into(),
+                        output: -1,
+                        readonly: true,
+                        mount_type: MountType::Bind.into(),
+                        cache_opt: None,
+                        secret_opt: None,
+                        ssh_opt: None,
+                    },
+                    pb::Mount {
+                        input: -1,
+                        selector: "".into(),
+                        dest: "/tmp".into(),
+                        output: 0,
+                        readonly: false,
+                        mount_type: MountType::Bind.into(),
+                        cache_opt: None,
+                        secret_opt: None,
+                        ssh_opt: None,
+                    },
+                    pb::Mount {
+                        input: -1,
+                        selector: "".into(),
+                        dest: "/var".into(),
+                        output: 1,
+                        readonly: false,
+                        mount_type: MountType::Bind.into(),
+                        cache_opt: None,
+                        secret_opt: None,
+                        ssh_opt: None,
+                    },
+                ],
+                network: NetMode::Unset.into(),
+                security: SecurityMode::Sandbox.into(),
+                meta: Some(Meta {
+                    args: crate::utils::test::to_vec(vec!["cargo", "build"]),
+                    env: vec![],
+                    cwd: "/".into(),
+                    user: "root".into(),
+
+                    extra_hosts: vec![],
+                    proxy_env: None,
+                }),
+            })
+        },
+    );
+}
