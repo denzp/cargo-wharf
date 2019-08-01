@@ -303,7 +303,7 @@ fn serialization_with_several_root_mounts() {
 
     crate::check_op!(
         command,
-        // |digest| { "sha256:54a66b514361b13b17f8b5aaaa2392a4c07b55ac53303e4f50584f3dfef6add0" },
+        |digest| { "sha256:baa1bf591d2c47058b7361a0284fa8a3f1bd0fac8a93c87affa77ddc0a5026fd" },
         |description| { vec![] },
         |caps| { vec!["exec.mount.bind"] },
         |cached_tail| {

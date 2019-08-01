@@ -1,26 +1,17 @@
-TOOLS_VERSION    = $(shell cargo pkgid --manifest-path=cargo-container-tools/Cargo.toml | cut -d\# -f2 | cut -d: -f2)
-FRONTEND_VERSION = $(shell cargo pkgid --manifest-path=cargo-buildkit-frontend/Cargo.toml | cut -d\# -f2 | cut -d: -f2)
-
-with-docker:   docker-container-tools   docker-cargo-frontend
-with-buildctl: buildctl-container-tools buildctl-cargo-frontend
-
-docker-container-tools:
-	docker build -t denzp/cargo-container-tools:$(TOOLS_VERSION) -f cargo-container-tools/Dockerfile .
-
-docker-cargo-frontend:
-	docker build -t denzp/buildkit-cargo-frontend:$(FRONTEND_VERSION) -f buildkit-cargo-frontend/Dockerfile .
+# TOOLS_VERSION    = v$(shell cargo pkgid --manifest-path=cargo-container-tools/Cargo.toml | cut -d\# -f2 | cut -d: -f2)
+# FRONTEND_VERSION = v$(shell cargo pkgid --manifest-path=cargo-buildkit-frontend/Cargo.toml | cut -d\# -f2 | cut -d: -f2)
 
 buildctl-container-tools:
-	buildctl build --frontend=dockerfile.v0 --local context=. --local dockerfile=cargo-container-tools --output type=image,push=false,docker.io/denzp/cargo-container-tools:$(TOOLS_VERSION)
+	buildctl build --frontend gateway.v0 --opt source=docker/dockerfile:1.1-experimental --local context=. --local dockerfile=cargo-container-tools --output type=image,name=docker.io/denzp/cargo-container-tools:local
 
 buildctl-cargo-frontend:
-	buildctl build --frontend=dockerfile.v0 --local context=. --local dockerfile=cargo-buildkit-frontend --output type=image,push=false,name=denzp/cargo-buildkit-frontend:$(FRONTEND_VERSION)
+	buildctl build --frontend gateway.v0 --opt source=docker/dockerfile:1.1-experimental --local context=. --local dockerfile=cargo-buildkit-frontend --output type=image,name=docker.io/denzp/cargo-buildkit-frontend:local
 
-buildctl-cargo-frontend-devel-build-plan:
-	buildctl build --opt debug=build-plan --frontend gateway.v0 --opt gateway-devel=true --opt source=dockerfile.v0 --local gateway-context=. --local gateway-dockerfile=cargo-buildkit-frontend --local context=. --output type=local,dest=.debug-output
+buildctl-cargo-frontend-example: buildctl-container-tools buildctl-cargo-frontend
+	buildctl build --frontend gateway.v0 --opt source=denzp/cargo-buildkit-frontend:local --local context=examples/workspace --output type=local,dest=.debug-output
 
-buildctl-cargo-frontend-devel-llb:
-	buildctl build --opt debug=llb --frontend gateway.v0 --opt gateway-devel=true --opt source=dockerfile.v0 --local gateway-context=. --local gateway-dockerfile=cargo-buildkit-frontend --local context=. --output type=local,dest=.debug-output
+buildctl-cargo-frontend-example-build-plan: buildctl-container-tools buildctl-cargo-frontend
+	buildctl build --frontend gateway.v0 --opt source=denzp/cargo-buildkit-frontend:local --local context=examples/workspace  --opt debug=build-plan --output type=local,dest=.debug-output
 
-buildctl-cargo-frontend-devel:
-	buildctl build --frontend gateway.v0 --opt gateway-devel=true --opt source=dockerfile.v0 --local gateway-context=. --local gateway-dockerfile=cargo-buildkit-frontend --local context=. --output type=local,dest=.debug-output
+buildctl-cargo-frontend-example-llb: buildctl-container-tools buildctl-cargo-frontend
+	buildctl build --frontend gateway.v0 --opt source=denzp/cargo-buildkit-frontend:local --local context=examples/workspace --opt debug=llb --output type=local,dest=.debug-output
