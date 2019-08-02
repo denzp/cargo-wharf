@@ -5,6 +5,7 @@ use futures::prelude::*;
 use prost::Message;
 
 use buildkit_frontend::{Bridge, Frontend, OutputRef};
+use buildkit_llb::ops::fs::SequenceOperation;
 use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
@@ -32,26 +33,45 @@ impl Frontend for CargoFrontend {
                     .context("Unable to evaluate the Cargo build plan")?
             };
 
-            if options.iter().any(|x| x == "debug=build-plan") {
-                return self
-                    .debug_output(&mut bridge, "/build-plan.json", build_plan)
-                    .await;
+            let mut debug_op = FileSystem::sequence().custom_name("Writing the debug output");
+
+            if options
+                .iter()
+                .any(|x| x.starts_with("debug=") && x.contains("build-plan"))
+            {
+                debug_op = debug_output(debug_op, "build-plan.json", &build_plan)?;
             }
 
             let graph: BuildGraph = build_plan.into();
             let query = GraphQuery::new(&graph, &builder_image);
 
-            if options.iter().any(|x| x == "debug=llb") {
-                return self
-                    .debug_output(&mut bridge, "/llb.pb", query.into_definition())
-                    .await;
+            if options
+                .iter()
+                .any(|x| x.starts_with("debug=") && x.contains("build-graph"))
+            {
+                debug_op = debug_output(debug_op, "build-graph.json", &graph)?;
             }
 
-            query
-                .solve(&mut bridge)
-                .await
-                .context("Unable to build the crate")
-                .map_err(Error::from)
+            if options
+                .iter()
+                .any(|x| x.starts_with("debug=") && x.contains("llb"))
+            {
+                debug_op = debug_output(debug_op, "llb.pb", &query.definition())?;
+            }
+
+            if options.iter().any(|x| x.starts_with("debug=")) {
+                bridge
+                    .solve(Terminal::with(debug_op.last_output().unwrap()))
+                    .await
+                    .context("Unable to write debug output")
+                    .map_err(Error::from)
+            } else {
+                query
+                    .solve(&mut bridge)
+                    .await
+                    .context("Unable to build the crate")
+                    .map_err(Error::from)
+            }
         }
     }
 }
@@ -60,31 +80,30 @@ trait DebugOutput {
     fn as_bytes(&self) -> Result<Vec<u8>, Error>;
 }
 
-impl CargoFrontend {
-    async fn debug_output<P, O>(
-        &self,
-        bridge: &mut Bridge,
-        path: P,
-        output: O,
-    ) -> Result<OutputRef, Error>
-    where
-        P: AsRef<Path>,
-        O: DebugOutput,
-    {
-        let action = FileSystem::mkfile(OutputIdx(0), LayerPath::Scratch(path))
-            .data(output.as_bytes()?)
-            .into_operation()
-            .custom_name("Writing the debug output");
+fn debug_output<'a, P, O>(
+    op: SequenceOperation<'a>,
+    path: P,
+    output: &O,
+) -> Result<SequenceOperation<'a>, Error>
+where
+    P: AsRef<Path>,
+    O: DebugOutput,
+{
+    let (index, layer_path) = match op.last_output_index() {
+        Some(index) => (index + 1, LayerPath::Own(OwnOutputIdx(index), path)),
+        None => (0, LayerPath::Scratch(path)),
+    };
 
-        bridge
-            .solve(Terminal::with(action.output(0)))
-            .await
-            .context("Unable to write output")
-            .map_err(Error::from)
-    }
+    Ok(op.append(FileSystem::mkfile(OutputIdx(index), layer_path).data(output.as_bytes()?)))
 }
 
 impl DebugOutput for RawBuildPlan {
+    fn as_bytes(&self) -> Result<Vec<u8>, Error> {
+        Ok(serde_json::to_string_pretty(self)?.into_bytes())
+    }
+}
+
+impl DebugOutput for BuildGraph {
     fn as_bytes(&self) -> Result<Vec<u8>, Error> {
         Ok(serde_json::to_string_pretty(self)?.into_bytes())
     }

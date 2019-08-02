@@ -12,38 +12,42 @@ mod mkfile;
 mod path;
 mod sequence;
 
+pub use self::copy::CopyOperation;
+pub use self::mkdir::MakeDirOperation;
+pub use self::mkfile::MakeFileOperation;
 pub use self::path::{LayerPath, UnsetPath};
+pub use self::sequence::SequenceOperation;
 
 /// Umbrella operation that handles file system related routines.
 /// Dockerfile's `COPY` directive is a partial case of this.
 pub struct FileSystem;
 
 impl FileSystem {
-    pub fn sequence() -> sequence::SequenceOperation<'static> {
-        sequence::SequenceOperation::new()
+    pub fn sequence() -> SequenceOperation<'static> {
+        SequenceOperation::new()
     }
 
     pub fn copy() -> copy::CopyOperation<UnsetPath, UnsetPath> {
-        copy::CopyOperation::new()
+        CopyOperation::new()
     }
 
-    pub fn mkdir<P>(output: OutputIdx, layer: LayerPath<P>) -> mkdir::MakeDirOperation
+    pub fn mkdir<P>(output: OutputIdx, layer: LayerPath<P>) -> MakeDirOperation
     where
         P: AsRef<Path>,
     {
-        mkdir::MakeDirOperation::new(output, layer)
+        MakeDirOperation::new(output, layer)
     }
 
-    pub fn mkfile<P>(output: OutputIdx, layer: LayerPath<P>) -> mkfile::MakeFileOperation
+    pub fn mkfile<P>(output: OutputIdx, layer: LayerPath<P>) -> MakeFileOperation
     where
         P: AsRef<Path>,
     {
-        mkfile::MakeFileOperation::new(output, layer)
+        MakeFileOperation::new(output, layer)
     }
 }
 
 pub trait FileOperation: Debug + Send + Sync {
-    fn output(&self) -> i64;
+    fn output(&self) -> i32;
 
     fn serialize_inputs(&self, cx: &mut Context) -> Result<Vec<pb::Input>>;
     fn serialize_action(&self, inputs_count: usize, inputs_offset: usize)

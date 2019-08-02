@@ -10,8 +10,5 @@ buildctl-cargo-frontend:
 buildctl-cargo-frontend-example: buildctl-container-tools buildctl-cargo-frontend
 	buildctl build --frontend gateway.v0 --opt source=denzp/cargo-buildkit-frontend:local --local context=examples/workspace --output type=local,dest=.debug-output
 
-buildctl-cargo-frontend-example-build-plan: buildctl-container-tools buildctl-cargo-frontend
-	buildctl build --frontend gateway.v0 --opt source=denzp/cargo-buildkit-frontend:local --local context=examples/workspace  --opt debug=build-plan --output type=local,dest=.debug-output
-
-buildctl-cargo-frontend-example-llb: buildctl-container-tools buildctl-cargo-frontend
-	buildctl build --frontend gateway.v0 --opt source=denzp/cargo-buildkit-frontend:local --local context=examples/workspace --opt debug=llb --output type=local,dest=.debug-output
+buildctl-cargo-frontend-example-debug: buildctl-container-tools buildctl-cargo-frontend
+	buildctl build --frontend gateway.v0 --opt source=denzp/cargo-buildkit-frontend:local --local context=examples/workspace  --opt debug=build-plan,build-graph,llb --output type=local,dest=.debug-output

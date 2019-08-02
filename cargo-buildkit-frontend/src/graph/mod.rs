@@ -1,4 +1,5 @@
 use petgraph::prelude::*;
+use serde::Serialize;
 
 use crate::plan::RawBuildPlan;
 
@@ -7,7 +8,7 @@ mod ops;
 
 pub use self::node::*;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct BuildGraph {
     graph: StableGraph<Node, ()>,
 }

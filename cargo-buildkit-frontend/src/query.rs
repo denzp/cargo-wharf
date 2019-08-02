@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use failure::{Error};
+use failure::Error;
 use log::*;
 use petgraph::prelude::*;
 use petgraph::visit::{Reversed, Topo, Walker};
@@ -31,7 +31,7 @@ impl<'a> GraphQuery<'a> {
         }
     }
 
-    pub fn into_definition(self) -> pb::Definition {
+    pub fn definition(&self) -> pb::Definition {
         let context = {
             Source::local("context")
                 .custom_name("Using context")
@@ -41,7 +41,7 @@ impl<'a> GraphQuery<'a> {
         self.terminal(&context).into_definition()
     }
 
-    pub async fn solve(self, bridge: &mut Bridge) -> Result<OutputRef, Error> {
+    pub async fn solve(&self, bridge: &mut Bridge) -> Result<OutputRef, Error> {
         let context = {
             Source::local("context")
                 .custom_name("Using context")
@@ -178,6 +178,7 @@ impl<'a> GraphQuery<'a> {
         command: &NodeCommandDetails,
     ) -> (Command<'a>, OutputIdx) {
         let out_path = {
+            // TODO: go through all outputs
             FileSystem::mkdir(
                 OutputIdx(0),
                 LayerPath::Scratch(
@@ -195,10 +196,11 @@ impl<'a> GraphQuery<'a> {
             .ref_counted()
         };
 
+        // TODO: mount the context only when it's needed.
+
         let command_llb = {
             self.image
                 .populate_env(Command::run(&command.program))
-                .ignore_cache(true) // TODO: remove me when things get more stable :)
                 .cwd(CONTEXT_PATH)
                 .args(&command.args)
                 .env_iter(&command.env)

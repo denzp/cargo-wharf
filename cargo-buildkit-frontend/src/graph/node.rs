@@ -2,10 +2,11 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use semver::Version;
+use serde::Serialize;
 
 use crate::plan::{RawInvocation, RawTargetKind};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Node {
     package_name: String,
     package_version: Version,
@@ -17,7 +18,7 @@ pub struct Node {
     links: BTreeMap<PathBuf, PathBuf>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Serialize)]
 pub enum NodeKind {
     Test,
     Binary,
@@ -26,7 +27,7 @@ pub enum NodeKind {
     BuildScript,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub enum NodeCommand {
     Simple(NodeCommandDetails),
 
@@ -36,7 +37,7 @@ pub enum NodeCommand {
     },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct NodeCommandDetails {
     pub env: BTreeMap<String, String>,
     pub program: String,

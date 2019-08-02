@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 clap = "2.33"
-cargo = "0.31"
+cargo = "0.37"
 failure = "0.1"
 
 serde = "1.0"

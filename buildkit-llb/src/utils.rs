@@ -70,6 +70,28 @@ impl Into<i64> for &OwnOutputIdx {
     }
 }
 
+impl Into<i32> for OutputIdx {
+    fn into(self) -> i32 {
+        self.0 as i32
+    }
+}
+impl Into<i32> for &OutputIdx {
+    fn into(self) -> i32 {
+        self.0 as i32
+    }
+}
+
+impl Into<i32> for OwnOutputIdx {
+    fn into(self) -> i32 {
+        self.0 as i32
+    }
+}
+impl Into<i32> for &OwnOutputIdx {
+    fn into(self) -> i32 {
+        self.0 as i32
+    }
+}
+
 #[cfg(test)]
 pub mod test {
     #[macro_export]

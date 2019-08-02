@@ -9,7 +9,7 @@ env_logger = "0.6"
 failure = "0.1"
 futures-preview = { version = "0.3.0-alpha.16", features = ["compat"] }
 log = "0.4"
-petgraph = "0.4"
+petgraph = { version = "0.4", features = ["serde-1"] }
 prost = "0.5"
 runtime = { version = "0.3.0-alpha.6", default-features = false }
 runtime-tokio = "0.3.0-alpha.5"

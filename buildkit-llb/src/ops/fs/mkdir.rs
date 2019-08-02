@@ -50,7 +50,7 @@ impl<'a> MakeDirOperation<'a> {
 }
 
 impl<'a> FileOperation for MakeDirOperation<'a> {
-    fn output(&self) -> i64 {
+    fn output(&self) -> i32 {
         self.output.into()
     }
 
@@ -89,7 +89,7 @@ impl<'a> FileOperation for MakeDirOperation<'a> {
             input: src_idx,
             secondary_input: -1,
 
-            output: self.output(),
+            output: i64::from(self.output()),
 
             action: Some(pb::file_action::Action::Mkdir(pb::FileActionMkDir {
                 path,

@@ -120,7 +120,7 @@ where
 }
 
 impl<'a> FileOperation for OpWithDestination<'a> {
-    fn output(&self) -> i64 {
+    fn output(&self) -> i32 {
         self.destination.0.into()
     }
 
@@ -175,22 +175,22 @@ impl<'a> FileOperation for OpWithDestination<'a> {
             LayerPath::Scratch(ref path) => (-1, path.to_string_lossy().into()),
 
             LayerPath::Other(_, ref path) => (
-                inputs_offset as i64 + src_offset,
+                inputs_offset as i32 + src_offset,
                 path.to_string_lossy().into(),
             ),
 
             LayerPath::Own(ref output, ref path) => {
-                let output: i64 = output.into();
+                let output: i32 = output.into();
 
-                (inputs_count as i64 + output, path.to_string_lossy().into())
+                (inputs_count as i32 + output, path.to_string_lossy().into())
             }
         };
 
         Ok(pb::FileAction {
-            input: dest_idx,
+            input: i64::from(dest_idx),
             secondary_input: src_idx,
 
-            output: self.output(),
+            output: i64::from(self.output()),
 
             action: Some(pb::file_action::Action::Copy(pb::FileActionCopy {
                 src,

@@ -1,5 +1,4 @@
 FROM clux/muslrust:nightly as builder
-
 USER root
 
 WORKDIR /rust-src

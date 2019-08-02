@@ -43,6 +43,20 @@ impl<'a> SequenceOperation<'a> {
         self.inner.push(Box::new(op));
         self
     }
+
+    pub fn last_output(&self) -> Option<OperationOutput<'_>> {
+        self.last_output_index().map(|index| self.output(index))
+    }
+
+    pub fn last_output_index(&self) -> Option<u32> {
+        // TODO: make sure the `inner` elements has monotonic indexes
+
+        self.inner
+            .iter()
+            .filter(|fs| fs.output() >= 0)
+            .last()
+            .map(|fs| fs.output() as u32)
+    }
 }
 
 impl<'a, 'b: 'a> MultiBorrowedOutputOperation<'b> for SequenceOperation<'b> {
