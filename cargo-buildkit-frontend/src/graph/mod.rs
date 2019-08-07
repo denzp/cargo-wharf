@@ -39,7 +39,8 @@ impl From<RawBuildPlan> for BuildGraph {
             }
         }
 
-        self::ops::merge_build_script_nodes(&mut graph);
+        self::ops::merge_buildscript_nodes(&mut graph);
+        self::ops::apply_buildscript_outputs(&mut graph);
 
         Self { graph }
     }

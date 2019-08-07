@@ -3,11 +3,13 @@ name = "cargo-buildkit-frontend"
 version = "0.1.0"
 authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
+publish = false
 
 [dependencies]
 env_logger = "0.6"
 failure = "0.1"
 futures-preview = { version = "0.3.0-alpha.16", features = ["compat"] }
+lazy_static = "1.0"
 log = "0.4"
 petgraph = { version = "0.4", features = ["serde-1"] }
 prost = "0.5"
@@ -26,3 +28,6 @@ path = "../buildkit-frontend"
 
 [dependencies.buildkit-proto]
 path = "../buildkit-proto"
+
+[dev-dependencies]
+maplit = "1.0"

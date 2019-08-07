@@ -1,4 +1,3 @@
-#![feature(existential_type)]
 #![deny(warnings)]
 #![deny(clippy::all)]
 

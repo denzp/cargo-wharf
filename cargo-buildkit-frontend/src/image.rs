@@ -2,11 +2,21 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use failure::Error;
+use lazy_static::*;
 
 use buildkit_frontend::Bridge;
-use buildkit_llb::ops::{exec::Mount, source::ImageSource, Command};
+use buildkit_llb::ops::source::ImageSource;
+use buildkit_llb::prelude::*;
 
 use crate::TARGET_PATH;
+
+pub const BUILDSCRIPT_CAPTURE_EXEC: &str = "/usr/local/bin/cargo-buildscript-capture";
+pub const BUILDSCRIPT_APPLY_EXEC: &str = "/usr/local/bin/cargo-buildscript-apply";
+
+lazy_static! {
+    pub static ref TOOLS_IMAGE: ImageSource =
+        Source::image("denzp/cargo-container-tools:local").custom_name("Using build context");
+}
 
 #[derive(Debug)]
 pub struct RustDockerImage {

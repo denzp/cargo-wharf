@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use buildkit_proto::pb::{self, op::Op, OpMetadata, SourceOp};
 
-use crate::ops::{OperationBuilder, SingleBorrowedOutputOperation, SingleOwnedOutputOperation};
+use crate::ops::{OperationBuilder, SingleBorrowedOutput, SingleOwnedOutput};
 use crate::serialization::{Context, Node, Operation, OperationId, Result};
 use crate::utils::{OperationOutput, OutputIdx};
 
@@ -51,13 +51,13 @@ impl LocalSource {
     }
 }
 
-impl<'a> SingleBorrowedOutputOperation<'a> for LocalSource {
+impl<'a> SingleBorrowedOutput<'a> for LocalSource {
     fn output(&'a self) -> OperationOutput<'a> {
         OperationOutput::borrowed(self, OutputIdx(0))
     }
 }
 
-impl<'a> SingleOwnedOutputOperation<'static> for Arc<LocalSource> {
+impl<'a> SingleOwnedOutput<'static> for Arc<LocalSource> {
     fn output(&self) -> OperationOutput<'static> {
         OperationOutput::owned(self.clone(), OutputIdx(0))
     }

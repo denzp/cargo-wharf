@@ -11,7 +11,7 @@ use either::Either;
 use super::context::Context;
 use super::mount::Mount;
 
-use crate::ops::{MultiBorrowedOutputOperation, MultiOwnedOutputOperation, OperationBuilder};
+use crate::ops::{MultiBorrowedOutput, MultiOwnedOutput, OperationBuilder};
 use crate::serialization::{Context as SerializationCtx, Node, Operation, OperationId, Result};
 use crate::utils::{OperationOutput, OutputIdx};
 
@@ -127,14 +127,14 @@ impl<'a> Command<'a> {
     }
 }
 
-impl<'a, 'b: 'a> MultiBorrowedOutputOperation<'b> for Command<'b> {
+impl<'a, 'b: 'a> MultiBorrowedOutput<'b> for Command<'b> {
     fn output(&'b self, index: u32) -> OperationOutput<'b> {
         // TODO: check if the requested index available.
         OperationOutput::borrowed(self, OutputIdx(index))
     }
 }
 
-impl<'a> MultiOwnedOutputOperation<'a> for Arc<Command<'a>> {
+impl<'a> MultiOwnedOutput<'a> for Arc<Command<'a>> {
     fn output(&self, index: u32) -> OperationOutput<'a> {
         // TODO: check if the requested index available.
         OperationOutput::owned(self.clone(), OutputIdx(index))

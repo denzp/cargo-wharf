@@ -17,7 +17,7 @@ use crate::query::GraphQuery;
 pub struct CargoFrontend;
 
 impl Frontend for CargoFrontend {
-    existential type RunFuture: Future<Output = Result<OutputRef, Error>>;
+    type RunFuture = impl Future<Output = Result<OutputRef, Error>>;
 
     fn run(self, mut bridge: Bridge, options: Vec<String>) -> Self::RunFuture {
         async move {

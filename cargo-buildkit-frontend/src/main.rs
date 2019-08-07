@@ -1,7 +1,7 @@
 #![warn(clippy::all)]
 #![allow(clippy::needless_lifetimes, dead_code)]
 #![deny(warnings)]
-#![feature(async_await, existential_type)]
+#![feature(async_await, type_alias_impl_trait)]
 
 use env_logger::Env;
 use log::*;

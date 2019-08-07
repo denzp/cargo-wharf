@@ -1,3 +1,4 @@
+#[cfg(lib_msg)]
 pub fn hello() {
-    println!("Hello from library 1");
+    println!(env!("LIB_MSG"));
 }

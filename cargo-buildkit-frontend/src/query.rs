@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use failure::Error;
+use lazy_static::*;
 use log::*;
 use petgraph::prelude::*;
 use petgraph::visit::{Reversed, Topo, Walker};
@@ -11,8 +12,18 @@ use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
 use crate::graph::{BuildGraph, Node, NodeCommand, NodeCommandDetails, NodeKind};
-use crate::image::RustDockerImage;
+use crate::image::{
+    RustDockerImage, BUILDSCRIPT_APPLY_EXEC, BUILDSCRIPT_CAPTURE_EXEC, TOOLS_IMAGE,
+};
 use crate::{CONTEXT_PATH, TARGET_PATH};
+
+lazy_static! {
+    static ref CONTEXT: LocalSource = {
+        Source::local("context")
+            .custom_name("Using build context")
+            .add_exclude_pattern("**/target")
+    };
+}
 
 pub struct GraphQuery<'a> {
     original_graph: &'a StableGraph<Node, ()>,
@@ -32,30 +43,18 @@ impl<'a> GraphQuery<'a> {
     }
 
     pub fn definition(&self) -> pb::Definition {
-        let context = {
-            Source::local("context")
-                .custom_name("Using context")
-                .add_exclude_pattern("**/target")
-        };
-
-        self.terminal(&context).into_definition()
+        self.terminal().into_definition()
     }
 
     pub async fn solve(&self, bridge: &mut Bridge) -> Result<OutputRef, Error> {
-        let context = {
-            Source::local("context")
-                .custom_name("Using context")
-                .add_exclude_pattern("**/target")
-        };
-
-        bridge.solve(self.terminal(&context)).await
+        bridge.solve(self.terminal()).await
     }
 
-    fn terminal<'b: 'a>(&self, context: &'b LocalSource) -> Terminal<'a> {
-        let nodes = self.serialize_all_nodes(context);
+    fn terminal(&self) -> Terminal<'a> {
+        debug!("serializing all nodes");
+        let nodes = self.serialize_all_nodes();
 
         debug!("preparing the final operation");
-
         let (result, result_output) = {
             self.original_graph
                 .node_indices()
@@ -68,7 +67,7 @@ impl<'a> GraphQuery<'a> {
                         let from = LayerPath::Other(
                             nodes[node.0.index()].clone().unwrap(),
                             node.1
-                                .get_outputs_iter()
+                                .outputs_iter()
                                 .next()
                                 .unwrap()
                                 .strip_prefix(TARGET_PATH)
@@ -95,10 +94,7 @@ impl<'a> GraphQuery<'a> {
         Terminal::with(result.ref_counted().output(result_output))
     }
 
-    fn serialize_all_nodes<'b: 'a>(
-        &self,
-        context: &'b LocalSource,
-    ) -> Vec<Option<OperationOutput<'a>>> {
+    fn serialize_all_nodes(&self) -> Vec<Option<OperationOutput<'a>>> {
         let mut nodes = vec![None; self.original_graph.capacity().0];
         let mut deps = vec![None; self.original_graph.capacity().0];
 
@@ -108,7 +104,7 @@ impl<'a> GraphQuery<'a> {
             self.maybe_cache_dependencies(&nodes, &mut deps, index);
 
             let (raw_node_llb, output) =
-                self.serialize_node(context, self.original_graph.node_weight(index).unwrap());
+                self.serialize_node(self.original_graph.node_weight(index).unwrap());
 
             let node_llb = {
                 deps[index.index()]
@@ -142,7 +138,7 @@ impl<'a> GraphQuery<'a> {
                 self.original_graph
                     .node_weight(dep_index)
                     .unwrap()
-                    .get_outputs_iter()
+                    .outputs_iter()
                     .map(move |path| {
                         Mount::ReadOnlySelector(
                             nodes[dep_index.index()].clone().unwrap(),
@@ -155,61 +151,80 @@ impl<'a> GraphQuery<'a> {
         deps[index.index()] = Some(local_deps.collect());
     }
 
-    pub fn serialize_node<'b: 'a>(
-        &self,
-        context: &'b LocalSource,
-        node: &'b Node,
-    ) -> (Command<'a>, OutputIdx) {
-        match node.command() {
+    fn serialize_node(&self, node: &'a Node) -> (Command<'a>, OutputIdx) {
+        let (mut command, index) = match node.command() {
             NodeCommand::Simple(ref details) => {
-                self.serialize_command(context, node.get_outputs_iter(), details)
+                self.serialize_command(self.create_target_dirs(node.output_dirs_iter()), details)
             }
 
-            NodeCommand::WithBuildscript { command, .. } => {
-                self.serialize_command(context, node.get_outputs_iter(), command)
+            NodeCommand::WithBuildscript { compile, run } => {
+                let (compile_command, compile_index) = self
+                    .serialize_command(self.create_target_dirs(node.output_dirs_iter()), compile);
+
+                self.serialize_command(compile_command.ref_counted().output(compile_index.0), run)
             }
+        };
+
+        if let NodeKind::BuildScriptOutputConsumer(_) = node.kind() {
+            command = command.mount(Mount::ReadOnlySelector(
+                TOOLS_IMAGE.output(),
+                BUILDSCRIPT_APPLY_EXEC,
+                BUILDSCRIPT_APPLY_EXEC,
+            ));
         }
+
+        if let NodeKind::MergedBuildScript(_) = node.kind() {
+            command = command.mount(Mount::ReadOnlySelector(
+                TOOLS_IMAGE.output(),
+                BUILDSCRIPT_CAPTURE_EXEC,
+                BUILDSCRIPT_CAPTURE_EXEC,
+            ));
+        }
+
+        (command, index)
+    }
+
+    fn create_target_dirs(
+        &self,
+        outputs: impl Iterator<Item = &'a Path>,
+    ) -> OperationOutput<'static> {
+        let mut operation = FileSystem::sequence();
+
+        for output in outputs {
+            let path = output.strip_prefix(TARGET_PATH).unwrap();
+
+            let (index, layer_path) = match operation.last_output_index() {
+                Some(index) => (index + 1, LayerPath::Own(OwnOutputIdx(index), path)),
+                None => (0, LayerPath::Scratch(path)),
+            };
+
+            operation = operation
+                .append(FileSystem::mkdir(OutputIdx(index), layer_path).make_parents(true));
+        }
+
+        operation.ref_counted().last_output().unwrap()
     }
 
     fn serialize_command<'b: 'a>(
         &self,
-        context: &'b LocalSource,
-        mut outputs: impl Iterator<Item = &'b Path>,
-        command: &NodeCommandDetails,
+        target_layer: OperationOutput<'b>,
+        command: &'b NodeCommandDetails,
     ) -> (Command<'a>, OutputIdx) {
-        let out_path = {
-            // TODO: go through all outputs
-            FileSystem::mkdir(
-                OutputIdx(0),
-                LayerPath::Scratch(
-                    outputs
-                        .next()
-                        .unwrap()
-                        .strip_prefix(TARGET_PATH)
-                        .unwrap()
-                        .parent()
-                        .unwrap(),
-                ),
-            )
-            .make_parents(true)
-            .into_operation()
-            .ref_counted()
-        };
-
-        // TODO: mount the context only when it's needed.
-
-        let command_llb = {
+        let mut command_llb = {
             self.image
                 .populate_env(Command::run(&command.program))
-                .cwd(CONTEXT_PATH)
+                .cwd(&command.cwd)
                 .args(&command.args)
                 .env_iter(&command.env)
                 .mount(Mount::ReadOnlyLayer(self.image.source().output(), "/"))
-                .mount(Mount::ReadOnlyLayer(context.output(), CONTEXT_PATH))
-                .mount(Mount::Scratch(OutputIdx(0), "/tmp"))
-                .mount(Mount::Layer(OutputIdx(1), out_path.output(0), TARGET_PATH))
+                .mount(Mount::Layer(OutputIdx(0), target_layer, TARGET_PATH))
+                .mount(Mount::Scratch(OutputIdx(1), "/tmp"))
         };
 
-        (command_llb, OutputIdx(1))
+        if command.cwd.starts_with(CONTEXT_PATH) {
+            command_llb = command_llb.mount(Mount::ReadOnlyLayer(CONTEXT.output(), CONTEXT_PATH));
+        }
+
+        (command_llb, OutputIdx(0))
     }
 }

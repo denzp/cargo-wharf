@@ -5,7 +5,7 @@ use buildkit_proto::pb::{self, op::Op};
 
 use super::FileOperation;
 
-use crate::ops::{MultiBorrowedOutputOperation, MultiOwnedOutputOperation, OperationBuilder};
+use crate::ops::*;
 use crate::serialization::{Context, Node, Operation, OperationId, Result};
 use crate::utils::{OperationOutput, OutputIdx};
 
@@ -44,12 +44,8 @@ impl<'a> SequenceOperation<'a> {
         self
     }
 
-    pub fn last_output(&self) -> Option<OperationOutput<'_>> {
-        self.last_output_index().map(|index| self.output(index))
-    }
-
     pub fn last_output_index(&self) -> Option<u32> {
-        // TODO: make sure the `inner` elements has monotonic indexes
+        // TODO: make sure the `inner` elements have monotonic indexes
 
         self.inner
             .iter()
@@ -59,17 +55,29 @@ impl<'a> SequenceOperation<'a> {
     }
 }
 
-impl<'a, 'b: 'a> MultiBorrowedOutputOperation<'b> for SequenceOperation<'b> {
+impl<'a, 'b: 'a> MultiBorrowedOutput<'b> for SequenceOperation<'b> {
     fn output(&'b self, index: u32) -> OperationOutput<'b> {
         // TODO: check if the requested index available.
         OperationOutput::borrowed(self, OutputIdx(index))
     }
 }
 
-impl<'a> MultiOwnedOutputOperation<'a> for Arc<SequenceOperation<'a>> {
+impl<'a> MultiOwnedOutput<'a> for Arc<SequenceOperation<'a>> {
     fn output(&self, index: u32) -> OperationOutput<'a> {
         // TODO: check if the requested index available.
         OperationOutput::owned(self.clone(), OutputIdx(index))
+    }
+}
+
+impl<'a, 'b: 'a> MultiBorrowedLastOutput<'b> for SequenceOperation<'b> {
+    fn last_output(&'b self) -> Option<OperationOutput<'b>> {
+        self.last_output_index().map(|index| self.output(index))
+    }
+}
+
+impl<'a> MultiOwnedLastOutput<'a> for Arc<SequenceOperation<'a>> {
+    fn last_output(&self) -> Option<OperationOutput<'a>> {
+        self.last_output_index().map(|index| self.output(index))
     }
 }
 

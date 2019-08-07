@@ -1,4 +1,4 @@
-FROM clux/muslrust:nightly as builder
+FROM clux/muslrust:nightly-2019-08-03 as builder
 USER root
 
 WORKDIR /rust-src
