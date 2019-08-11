@@ -103,19 +103,12 @@ impl<'a> GraphQuery<'a> {
         while let Some(index) = visitor.next(self.original_graph) {
             self.maybe_cache_dependencies(&nodes, &mut deps, index);
 
-            let (raw_node_llb, output) =
-                self.serialize_node(self.original_graph.node_weight(index).unwrap());
+            let (node_llb, output) = self.serialize_node(
+                deps[index.index()].as_ref().unwrap(),
+                self.original_graph.node_weight(index).unwrap(),
+            );
 
-            let node_llb = {
-                deps[index.index()]
-                    .as_ref()
-                    .unwrap()
-                    .iter()
-                    .fold(raw_node_llb, |output, mount| output.mount(mount.clone()))
-                    .ref_counted()
-            };
-
-            nodes[index.index()] = Some(node_llb.output(output.0));
+            nodes[index.index()] = Some(node_llb.ref_counted().output(output.0));
         }
 
         nodes
@@ -151,19 +144,35 @@ impl<'a> GraphQuery<'a> {
         deps[index.index()] = Some(local_deps.collect());
     }
 
-    fn serialize_node(&self, node: &'a Node) -> (Command<'a>, OutputIdx) {
+    fn serialize_node(
+        &self,
+        deps: &[Mount<'a, PathBuf>],
+        node: &'a Node,
+    ) -> (Command<'a>, OutputIdx) {
         let (mut command, index) = match node.command() {
             NodeCommand::Simple(ref details) => {
                 self.serialize_command(self.create_target_dirs(node.output_dirs_iter()), details)
             }
 
             NodeCommand::WithBuildscript { compile, run } => {
-                let (compile_command, compile_index) = self
-                    .serialize_command(self.create_target_dirs(node.output_dirs_iter()), compile);
+                let (mut compile_command, compile_index) = {
+                    self.serialize_command(
+                        self.create_target_dirs(node.output_dirs_iter()),
+                        compile,
+                    )
+                };
+
+                for mount in deps {
+                    compile_command = compile_command.mount(mount.clone());
+                }
 
                 self.serialize_command(compile_command.ref_counted().output(compile_index.0), run)
             }
         };
+
+        for mount in deps {
+            command = command.mount(mount.clone());
+        }
 
         if let NodeKind::BuildScriptOutputConsumer(_) = node.kind() {
             command = command.mount(Mount::ReadOnlySelector(
