@@ -24,7 +24,7 @@ pub use self::utils::{OutputRef, ToErrorString};
 pub trait Frontend {
     type RunFuture: Future<Output = Result<OutputRef, Error>>;
 
-    fn run(self, bridge: Bridge, options: Vec<String>) -> Self::RunFuture;
+    fn run(self, bridge: Bridge, options: Options) -> Self::RunFuture;
 }
 
 pub async fn run_frontend<F: Frontend>(frontend: F) -> Result<(), Error> {
@@ -49,7 +49,7 @@ pub async fn run_frontend<F: Frontend>(frontend: F) -> Result<(), Error> {
     let options = Options::analyse();
 
     debug!("running a frontend entrypoint");
-    match frontend.run(bridge.clone(), options.into()).await {
+    match frontend.run(bridge.clone(), options).await {
         Ok(output) => {
             bridge
                 .finish_with_success(output)

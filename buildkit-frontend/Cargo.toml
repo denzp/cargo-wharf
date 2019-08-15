@@ -5,6 +5,7 @@ authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+csv = "1.1"
 failure = "0.1"
 libc = "0.2"
 log = "0.4"

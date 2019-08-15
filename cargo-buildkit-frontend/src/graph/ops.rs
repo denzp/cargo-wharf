@@ -124,9 +124,7 @@ mod tests {
         assert_eq!(buildscript_node.links_iter().collect::<Vec<_>>(), vec![]);
         assert_eq!(
             buildscript_node.outputs_iter().collect::<Vec<_>>(),
-            vec![Path::new(
-                "/target/debug/build/lib-1-b110aa734b821ac2/build_script_build-b110aa734b821ac2"
-            )],
+            vec![Path::new("/target/debug/build/lib-1-c181ff77de97ab79/out")],
         );
         assert_eq!(
             buildscript_node.output_dirs_iter().collect::<Vec<_>>(),

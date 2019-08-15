@@ -4,7 +4,7 @@ use failure::{Error, ResultExt};
 use futures::prelude::*;
 use prost::Message;
 
-use buildkit_frontend::{Bridge, Frontend, OutputRef};
+use buildkit_frontend::{Bridge, Frontend, Options, OutputRef};
 use buildkit_llb::ops::fs::SequenceOperation;
 use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
@@ -19,7 +19,7 @@ pub struct CargoFrontend;
 impl Frontend for CargoFrontend {
     type RunFuture = impl Future<Output = Result<OutputRef, Error>>;
 
-    fn run(self, mut bridge: Bridge, options: Vec<String>) -> Self::RunFuture {
+    fn run(self, mut bridge: Bridge, options: Options) -> Self::RunFuture {
         async move {
             let builder_image = {
                 RustDockerImage::analyse(&mut bridge, Source::image("rustlang/rust:nightly"))
@@ -35,43 +35,34 @@ impl Frontend for CargoFrontend {
 
             let mut debug_op = FileSystem::sequence().custom_name("Writing the debug output");
 
-            if options
-                .iter()
-                .any(|x| x.starts_with("debug=") && x.contains("build-plan"))
-            {
-                debug_op = debug_output(debug_op, "build-plan.json", &build_plan)?;
+            if options.has_value("debug", "build-plan") {
+                debug_op = append_debug_output(debug_op, "build-plan.json", &build_plan)?;
             }
 
             let graph: BuildGraph = build_plan.into();
             let query = GraphQuery::new(&graph, &builder_image);
 
-            if options
-                .iter()
-                .any(|x| x.starts_with("debug=") && x.contains("build-graph"))
-            {
-                debug_op = debug_output(debug_op, "build-graph.json", &graph)?;
+            if options.has_value("debug", "build-graph") {
+                debug_op = append_debug_output(debug_op, "build-graph.json", &graph)?;
             }
 
-            if options
-                .iter()
-                .any(|x| x.starts_with("debug=") && x.contains("llb"))
-            {
-                debug_op = debug_output(debug_op, "llb.pb", &query.definition())?;
+            if options.has_value("debug", "llb") {
+                debug_op = append_debug_output(debug_op, "llb.pb", &query.definition())?;
             }
 
-            if options.iter().any(|x| x.starts_with("debug=")) {
-                bridge
+            if options.has("debug") {
+                return bridge
                     .solve(Terminal::with(debug_op.last_output().unwrap()))
                     .await
                     .context("Unable to write debug output")
-                    .map_err(Error::from)
-            } else {
-                query
-                    .solve(&mut bridge)
-                    .await
-                    .context("Unable to build the crate")
-                    .map_err(Error::from)
+                    .map_err(Error::from);
             }
+
+            query
+                .solve(&mut bridge)
+                .await
+                .context("Unable to build the crate")
+                .map_err(Error::from)
         }
     }
 }
@@ -80,7 +71,7 @@ trait DebugOutput {
     fn as_bytes(&self) -> Result<Vec<u8>, Error>;
 }
 
-fn debug_output<'a, P, O>(
+fn append_debug_output<'a, P, O>(
     op: SequenceOperation<'a>,
     path: P,
     output: &O,
