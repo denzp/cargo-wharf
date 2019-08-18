@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use failure::{bail, format_err, Error, ResultExt};
@@ -18,9 +19,10 @@ use buildkit_proto::moby::buildkit::v1::frontend::{
 pub use buildkit_llb::ops::Terminal;
 pub use buildkit_proto::moby::buildkit::v1::frontend::FileRange;
 
-use super::error::ErrorCode;
-use super::stdio::StdioSocket;
-use super::utils::OutputRef;
+use crate::error::ErrorCode;
+use crate::oci::ImageSpecification;
+use crate::stdio::StdioSocket;
+use crate::utils::OutputRef;
 
 type BridgeConnection = tower_request_modifier::RequestModifier<
     Connection<StdioSocket, DefaultExecutor, BoxBody>,
@@ -106,12 +108,22 @@ impl Bridge {
         Ok(response)
     }
 
-    pub(crate) async fn finish_with_success(mut self, output: OutputRef) -> Result<(), Error> {
+    pub(crate) async fn finish_with_success(
+        mut self,
+        output: OutputRef,
+        config: Option<ImageSpecification>,
+    ) -> Result<(), Error> {
+        let mut metadata = HashMap::new();
+
+        if let Some(config) = config {
+            metadata.insert("containerimage.config".into(), serde_json::to_vec(&config)?);
+        }
+
         let request = ReturnRequest {
             error: None,
             result: Some(Output {
                 result: Some(RefResult::Ref(output.0)),
-                metadata: Default::default(),
+                metadata,
             }),
         };
 

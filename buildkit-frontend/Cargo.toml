@@ -10,6 +10,9 @@ failure = "0.1"
 libc = "0.2"
 log = "0.4"
 mio = "0.6"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
 tokio = "0.1"
 
 tower-grpc = { git = "https://github.com/tower-rs/tower-grpc" }
@@ -20,8 +23,15 @@ tower-request-modifier = { git = "https://github.com/tower-rs/tower-http" }
 version = "0.3.0-alpha.16"
 features = ["compat"]
 
+[dependencies.chrono]
+version = "0.4"
+features = ["serde"]
+
 [dependencies.buildkit-proto]
 path = "../buildkit-proto"
 
 [dependencies.buildkit-llb]
 path = "../buildkit-llb"
+
+[dev-dependencies]
+pretty_assertions = "0.6"

@@ -1,3 +1,5 @@
+#[allow(clippy::all)]
+
 pub mod moby {
     pub mod buildkit {
         pub mod v1 {

@@ -1,11 +1,13 @@
 use std::path::{Path, PathBuf};
 
+use chrono::prelude::*;
 use failure::Error;
 use lazy_static::*;
 use log::*;
 use petgraph::prelude::*;
 use petgraph::visit::{Reversed, Topo, Walker};
 
+use buildkit_frontend::oci::*;
 use buildkit_frontend::{Bridge, OutputRef};
 use buildkit_llb::ops::source::LocalSource;
 use buildkit_llb::prelude::*;
@@ -48,6 +50,20 @@ impl<'a> GraphQuery<'a> {
 
     pub async fn solve(&self, bridge: &mut Bridge) -> Result<OutputRef, Error> {
         bridge.solve(self.terminal()).await
+    }
+
+    pub fn image_spec(&self) -> Result<ImageSpecification, Error> {
+        Ok(ImageSpecification {
+            created: Some(Utc::now()),
+            author: None,
+
+            architecture: Architecture::Amd64,
+            os: OperatingSystem::Linux,
+
+            config: None,
+            rootfs: None,
+            history: None,
+        })
     }
 
     fn terminal(&self) -> Terminal<'a> {

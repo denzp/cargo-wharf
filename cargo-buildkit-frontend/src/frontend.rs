@@ -4,7 +4,7 @@ use failure::{Error, ResultExt};
 use futures::prelude::*;
 use prost::Message;
 
-use buildkit_frontend::{Bridge, Frontend, Options, OutputRef};
+use buildkit_frontend::{Bridge, Frontend, FrontendOutput, Options};
 use buildkit_llb::ops::fs::SequenceOperation;
 use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
@@ -17,7 +17,7 @@ use crate::query::GraphQuery;
 pub struct CargoFrontend;
 
 impl Frontend for CargoFrontend {
-    type RunFuture = impl Future<Output = Result<OutputRef, Error>>;
+    type RunFuture = impl Future<Output = Result<FrontendOutput, Error>>;
 
     fn run(self, mut bridge: Bridge, options: Options) -> Self::RunFuture {
         async move {
@@ -51,18 +51,21 @@ impl Frontend for CargoFrontend {
             }
 
             if options.has("debug") {
-                return bridge
-                    .solve(Terminal::with(debug_op.last_output().unwrap()))
-                    .await
-                    .context("Unable to write debug output")
-                    .map_err(Error::from);
+                return Ok(FrontendOutput::with_ref(
+                    bridge
+                        .solve(Terminal::with(debug_op.last_output().unwrap()))
+                        .await
+                        .context("Unable to write debug output")?,
+                ));
             }
 
-            query
-                .solve(&mut bridge)
-                .await
-                .context("Unable to build the crate")
-                .map_err(Error::from)
+            Ok(FrontendOutput::with_spec_and_ref(
+                query.image_spec().context("Unable to build image spec")?,
+                query
+                    .solve(&mut bridge)
+                    .await
+                    .context("Unable to build the crate")?,
+            ))
         }
     }
 }

@@ -8,7 +8,7 @@ buildctl-cargo-frontend:
 	buildctl build --frontend gateway.v0 --opt source=docker/dockerfile:1.1-experimental --local context=. --local dockerfile=cargo-buildkit-frontend --output type=image,name=docker.io/denzp/cargo-buildkit-frontend:local
 
 buildctl-cargo-frontend-example: buildctl-container-tools buildctl-cargo-frontend
-	buildctl build --frontend gateway.v0 --opt source=denzp/cargo-buildkit-frontend:local --local context=examples/workspace --output type=local,dest=.debug-output
+	buildctl build --frontend gateway.v0 --opt source=denzp/cargo-buildkit-frontend:local --local context=examples/workspace --output type=docker,name=cargo-wharf/example-binary | docker load
 
 buildctl-cargo-frontend-example-debug: buildctl-container-tools buildctl-cargo-frontend
 	buildctl build --frontend gateway.v0 --opt source=denzp/cargo-buildkit-frontend:local --local context=examples/workspace  --opt debug=build-plan,build-graph,llb --output type=local,dest=.debug-output
