@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::Arc;
 
 use buildkit_proto::pb::{self, op::Op, OpMetadata, SourceOp};
@@ -13,6 +14,24 @@ pub struct ImageSource {
     name: String,
     description: HashMap<String, String>,
     ignore_cache: bool,
+    resolve_mode: Option<ResolveMode>,
+}
+
+#[derive(Debug)]
+pub enum ResolveMode {
+    Default,
+    ForcePull,
+    PreferLocal,
+}
+
+impl fmt::Display for ResolveMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ResolveMode::Default => write!(f, "default"),
+            ResolveMode::ForcePull => write!(f, "pull"),
+            ResolveMode::PreferLocal => write!(f, "local"),
+        }
+    }
 }
 
 impl ImageSource {
@@ -25,7 +44,13 @@ impl ImageSource {
             name: name.into(),
             description: Default::default(),
             ignore_cache: false,
+            resolve_mode: None,
         }
+    }
+
+    pub fn with_resolve_mode(mut self, mode: ResolveMode) -> Self {
+        self.resolve_mode = Some(mode);
+        self
     }
 }
 
@@ -64,10 +89,16 @@ impl Operation for ImageSource {
     }
 
     fn serialize(&self, _: &mut Context) -> Result<Node> {
+        let mut attrs = HashMap::default();
+
+        if let Some(ref mode) = self.resolve_mode {
+            attrs.insert("image.resolvemode".into(), mode.to_string());
+        }
+
         let head = pb::Op {
             op: Some(Op::Source(SourceOp {
                 identifier: format!("docker-image://docker.io/{}", self.name),
-                attrs: Default::default(),
+                attrs,
             })),
 
             ..Default::default()
@@ -127,6 +158,51 @@ fn serialization() {
             Op::Source(SourceOp {
                 identifier: "docker-image://docker.io/rustlang/rust:nightly".into(),
                 attrs: Default::default(),
+            })
+        },
+    );
+
+    crate::check_op!(
+        ImageSource::new("rustlang/rust:nightly").with_resolve_mode(ResolveMode::Default),
+        |digest| { "sha256:792e246751e84b9a5e40c28900d70771a07e8cc920c1039cdddfc6bf69256dfe" },
+        |description| { vec![] },
+        |caps| { vec![] },
+        |cached_tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "docker-image://docker.io/rustlang/rust:nightly".into(),
+                attrs: crate::utils::test::to_map(vec![("image.resolvemode", "default")]),
+            })
+        },
+    );
+
+    crate::check_op!(
+        ImageSource::new("rustlang/rust:nightly").with_resolve_mode(ResolveMode::ForcePull),
+        |digest| { "sha256:0bd920010eab701bdce44c61d220e6943d56d3fb9a9fa4e773fc060c0d746122" },
+        |description| { vec![] },
+        |caps| { vec![] },
+        |cached_tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "docker-image://docker.io/rustlang/rust:nightly".into(),
+                attrs: crate::utils::test::to_map(vec![("image.resolvemode", "pull")]),
+            })
+        },
+    );
+
+    crate::check_op!(
+        ImageSource::new("rustlang/rust:nightly").with_resolve_mode(ResolveMode::PreferLocal),
+        |digest| { "sha256:bd6797c8644d2663b29c36a8b3b63931e539be44ede5e56aca2da4f35f241f18" },
+        |description| { vec![] },
+        |caps| { vec![] },
+        |cached_tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "docker-image://docker.io/rustlang/rust:nightly".into(),
+                attrs: crate::utils::test::to_map(vec![("image.resolvemode", "local")]),
             })
         },
     );

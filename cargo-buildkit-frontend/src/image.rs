@@ -14,8 +14,7 @@ pub const BUILDSCRIPT_CAPTURE_EXEC: &str = "/usr/local/bin/cargo-buildscript-cap
 pub const BUILDSCRIPT_APPLY_EXEC: &str = "/usr/local/bin/cargo-buildscript-apply";
 
 lazy_static! {
-    pub static ref TOOLS_IMAGE: ImageSource =
-        Source::image("denzp/cargo-container-tools:local").custom_name("Using build context");
+    pub static ref TOOLS_IMAGE: ImageSource = Source::image("denzp/cargo-container-tools:local");
 }
 
 #[derive(Debug)]

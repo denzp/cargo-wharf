@@ -22,9 +22,13 @@ impl Frontend for CargoFrontend {
     fn run(self, mut bridge: Bridge, options: Options) -> Self::RunFuture {
         async move {
             let builder_image = {
-                RustDockerImage::analyse(&mut bridge, Source::image("rustlang/rust:nightly"))
-                    .await
-                    .context("Unable to analyse Rust builder image")?
+                RustDockerImage::analyse(
+                    &mut bridge,
+                    Source::image("rustlang/rust:nightly")
+                        .with_resolve_mode(ResolveMode::PreferLocal),
+                )
+                .await
+                .context("Unable to analyse Rust builder image")?
             };
 
             let build_plan = {
@@ -93,13 +97,13 @@ where
 
 impl DebugOutput for RawBuildPlan {
     fn as_bytes(&self) -> Result<Vec<u8>, Error> {
-        Ok(serde_json::to_string_pretty(self)?.into_bytes())
+        Ok(serde_json::to_vec_pretty(self)?)
     }
 }
 
 impl DebugOutput for BuildGraph {
     fn as_bytes(&self) -> Result<Vec<u8>, Error> {
-        Ok(serde_json::to_string_pretty(self)?.into_bytes())
+        Ok(serde_json::to_vec_pretty(self)?)
     }
 }
 

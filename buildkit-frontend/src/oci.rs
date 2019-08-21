@@ -289,7 +289,7 @@ mod golang_map {
         type Value = Option<Vec<T>>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("a nonempty sequence of numbers")
+            formatter.write_str("a map with empty struct values")
         }
 
         fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
@@ -343,7 +343,7 @@ mod env_variables {
         type Value = Option<HashMap<String, String>>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("a nonempty sequence of numbers")
+            formatter.write_str("a pair ENV_NAME=ENV_VALUE")
         }
 
         fn visit_seq<M>(self, mut access: M) -> Result<Self::Value, M::Error>
@@ -355,7 +355,7 @@ mod env_variables {
             while let Some(mut pair) = access.next_element::<String>()? {
                 let separator = pair
                     .find('=')
-                    .ok_or_else(|| Error::custom("Expected a pair ENV_NAME=Env_VALUE"))?;
+                    .ok_or_else(|| Error::custom("Expected a pair ENV_NAME=ENV_VALUE"))?;
 
                 let value: String = pair.drain(separator + 1..).collect();
                 pair.truncate(separator);

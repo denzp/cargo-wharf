@@ -3,7 +3,7 @@ mod image;
 mod local;
 
 pub use self::git::GitSource;
-pub use self::image::ImageSource;
+pub use self::image::{ImageSource, ResolveMode};
 pub use self::local::LocalSource;
 
 /// Provide an input for other operations. For example: `FROM` directive in Dockerfile.
