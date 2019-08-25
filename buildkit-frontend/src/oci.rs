@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::convert::TryFrom;
-use std::fmt;
 
 use chrono::prelude::*;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 // https://github.com/opencontainers/image-spec/blob/v1.0.1/config.md
 
@@ -89,46 +89,66 @@ pub enum OperatingSystem {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+#[serde(from = "RawImageConfig")]
+#[serde(into = "RawImageConfig")]
 pub struct ImageConfig {
     /// The username or UID which is a platform-specific structure that allows specific control over which user the process run as.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub user: Option<String>,
 
     /// A set of ports to expose from a container running this image.
-    #[serde(with = "golang_map")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub exposed_ports: Option<Vec<ExposedPort>>,
 
     /// Environment variables for the process to run with.
-    #[serde(with = "env_variables")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub env: Option<HashMap<String, String>>,
 
     /// A list of arguments to use as the command to execute when the container starts.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub entrypoint: Option<Vec<String>>,
 
     /// Default arguments to the entrypoint of the container.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cmd: Option<Vec<String>>,
 
     /// A set of directories describing where the process is likely write data specific to a container instance.
-    #[serde(with = "golang_map")]
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub volumes: Option<Vec<String>>,
 
     /// Sets the current working directory of the entrypoint process in the container.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub working_dir: Option<String>,
 
     /// The field contains arbitrary metadata for the container.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub labels: Option<HashMap<String, String>>,
 
     /// The field contains the system call signal that will be sent to the container to exit.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub stop_signal: Option<Signal>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct RawImageConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    exposed_ports: Option<BTreeMap<ExposedPort, Value>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    env: Option<Vec<String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    entrypoint: Option<Vec<String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cmd: Option<Vec<String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    volumes: Option<BTreeMap<String, Value>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    working_dir: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    labels: Option<HashMap<String, String>>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stop_signal: Option<Signal>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -166,7 +186,7 @@ pub struct LayerHistoryItem {
     pub empty_layer: Option<bool>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize)]
 #[serde(try_from = "String")]
 #[serde(into = "String")]
 pub enum ExposedPort {
@@ -241,131 +261,74 @@ pub enum Signal {
     SIGINFO,
 }
 
-mod golang_map {
-    use serde::de::{MapAccess, Visitor};
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-    use std::marker::PhantomData;
+impl From<RawImageConfig> for ImageConfig {
+    fn from(raw: RawImageConfig) -> Self {
+        Self {
+            user: raw.user,
+            entrypoint: raw.entrypoint,
+            cmd: raw.cmd,
+            working_dir: raw.working_dir,
+            labels: raw.labels,
+            stop_signal: raw.stop_signal,
 
-    use super::*;
+            env: raw.env.map(|inner| {
+                inner
+                    .into_iter()
+                    .map(|mut pair| match pair.find('=') {
+                        Some(pos) => {
+                            let value = pair.split_off(pos + 1);
+                            let mut name = pair;
+                            name.pop();
 
-    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<Option<Vec<T>>, D::Error>
-    where
-        T: Deserialize<'de>,
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_map(MapVisitor::default())
-    }
+                            (name, value)
+                        }
 
-    pub fn serialize<T, S>(value: &Option<Vec<T>>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        T: Serialize,
-        S: Serializer,
-    {
-        serializer.collect_map(
-            value
-                .as_ref()
-                .unwrap()
-                .iter()
-                .map(|key| (key, HashMap::<(), ()>::with_capacity(0))),
-        )
-    }
+                        None => (pair, String::with_capacity(0)),
+                    })
+                    .collect()
+            }),
 
-    struct MapVisitor<T> {
-        marker: PhantomData<T>,
-    }
+            exposed_ports: raw
+                .exposed_ports
+                .map(|inner| inner.into_iter().map(|(port, _)| port).collect()),
 
-    impl<T> Default for MapVisitor<T> {
-        fn default() -> Self {
-            Self {
-                marker: PhantomData,
-            }
-        }
-    }
-
-    impl<'de, T> Visitor<'de> for MapVisitor<T>
-    where
-        T: Deserialize<'de>,
-    {
-        type Value = Option<Vec<T>>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("a map with empty struct values")
-        }
-
-        fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
-        where
-            M: MapAccess<'de>,
-        {
-            let mut seq = Vec::with_capacity(access.size_hint().unwrap_or(0));
-
-            while let Some((key, _)) = access.next_entry::<T, serde_json::Value>()? {
-                seq.push(key);
-            }
-
-            Ok(Some(seq))
+            volumes: raw
+                .volumes
+                .map(|inner| inner.into_iter().map(|(volume, _)| volume).collect()),
         }
     }
 }
 
-mod env_variables {
-    use serde::de::{Error, SeqAccess, Visitor};
-    use serde::{Deserializer, Serializer};
+impl Into<RawImageConfig> for ImageConfig {
+    fn into(self) -> RawImageConfig {
+        RawImageConfig {
+            user: self.user,
+            entrypoint: self.entrypoint,
+            cmd: self.cmd,
+            working_dir: self.working_dir,
+            labels: self.labels,
+            stop_signal: self.stop_signal,
 
-    use super::*;
+            env: self.env.map(|inner| {
+                inner
+                    .into_iter()
+                    .map(|(key, value)| format!("{}={}", key, value))
+                    .collect()
+            }),
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<HashMap<String, String>>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_seq(SeqVisitor::default())
-    }
+            exposed_ports: self.exposed_ports.map(|inner| {
+                inner
+                    .into_iter()
+                    .map(|port| (port, Value::Object(Default::default())))
+                    .collect()
+            }),
 
-    pub fn serialize<S>(
-        value: &Option<HashMap<String, String>>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.collect_seq(
-            value
-                .as_ref()
-                .unwrap()
-                .iter()
-                .map(|(key, value)| format!("{}={}", key, value)),
-        )
-    }
-
-    #[derive(Default)]
-    struct SeqVisitor;
-
-    impl<'de> Visitor<'de> for SeqVisitor {
-        type Value = Option<HashMap<String, String>>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("a pair ENV_NAME=ENV_VALUE")
-        }
-
-        fn visit_seq<M>(self, mut access: M) -> Result<Self::Value, M::Error>
-        where
-            M: SeqAccess<'de>,
-        {
-            let mut kv = HashMap::with_capacity(access.size_hint().unwrap_or(0));
-
-            while let Some(mut pair) = access.next_element::<String>()? {
-                let separator = pair
-                    .find('=')
-                    .ok_or_else(|| Error::custom("Expected a pair ENV_NAME=ENV_VALUE"))?;
-
-                let value: String = pair.drain(separator + 1..).collect();
-                pair.truncate(separator);
-
-                let key = pair;
-
-                kv.insert(key, value);
-            }
-
-            Ok(Some(kv))
+            volumes: self.volumes.map(|inner| {
+                inner
+                    .into_iter()
+                    .map(|volume| (volume, Value::Object(Default::default())))
+                    .collect()
+            }),
         }
     }
 }

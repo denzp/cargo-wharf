@@ -8,16 +8,17 @@ use crate::ops::{OperationBuilder, SingleBorrowedOutput, SingleOwnedOutput};
 use crate::serialization::{Context, Node, Operation, OperationId, Result};
 use crate::utils::{OperationOutput, OutputIdx};
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct ImageSource {
     id: OperationId,
     name: String,
     description: HashMap<String, String>,
     ignore_cache: bool,
     resolve_mode: Option<ResolveMode>,
+    digest: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum ResolveMode {
     Default,
     ForcePull,
@@ -34,6 +35,12 @@ impl fmt::Display for ResolveMode {
     }
 }
 
+impl Default for ResolveMode {
+    fn default() -> Self {
+        ResolveMode::Default
+    }
+}
+
 impl ImageSource {
     pub(crate) fn new<S>(name: S) -> Self
     where
@@ -41,16 +48,33 @@ impl ImageSource {
     {
         Self {
             id: OperationId::default(),
-            name: name.into(),
+            name: format!("docker.io/{}", name.into()),
             description: Default::default(),
             ignore_cache: false,
             resolve_mode: None,
+            digest: None,
         }
     }
 
     pub fn with_resolve_mode(mut self, mode: ResolveMode) -> Self {
         self.resolve_mode = Some(mode);
         self
+    }
+
+    pub fn resolve_mode(&self) -> Option<ResolveMode> {
+        self.resolve_mode
+    }
+
+    pub fn with_digest<S>(mut self, digest: S) -> Self
+    where
+        S: Into<String>,
+    {
+        self.digest = Some(digest.into());
+        self
+    }
+
+    pub fn canonical_name(&self) -> &str {
+        &self.name
     }
 }
 
@@ -97,7 +121,12 @@ impl Operation for ImageSource {
 
         let head = pb::Op {
             op: Some(Op::Source(SourceOp {
-                identifier: format!("docker-image://docker.io/{}", self.name),
+                identifier: match self.digest {
+                    None => format!("docker-image://{}", self.canonical_name()),
+                    Some(ref digest) => {
+                        format!("docker-image://{}@{}", self.canonical_name(), digest)
+                    }
+                },
                 attrs,
             })),
 
@@ -162,6 +191,24 @@ fn serialization() {
         },
     );
 
+    crate::check_op!(
+        ImageSource::new("rustlang/rust:nightly").with_digest("sha256:123456"),
+        |digest| { "sha256:a9837e26998d165e7b6433f8d40b36d259905295860fcbbc62bbce75a6c991c6" },
+        |description| { vec![] },
+        |caps| { vec![] },
+        |cached_tail| { vec![] },
+        |inputs| { vec![] },
+        |op| {
+            Op::Source(SourceOp {
+                identifier: "docker-image://docker.io/rustlang/rust:nightly@sha256:123456".into(),
+                attrs: Default::default(),
+            })
+        },
+    );
+}
+
+#[test]
+fn resolve_mode() {
     crate::check_op!(
         ImageSource::new("rustlang/rust:nightly").with_resolve_mode(ResolveMode::Default),
         |digest| { "sha256:792e246751e84b9a5e40c28900d70771a07e8cc920c1039cdddfc6bf69256dfe" },

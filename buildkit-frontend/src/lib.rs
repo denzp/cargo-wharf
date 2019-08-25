@@ -1,6 +1,5 @@
 #![deny(warnings)]
 #![deny(clippy::all)]
-#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use futures::compat::*;

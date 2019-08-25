@@ -12,10 +12,11 @@ use tower_h2::client::Connection;
 
 use buildkit_proto::google::rpc::Status;
 use buildkit_proto::moby::buildkit::v1::frontend::{
-    client, result::Result as RefResult, ReadFileRequest, Result as Output, ReturnRequest,
-    SolveRequest,
+    client, result::Result as RefResult, ReadFileRequest, ResolveImageConfigRequest,
+    Result as Output, ReturnRequest, SolveRequest,
 };
 
+pub use buildkit_llb::ops::source::{ImageSource, ResolveMode};
 pub use buildkit_llb::ops::Terminal;
 pub use buildkit_proto::moby::buildkit::v1::frontend::FileRange;
 
@@ -39,6 +40,34 @@ impl Bridge {
         Self {
             client: client::LlbBridge::new(client),
         }
+    }
+
+    pub async fn resolve_image_config(
+        &mut self,
+        image: &ImageSource,
+    ) -> Result<(String, ImageSpecification), Error> {
+        let request = ResolveImageConfigRequest {
+            r#ref: image.canonical_name().into(),
+            platform: None,
+            resolve_mode: image.resolve_mode().unwrap_or_default().to_string(),
+            log_name: "".into(),
+        };
+
+        debug!("requesting to resolve an image: {:?}", request);
+        let response = {
+            self.client
+                .resolve_image_config(Request::new(request))
+                .compat()
+                .await
+                .unwrap()
+                .into_inner()
+        };
+
+        Ok((
+            response.digest,
+            serde_json::from_slice(&response.config)
+                .context("Unable to parse image specification")?,
+        ))
     }
 
     pub async fn solve<'a, 'b: 'a>(&'a mut self, graph: Terminal<'b>) -> Result<OutputRef, Error> {
