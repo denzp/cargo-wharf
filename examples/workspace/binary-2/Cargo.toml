@@ -8,3 +8,8 @@ edition = "2018"
 
 [dependencies.lib-1]
 path = "../lib-1"
+
+[[package.metadata.wharf.binary]]
+name = "binary-2"
+path = "/usr/local/bin/binary-2"
+cwd = "/"

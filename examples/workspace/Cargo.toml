@@ -4,3 +4,9 @@ members = [
     "binary-2",
     "lib-1",
 ]
+
+[workspace.metadata.wharf.defaults]
+builder-image = "rust:latest"
+final-image = "alpine:latest"
+cwd = "/root"
+user = "root"

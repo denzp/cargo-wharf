@@ -6,3 +6,5 @@ pub use self::env::RuntimeEnv;
 
 mod output;
 pub use self::output::BuildScriptOutput;
+
+pub mod metadata;

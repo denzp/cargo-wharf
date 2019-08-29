@@ -4,12 +4,15 @@ version = "0.2.0"
 authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 publish = false
+default-run = "cargo-build-plan"
 
 [dependencies]
-cargo = "0.37"
+cargo = "0.38"
 clap = "2.33"
 failure = "0.1"
-lazy_static = "1.0"
+lazy_static = "1.4"
+semver = "0.9"
+toml = "0.5"
 
 serde = "1.0"
 serde_json = "1.0"

@@ -23,19 +23,19 @@ fn get_cli_app() -> App<'static, 'static> {
     App::new("cargo-buildscript-apply")
         .version(crate_version!())
         .author(crate_authors!())
-        .about("Tiny Rust buildscript output adapter.")
+        .about("Tiny Rust buildscript output adapter")
         .args(&[
             {
                 Arg::with_name("rustc_path")
                     .required(true)
                     .value_name("RUSTC")
-                    .help("Path to a rustc binary.")
+                    .help("Path to a rustc binary")
             },
             {
                 Arg::with_name("rustc_args")
                     .value_name("ARG")
                     .multiple(true)
-                    .help("Args to pass into rustc.")
+                    .help("Args to pass into rustc")
             },
         ])
 }

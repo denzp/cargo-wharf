@@ -23,19 +23,19 @@ fn get_cli_app() -> App<'static, 'static> {
     App::new("cargo-buildscript-capture")
         .version(crate_version!())
         .author(crate_authors!())
-        .about("Tiny Rust buildscript output collector.")
+        .about("Tiny Rust buildscript output collector")
         .args(&[
             {
                 Arg::with_name("buildscript_path")
                     .required(true)
                     .value_name("BUILDSCRIPT")
-                    .help("Path to a buildscript binary.")
+                    .help("Path to a buildscript binary")
             },
             {
                 Arg::with_name("buildscript_args")
                     .value_name("ARG")
                     .multiple(true)
-                    .help("Args to pass into the buildscript.")
+                    .help("Args to pass into the buildscript")
             },
         ])
 }
