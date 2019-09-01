@@ -1,8 +1,10 @@
 #![deny(warnings)]
 #![deny(clippy::all)]
 
-use std::env::current_dir;
-use std::process::exit;
+use std::env::{current_dir, current_exe};
+use std::fs::File;
+use std::io::{copy, BufWriter};
+use std::process::{exit, Command, Stdio};
 use std::sync::Arc;
 
 use cargo::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
@@ -11,6 +13,7 @@ use cargo::ops::{CompileFilter, CompileOptions, FilterRule, LibRule, Packages};
 use cargo::util::{config::Config, CargoResult};
 
 use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
+use failure::{bail, ResultExt};
 
 fn main() {
     let matches = get_cli_app().get_matches();
@@ -27,6 +30,14 @@ fn get_cli_app() -> App<'static, 'static> {
         .author(crate_authors!())
         .about("Tiny Rust build plan writer")
         .args(&[
+            {
+                Arg::with_name("output")
+                    .long("output")
+                    .takes_value(true)
+                    .value_name("PATH")
+                    .default_value("-")
+                    .help("Build plan output path (or '-' for STDOUT)")
+            },
             {
                 Arg::with_name("manifest")
                     .long("manifest-path")
@@ -45,7 +56,41 @@ fn get_cli_app() -> App<'static, 'static> {
 }
 
 fn run(matches: &ArgMatches<'static>) -> CargoResult<()> {
-    let config = Config::default()?;
+    let mut writer = BufWriter::new(match matches.value_of("output").unwrap() {
+        "-" => return run_stdout(matches),
+        path => File::create(path)?,
+    });
+
+    let mut process = Command::new(current_exe()?);
+
+    process.stdout(Stdio::piped());
+    process.stderr(Stdio::inherit());
+
+    if matches.is_present("release") {
+        process.arg("--release");
+    }
+
+    if let Some(path) = matches.value_of("manifest") {
+        process.arg("--manifest-path").arg(path);
+    }
+
+    let mut child = process.spawn()?;
+
+    copy(&mut child.stdout.take().unwrap(), &mut writer)
+        .context("Unable to copy child stdout into output")?;
+
+    let exit_code = child.wait().context("Failed to wait on child")?;
+
+    if !exit_code.success() {
+        bail!("Child process failed");
+    }
+
+    Ok(())
+}
+
+fn run_stdout(matches: &ArgMatches<'static>) -> CargoResult<()> {
+    let mut config = Config::default()?;
+    config.configure(0, None, &None, true, true, false, &None, &[])?;
 
     let mut build_config = BuildConfig::new(&config, Some(1), &None, CompileMode::Build)?;
     build_config.release = matches.is_present("release");

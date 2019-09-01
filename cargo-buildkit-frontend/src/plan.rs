@@ -8,14 +8,12 @@ use serde::{Deserialize, Serialize};
 use buildkit_frontend::Bridge;
 use buildkit_llb::prelude::*;
 
-use crate::image::RustDockerImage;
+use crate::image::{RustDockerImage, TOOLS_IMAGE};
 use crate::CONTEXT_PATH;
 
-const PLAN_EVALUATION_COMMAND: &str =
-    "cargo build -Z unstable-options --build-plan --all-targets --locked";
-
-const PLAN_OUTPUT_LAYER_PATH: &str = "/output";
-const PLAN_OUTPUT_NAME: &str = "/build-plan.json";
+const BUILD_PLAN_EXEC: &str = "/usr/local/bin/cargo-build-plan";
+const OUTPUT_LAYER_PATH: &str = "/output";
+const OUTPUT_NAME: &str = "build-plan.json";
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RawInvocation {
@@ -58,21 +56,30 @@ impl RawBuildPlan {
                 .add_exclude_pattern("**/target")
         };
 
-        let args = &[
-            "-c",
-            &format!(
-                "{} > {}/{}",
-                PLAN_EVALUATION_COMMAND, PLAN_OUTPUT_LAYER_PATH, PLAN_OUTPUT_NAME
-            ),
-        ];
-
         let command = {
             image
-                .populate_env(Command::run("/bin/sh").args(args))
+                .populate_env(Command::run(BUILD_PLAN_EXEC))
+                .args(&[
+                    "--manifest-path",
+                    &PathBuf::from(CONTEXT_PATH)
+                        .join("Cargo.toml")
+                        .to_string_lossy(),
+                ])
+                .args(&[
+                    "--output",
+                    &PathBuf::from(OUTPUT_LAYER_PATH)
+                        .join(OUTPUT_NAME)
+                        .to_string_lossy(),
+                ])
                 .cwd(CONTEXT_PATH)
                 .mount(Mount::Layer(OutputIdx(0), image.source().output(), "/"))
                 .mount(Mount::ReadOnlyLayer(context.output(), CONTEXT_PATH))
-                .mount(Mount::Scratch(OutputIdx(1), PLAN_OUTPUT_LAYER_PATH))
+                .mount(Mount::ReadOnlySelector(
+                    TOOLS_IMAGE.output(),
+                    BUILD_PLAN_EXEC,
+                    BUILD_PLAN_EXEC,
+                ))
+                .mount(Mount::Scratch(OutputIdx(1), OUTPUT_LAYER_PATH))
                 .custom_name("Evaluating the build plan")
         };
 
@@ -85,7 +92,7 @@ impl RawBuildPlan {
 
         let build_plan = {
             bridge
-                .read_file(&build_plan_layer, "/build-plan.json", None)
+                .read_file(&build_plan_layer, OUTPUT_NAME, None)
                 .await
                 .context("Unable to read Cargo build plan")?
         };

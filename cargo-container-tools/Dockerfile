@@ -10,11 +10,19 @@ RUN --mount=type=cache,target=/rust-src/target \
     ["cargo", "build", "--release", "--target", "x86_64-unknown-linux-musl"]
 
 RUN --mount=type=cache,target=/rust-src/target \
+    ["cp", "/rust-src/target/x86_64-unknown-linux-musl/release/cargo-build-plan", "/usr/local/bin/cargo-build-plan"]
+
+RUN --mount=type=cache,target=/rust-src/target \
     ["cp", "/rust-src/target/x86_64-unknown-linux-musl/release/cargo-buildscript-capture", "/usr/local/bin/cargo-buildscript-capture"]
 
 RUN --mount=type=cache,target=/rust-src/target \
     ["cp", "/rust-src/target/x86_64-unknown-linux-musl/release/cargo-buildscript-apply", "/usr/local/bin/cargo-buildscript-apply"]
 
+RUN --mount=type=cache,target=/rust-src/target \
+    ["cp", "/rust-src/target/x86_64-unknown-linux-musl/release/cargo-metadata-collector", "/usr/local/bin/cargo-metadata-collector"]
+
 FROM alpine
+COPY --from=builder /usr/local/bin/cargo-build-plan /usr/local/bin/cargo-build-plan
 COPY --from=builder /usr/local/bin/cargo-buildscript-capture /usr/local/bin/cargo-buildscript-capture
 COPY --from=builder /usr/local/bin/cargo-buildscript-apply /usr/local/bin/cargo-buildscript-apply
+COPY --from=builder /usr/local/bin/cargo-metadata-collector /usr/local/bin/cargo-metadata-collector

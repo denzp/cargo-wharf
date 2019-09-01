@@ -44,14 +44,11 @@ impl RustDockerImage {
         };
 
         let source_env = config.env.unwrap_or_default();
-
-        let cargo_home_env = {
-            PathBuf::from(
-                source_env
-                    .get("CARGO_HOME")
-                    .ok_or_else(|| format_err!("Unable to find CARGO_HOME env variable"))?,
-            )
-        };
+        let cargo_home_env = PathBuf::from(
+            source_env
+                .get("CARGO_HOME")
+                .ok_or_else(|| format_err!("Unable to find CARGO_HOME env variable"))?,
+        );
 
         Ok(Self {
             source: source.with_digest(digest),

@@ -9,6 +9,7 @@ default-run = "cargo-build-plan"
 [dependencies]
 cargo = "0.38"
 clap = "2.33"
+either = "1.5"
 failure = "0.1"
 lazy_static = "1.4"
 semver = "0.9"

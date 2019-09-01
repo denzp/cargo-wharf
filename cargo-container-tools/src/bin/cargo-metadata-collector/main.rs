@@ -1,19 +1,18 @@
-// #![deny(warnings)]
+#![deny(warnings)]
 #![deny(clippy::all)]
 
 use std::env::current_dir;
-use std::fs::read_to_string;
+use std::fs::{read_to_string, File};
+use std::io::{stdout, BufWriter};
 use std::iter::once;
 use std::process::exit;
-use std::sync::Arc;
 
-use cargo::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor, MessageFormat};
 use cargo::core::package::Package;
 use cargo::core::{Shell, Workspace};
-use cargo::ops::{CompileFilter, CompileOptions, FilterRule, LibRule, Packages};
 use cargo::util::{config::Config, CargoResult};
 
 use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
+use either::Either;
 use toml::Value;
 
 use cargo_container_tools::metadata::*;
@@ -32,14 +31,24 @@ fn get_cli_app() -> App<'static, 'static> {
         .version(crate_version!())
         .author(crate_authors!())
         .about("Tiny Rust [package.metadata] collector")
-        .arg(
-            Arg::with_name("manifest")
-                .long("manifest-path")
-                .takes_value(true)
-                .value_name("PATH")
-                .default_value("Cargo.toml")
-                .help("Path to Cargo.toml"),
-        )
+        .args(&[
+            {
+                Arg::with_name("output")
+                    .long("output")
+                    .takes_value(true)
+                    .value_name("PATH")
+                    .default_value("-")
+                    .help("Metadata output path (or '-' for STDOUT)")
+            },
+            {
+                Arg::with_name("manifest")
+                    .long("manifest-path")
+                    .takes_value(true)
+                    .value_name("PATH")
+                    .default_value("Cargo.toml")
+                    .help("Path to Cargo.toml")
+            },
+        ])
 }
 
 fn run(matches: &ArgMatches<'static>) -> CargoResult<()> {
@@ -56,7 +65,12 @@ fn run(matches: &ArgMatches<'static>) -> CargoResult<()> {
             .unwrap_or_else(|| workspace_metadata(&ws))
     };
 
-    println!("{}", serde_json::to_string_pretty(&metadata)?);
+    let writer = BufWriter::new(match matches.value_of("output").unwrap() {
+        "-" => Either::Left(stdout()),
+        path => Either::Right(File::create(path)?),
+    });
+
+    serde_json::to_writer_pretty(writer, &metadata)?;
 
     Ok(())
 }

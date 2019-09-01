@@ -9,6 +9,7 @@ use buildkit_llb::ops::fs::SequenceOperation;
 use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
+use crate::config::Config;
 use crate::graph::BuildGraph;
 use crate::image::RustDockerImage;
 use crate::plan::RawBuildPlan;
@@ -21,14 +22,22 @@ impl Frontend for CargoFrontend {
 
     fn run(self, mut bridge: Bridge, options: Options) -> Self::RunFuture {
         async move {
+            let mut debug_op = FileSystem::sequence().custom_name("Writing the debug output");
+
+            let config = {
+                Config::analyse(&mut bridge)
+                    .await
+                    .context("Unable to analyse config")?
+            };
+
+            if options.has_value("debug", "config") {
+                debug_op = append_debug_output(debug_op, "config.json", &config)?;
+            }
+
             let builder_image = {
-                RustDockerImage::analyse(
-                    &mut bridge,
-                    Source::image("rustlang/rust:nightly")
-                        .with_resolve_mode(ResolveMode::PreferLocal),
-                )
-                .await
-                .context("Unable to analyse Rust builder image")?
+                RustDockerImage::analyse(&mut bridge, Source::image("rustlang/rust:nightly"))
+                    .await
+                    .context("Unable to analyse Rust builder image")?
             };
 
             let build_plan = {
@@ -36,8 +45,6 @@ impl Frontend for CargoFrontend {
                     .await
                     .context("Unable to evaluate the Cargo build plan")?
             };
-
-            let mut debug_op = FileSystem::sequence().custom_name("Writing the debug output");
 
             if options.has_value("debug", "build-plan") {
                 debug_op = append_debug_output(debug_op, "build-plan.json", &build_plan)?;
@@ -93,6 +100,12 @@ where
     };
 
     Ok(op.append(FileSystem::mkfile(OutputIdx(index), layer_path).data(output.as_bytes()?)))
+}
+
+impl DebugOutput for Config {
+    fn as_bytes(&self) -> Result<Vec<u8>, Error> {
+        Ok(serde_json::to_vec_pretty(self)?)
+    }
 }
 
 impl DebugOutput for RawBuildPlan {
