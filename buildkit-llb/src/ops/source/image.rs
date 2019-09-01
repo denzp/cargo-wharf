@@ -46,9 +46,25 @@ impl ImageSource {
     where
         S: Into<String>,
     {
+        let mut name = name.into();
+
+        let tag_separator = match name.find(':') {
+            Some(len) => len,
+            None => {
+                let original_len = name.len();
+
+                name += ":latest";
+                original_len
+            }
+        };
+
+        if name[..tag_separator].find('/').is_none() {
+            name = String::from("library/") + &name;
+        }
+
         Self {
             id: OperationId::default(),
-            name: format!("docker.io/{}", name.into()),
+            name: format!("docker.io/{}", name),
             description: Default::default(),
             ignore_cache: false,
             resolve_mode: None,
@@ -253,4 +269,35 @@ fn resolve_mode() {
             })
         },
     );
+}
+
+#[test]
+fn image_name() {
+    crate::check_op!(ImageSource::new("rustlang/rust"), |op| {
+        Op::Source(SourceOp {
+            identifier: "docker-image://docker.io/rustlang/rust:latest".into(),
+            attrs: Default::default(),
+        })
+    });
+
+    crate::check_op!(ImageSource::new("rust:nightly"), |op| {
+        Op::Source(SourceOp {
+            identifier: "docker-image://docker.io/library/rust:nightly".into(),
+            attrs: Default::default(),
+        })
+    });
+
+    crate::check_op!(ImageSource::new("rust"), |op| {
+        Op::Source(SourceOp {
+            identifier: "docker-image://docker.io/library/rust:latest".into(),
+            attrs: Default::default(),
+        })
+    });
+
+    crate::check_op!(ImageSource::new("rust:complex/tag"), |op| {
+        Op::Source(SourceOp {
+            identifier: "docker-image://docker.io/library/rust:complex/tag".into(),
+            attrs: Default::default(),
+        })
+    });
 }

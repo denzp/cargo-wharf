@@ -35,7 +35,7 @@ impl Frontend for CargoFrontend {
             }
 
             let builder_image = {
-                RustDockerImage::analyse(&mut bridge, Source::image("rustlang/rust:nightly"))
+                RustDockerImage::analyse(&mut bridge, config.builder_image())
                     .await
                     .context("Unable to analyse Rust builder image")?
             };

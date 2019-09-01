@@ -6,6 +6,7 @@ use log::*;
 use serde::{Deserialize, Serialize};
 
 use buildkit_frontend::Bridge;
+use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
 use crate::image::TOOLS_IMAGE;
@@ -91,6 +92,10 @@ impl Config {
         debug!("raw metadata: {:?}", raw_metadata);
 
         Self::try_from(raw_metadata)
+    }
+
+    pub fn builder_image(&self) -> ImageSource {
+        Source::image(&self.config.builder_image).with_resolve_mode(ResolveMode::PreferLocal)
     }
 }
 

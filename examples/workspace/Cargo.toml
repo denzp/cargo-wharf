@@ -6,7 +6,7 @@ members = [
 ]
 
 [workspace.metadata.wharf.config]
-builder-image = "rust:latest"
-release-image = "alpine:latest"
+builder-image = "rust"
+release-image = "alpine"
 default-user = "root"
 default-workdir = "/root"

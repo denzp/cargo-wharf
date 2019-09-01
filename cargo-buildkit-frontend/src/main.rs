@@ -1,5 +1,4 @@
 #![warn(clippy::all)]
-#![allow(clippy::needless_lifetimes, dead_code)]
 #![deny(warnings)]
 #![feature(type_alias_impl_trait)]
 
