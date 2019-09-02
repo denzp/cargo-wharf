@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use failure::{format_err, Error, ResultExt};
 use lazy_static::*;
 use log::*;
+use serde::Serialize;
 
 use buildkit_frontend::Bridge;
 use buildkit_llb::ops::source::ImageSource;
@@ -11,16 +12,15 @@ use buildkit_llb::prelude::*;
 
 use crate::TARGET_PATH;
 
-pub const BUILDSCRIPT_CAPTURE_EXEC: &str = "/usr/local/bin/cargo-buildscript-capture";
-pub const BUILDSCRIPT_APPLY_EXEC: &str = "/usr/local/bin/cargo-buildscript-apply";
-
 lazy_static! {
     pub static ref TOOLS_IMAGE: ImageSource = Source::image("denzp/cargo-container-tools:local");
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct RustDockerImage {
+    #[serde(skip_serializing)]
     source: ImageSource,
+
     source_env: HashMap<String, String>,
     source_user: Option<String>,
 

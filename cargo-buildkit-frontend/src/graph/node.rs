@@ -5,8 +5,10 @@ use std::path::{Path, PathBuf};
 use semver::Version;
 use serde::Serialize;
 
-use crate::image::{BUILDSCRIPT_APPLY_EXEC, BUILDSCRIPT_CAPTURE_EXEC};
 use crate::plan::{RawInvocation, RawTargetKind};
+
+pub const BUILDSCRIPT_CAPTURE_EXEC: &str = "/usr/local/bin/cargo-buildscript-capture";
+pub const BUILDSCRIPT_APPLY_EXEC: &str = "/usr/local/bin/cargo-buildscript-apply";
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Node {

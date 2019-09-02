@@ -13,10 +13,10 @@ use buildkit_llb::ops::source::LocalSource;
 use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
+use crate::config::Config;
 use crate::graph::{BuildGraph, Node, NodeCommand, NodeCommandDetails, NodeKind};
-use crate::image::{
-    RustDockerImage, BUILDSCRIPT_APPLY_EXEC, BUILDSCRIPT_CAPTURE_EXEC, TOOLS_IMAGE,
-};
+use crate::graph::{BUILDSCRIPT_APPLY_EXEC, BUILDSCRIPT_CAPTURE_EXEC};
+use crate::image::TOOLS_IMAGE;
 use crate::{CONTEXT_PATH, TARGET_PATH};
 
 lazy_static! {
@@ -31,16 +31,16 @@ pub struct GraphQuery<'a> {
     original_graph: &'a StableGraph<Node, ()>,
     reversed_graph: Reversed<&'a StableGraph<Node, ()>>,
 
-    image: &'a RustDockerImage,
+    config: &'a Config,
 }
 
 impl<'a> GraphQuery<'a> {
-    pub fn new(graph: &'a BuildGraph, image: &'a RustDockerImage) -> Self {
+    pub fn new(graph: &'a BuildGraph, config: &'a Config) -> Self {
         Self {
             original_graph: graph.inner(),
             reversed_graph: Reversed(graph.inner()),
 
-            image,
+            config,
         }
     }
 
@@ -235,13 +235,15 @@ impl<'a> GraphQuery<'a> {
         target_layer: OperationOutput<'b>,
         command: &'b NodeCommandDetails,
     ) -> (Command<'a>, OutputIdx) {
+        let builder = self.config.builder_image();
+
         let mut command_llb = {
-            self.image
+            builder
                 .populate_env(Command::run(&command.program))
                 .cwd(&command.cwd)
                 .args(&command.args)
                 .env_iter(&command.env)
-                .mount(Mount::ReadOnlyLayer(self.image.source().output(), "/"))
+                .mount(Mount::ReadOnlyLayer(builder.source().output(), "/"))
                 .mount(Mount::Layer(OutputIdx(0), target_layer, TARGET_PATH))
                 .mount(Mount::Scratch(OutputIdx(1), "/tmp"))
         };

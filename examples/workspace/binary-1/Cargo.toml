@@ -13,4 +13,3 @@ path = "../lib-1"
 [[package.metadata.wharf.binary]]
 name = "binary-1"
 destination = "/bin/binary-1"
-user = "binary-1-user"

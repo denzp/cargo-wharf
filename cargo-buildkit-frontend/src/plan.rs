@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use buildkit_frontend::Bridge;
 use buildkit_llb::prelude::*;
 
-use crate::image::{RustDockerImage, TOOLS_IMAGE};
+use crate::config::Config;
+use crate::image::TOOLS_IMAGE;
 use crate::CONTEXT_PATH;
 
 const BUILD_PLAN_EXEC: &str = "/usr/local/bin/cargo-build-plan";
@@ -48,7 +49,7 @@ pub struct RawBuildPlan {
 impl RawBuildPlan {
     pub async fn evaluate<'a, 'b: 'a>(
         bridge: &'a mut Bridge,
-        image: &'b RustDockerImage,
+        config: &'b Config,
     ) -> Result<Self, Error> {
         let context = {
             Source::local("context")
@@ -56,8 +57,10 @@ impl RawBuildPlan {
                 .add_exclude_pattern("**/target")
         };
 
+        let builder = config.builder_image();
+
         let command = {
-            image
+            builder
                 .populate_env(Command::run(BUILD_PLAN_EXEC))
                 .args(&[
                     "--manifest-path",
@@ -72,7 +75,7 @@ impl RawBuildPlan {
                         .to_string_lossy(),
                 ])
                 .cwd(CONTEXT_PATH)
-                .mount(Mount::Layer(OutputIdx(0), image.source().output(), "/"))
+                .mount(Mount::Layer(OutputIdx(0), builder.source().output(), "/"))
                 .mount(Mount::ReadOnlyLayer(context.output(), CONTEXT_PATH))
                 .mount(Mount::ReadOnlySelector(
                     TOOLS_IMAGE.output(),

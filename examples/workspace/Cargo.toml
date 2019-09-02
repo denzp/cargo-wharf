@@ -5,8 +5,10 @@ members = [
     "lib-1",
 ]
 
-[workspace.metadata.wharf.config]
-builder-image = "rust"
-release-image = "alpine"
-default-user = "root"
-default-workdir = "/root"
+[workspace.metadata.wharf.builder]
+image = "rust"
+
+[workspace.metadata.wharf.output]
+image = "alpine"
+workdir = "/root"
+user = "root"

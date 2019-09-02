@@ -6,40 +6,43 @@ use log::*;
 use serde::{Deserialize, Serialize};
 
 use buildkit_frontend::Bridge;
-use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
-use crate::image::TOOLS_IMAGE;
+use crate::image::{RustDockerImage, TOOLS_IMAGE};
 use crate::CONTEXT_PATH;
 
 const METADATA_COLLECTOR_EXEC: &str = "/usr/local/bin/cargo-metadata-collector";
 const OUTPUT_LAYER_PATH: &str = "/output";
 const OUTPUT_NAME: &str = "build-plan.json";
 
-#[derive(Debug, Serialize, PartialEq)]
+#[derive(Debug, Serialize)]
 pub struct Config {
-    config: DefaultConfig,
+    builder: BuilderConfig,
+    builder_image: RustDockerImage,
+
+    output: OutputConfig,
+
     binaries: Vec<BinaryDefinition>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
-pub struct DefaultConfig {
-    builder_image: String,
-    release_image: String,
-
-    default_user: Option<String>,
-    default_workdir: Option<PathBuf>,
+pub struct BuilderConfig {
+    image: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+pub struct OutputConfig {
+    image: String,
+    user: Option<String>,
+    workdir: Option<PathBuf>,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct BinaryDefinition {
     name: String,
     destination: PathBuf,
-
-    user: Option<String>,
-    workdir: Option<PathBuf>,
 }
 
 impl Config {
@@ -91,43 +94,89 @@ impl Config {
 
         debug!("raw metadata: {:?}", raw_metadata);
 
-        Self::try_from(raw_metadata)
-    }
+        let base = ConfigBase::try_from(raw_metadata)?;
 
-    pub fn builder_image(&self) -> ImageSource {
-        Source::image(&self.config.builder_image).with_resolve_mode(ResolveMode::PreferLocal)
-    }
-}
+        let builder_source =
+            Source::image(&base.builder.image).with_resolve_mode(ResolveMode::PreferLocal);
 
-impl TryFrom<Vec<schema::MetadataWrapper>> for Config {
-    type Error = Error;
-
-    fn try_from(raw: Vec<schema::MetadataWrapper>) -> Result<Self, Error> {
-        let (config, binaries) = {
-            raw.into_iter()
-                .filter_map(|item| item.metadata)
-                .filter_map(|item| item.wharf)
-                .try_fold((None, vec![]), |(config, mut binaries), metadata| {
-                    if let Some(mut incoming) = metadata.binary {
-                        binaries.append(&mut incoming);
-                    }
-
-                    Ok(match (config, metadata.config) {
-                        (config, None) => (config, binaries),
-                        (None, Some(incoming)) => (Some(incoming), binaries),
-
-                        (Some(_), Some(_)) => {
-                            bail!("Found duplicated 'wharf.config' section");
-                        }
-                    })
-                })?
+        let builder_image = {
+            RustDockerImage::analyse(bridge, builder_source)
+                .await
+                .context("Unable to analyse Rust builder image")?
         };
 
         Ok(Self {
-            config: config.ok_or_else(|| format_err!("Missing 'wharf.config' section"))?,
+            builder: base.builder,
+            builder_image,
+
+            output: base.output,
+            binaries: base.binaries,
+        })
+    }
+
+    pub fn builder_image(&self) -> &RustDockerImage {
+        &self.builder_image
+    }
+}
+
+type ConfigCtx = (
+    Option<BuilderConfig>,
+    Option<OutputConfig>,
+    Vec<BinaryDefinition>,
+);
+
+#[derive(Debug, PartialEq)]
+struct ConfigBase {
+    builder: BuilderConfig,
+    output: OutputConfig,
+    binaries: Vec<BinaryDefinition>,
+}
+
+impl TryFrom<Vec<schema::MetadataWrapper>> for ConfigBase {
+    type Error = Error;
+
+    fn try_from(raw: Vec<schema::MetadataWrapper>) -> Result<Self, Self::Error> {
+        let (builder, output, binaries) = {
+            raw.into_iter()
+                .filter_map(|item| item.metadata)
+                .filter_map(|item| item.wharf)
+                .try_fold((None, None, vec![]), extract_config)?
+        };
+
+        Ok(Self {
+            builder: builder.ok_or_else(|| format_err!("Missing 'wharf.builder' section"))?,
+            output: output.ok_or_else(|| format_err!("Missing 'wharf.output' section"))?,
             binaries,
         })
     }
+}
+
+fn extract_config(cx: ConfigCtx, metadata: schema::WharfMetadata) -> Result<ConfigCtx, Error> {
+    let (mut builder, mut output, mut binaries) = cx;
+
+    if let Some(mut incoming) = metadata.binary {
+        binaries.append(&mut incoming);
+    }
+
+    builder = match (builder.take(), metadata.builder) {
+        (builder, None) => builder,
+        (None, Some(incoming)) => Some(incoming),
+
+        (Some(_), Some(_)) => {
+            bail!("Found duplicated 'wharf.builder' section");
+        }
+    };
+
+    output = match (output.take(), metadata.output) {
+        (output, None) => output,
+        (None, Some(incoming)) => Some(incoming),
+
+        (Some(_), Some(_)) => {
+            bail!("Found duplicated 'wharf.output' section");
+        }
+    };
+
+    Ok((builder, output, binaries))
 }
 
 #[test]
@@ -138,12 +187,13 @@ fn transformation() {
         MetadataWrapper {
             metadata: Some(PackageMetadata {
                 wharf: Some(WharfMetadata {
-                    config: Some(DefaultConfig {
-                        builder_image: "rust:latest".into(),
-                        release_image: "alpine:latest".into(),
-                        default_user: Some("root".into()),
-                        default_workdir: Some("/root".into()),
+                    output: Some(OutputConfig {
+                        image: "alpine:latest".into(),
+                        user: Some("root".into()),
+                        workdir: Some("/root".into()),
                     }),
+
+                    builder: None,
                     binary: None,
                 }),
             }),
@@ -151,13 +201,25 @@ fn transformation() {
         MetadataWrapper {
             metadata: Some(PackageMetadata {
                 wharf: Some(WharfMetadata {
-                    config: None,
+                    builder: Some(BuilderConfig {
+                        image: "rust:latest".into(),
+                    }),
+
+                    output: None,
+                    binary: None,
+                }),
+            }),
+        },
+        MetadataWrapper {
+            metadata: Some(PackageMetadata {
+                wharf: Some(WharfMetadata {
                     binary: Some(vec![BinaryDefinition {
                         name: "binary-1".into(),
                         destination: "/bin/binary-1".into(),
-                        user: Some("binary-1-user".into()),
-                        workdir: None,
                     }]),
+
+                    output: None,
+                    builder: None,
                 }),
             }),
         },
@@ -165,39 +227,37 @@ fn transformation() {
         MetadataWrapper {
             metadata: Some(PackageMetadata {
                 wharf: Some(WharfMetadata {
-                    config: None,
                     binary: Some(vec![BinaryDefinition {
                         name: "binary-2".into(),
                         destination: "/usr/local/bin/binary-2".into(),
-                        user: None,
-                        workdir: Some("/".into()),
                     }]),
+
+                    output: None,
+                    builder: None,
                 }),
             }),
         },
     ];
 
     assert_eq!(
-        Config::try_from(raw).unwrap(),
-        Config {
-            config: DefaultConfig {
-                builder_image: "rust:latest".into(),
-                release_image: "alpine:latest".into(),
-                default_user: Some("root".into()),
-                default_workdir: Some("/root".into()),
+        ConfigBase::try_from(raw).unwrap(),
+        ConfigBase {
+            builder: BuilderConfig {
+                image: "rust:latest".into(),
+            },
+            output: OutputConfig {
+                image: "alpine:latest".into(),
+                user: Some("root".into()),
+                workdir: Some("/root".into()),
             },
             binaries: vec![
                 BinaryDefinition {
                     name: "binary-1".into(),
                     destination: "/bin/binary-1".into(),
-                    user: Some("binary-1-user".into()),
-                    workdir: None,
                 },
                 BinaryDefinition {
                     name: "binary-2".into(),
                     destination: "/usr/local/bin/binary-2".into(),
-                    user: None,
-                    workdir: Some("/".into()),
                 }
             ]
         }
@@ -212,12 +272,15 @@ fn duplicated_config() {
         MetadataWrapper {
             metadata: Some(PackageMetadata {
                 wharf: Some(WharfMetadata {
-                    config: Some(DefaultConfig {
-                        builder_image: "rust:latest".into(),
-                        release_image: "alpine:latest".into(),
-                        default_user: Some("root".into()),
-                        default_workdir: Some("/root".into()),
+                    builder: Some(BuilderConfig {
+                        image: "rust:latest".into(),
                     }),
+                    output: Some(OutputConfig {
+                        image: "alpine:latest".into(),
+                        user: Some("root".into()),
+                        workdir: Some("/root".into()),
+                    }),
+
                     binary: None,
                 }),
             }),
@@ -225,19 +288,53 @@ fn duplicated_config() {
         MetadataWrapper {
             metadata: Some(PackageMetadata {
                 wharf: Some(WharfMetadata {
-                    config: Some(DefaultConfig {
-                        builder_image: "another".into(),
-                        release_image: "another".into(),
-                        default_user: None,
-                        default_workdir: None,
+                    builder: Some(BuilderConfig {
+                        image: "rust:latest".into(),
                     }),
+
+                    output: None,
                     binary: None,
                 }),
             }),
         },
     ];
 
-    assert!(Config::try_from(raw).is_err());
+    assert!(ConfigBase::try_from(raw).is_err());
+
+    let raw = vec![
+        MetadataWrapper {
+            metadata: Some(PackageMetadata {
+                wharf: Some(WharfMetadata {
+                    builder: Some(BuilderConfig {
+                        image: "rust:latest".into(),
+                    }),
+                    output: Some(OutputConfig {
+                        image: "alpine:latest".into(),
+                        user: Some("root".into()),
+                        workdir: Some("/root".into()),
+                    }),
+
+                    binary: None,
+                }),
+            }),
+        },
+        MetadataWrapper {
+            metadata: Some(PackageMetadata {
+                wharf: Some(WharfMetadata {
+                    output: Some(OutputConfig {
+                        image: "rust:latest".into(),
+                        user: None,
+                        workdir: None,
+                    }),
+
+                    builder: None,
+                    binary: None,
+                }),
+            }),
+        },
+    ];
+
+    assert!(ConfigBase::try_from(raw).is_err());
 }
 
 #[test]
@@ -248,7 +345,39 @@ fn missing_config() {
         metadata: Some(PackageMetadata { wharf: None }),
     }];
 
-    assert!(Config::try_from(raw).is_err());
+    assert!(ConfigBase::try_from(raw).is_err());
+
+    let raw = vec![MetadataWrapper {
+        metadata: Some(PackageMetadata {
+            wharf: Some(WharfMetadata {
+                builder: Some(BuilderConfig {
+                    image: "another".into(),
+                }),
+
+                output: None,
+                binary: None,
+            }),
+        }),
+    }];
+
+    assert!(ConfigBase::try_from(raw).is_err());
+
+    let raw = vec![MetadataWrapper {
+        metadata: Some(PackageMetadata {
+            wharf: Some(WharfMetadata {
+                output: Some(OutputConfig {
+                    image: "another".into(),
+                    user: Some("root".into()),
+                    workdir: Some("/root".into()),
+                }),
+
+                builder: None,
+                binary: None,
+            }),
+        }),
+    }];
+
+    assert!(ConfigBase::try_from(raw).is_err());
 }
 
 mod schema {
@@ -266,7 +395,8 @@ mod schema {
 
     #[derive(Debug, Deserialize)]
     pub(super) struct WharfMetadata {
-        pub(super) config: Option<DefaultConfig>,
+        pub(super) builder: Option<BuilderConfig>,
+        pub(super) output: Option<OutputConfig>,
         pub(super) binary: Option<Vec<BinaryDefinition>>,
     }
 }

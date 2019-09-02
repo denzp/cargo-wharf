@@ -11,7 +11,6 @@ use buildkit_proto::pb;
 
 use crate::config::Config;
 use crate::graph::BuildGraph;
-use crate::image::RustDockerImage;
 use crate::plan::RawBuildPlan;
 use crate::query::GraphQuery;
 
@@ -34,14 +33,8 @@ impl Frontend for CargoFrontend {
                 debug_op = append_debug_output(debug_op, "config.json", &config)?;
             }
 
-            let builder_image = {
-                RustDockerImage::analyse(&mut bridge, config.builder_image())
-                    .await
-                    .context("Unable to analyse Rust builder image")?
-            };
-
             let build_plan = {
-                RawBuildPlan::evaluate(&mut bridge, &builder_image)
+                RawBuildPlan::evaluate(&mut bridge, &config)
                     .await
                     .context("Unable to evaluate the Cargo build plan")?
             };
@@ -51,7 +44,7 @@ impl Frontend for CargoFrontend {
             }
 
             let graph: BuildGraph = build_plan.into();
-            let query = GraphQuery::new(&graph, &builder_image);
+            let query = GraphQuery::new(&graph, &config);
 
             if options.has_value("debug", "build-graph") {
                 debug_op = append_debug_output(debug_op, "build-graph.json", &graph)?;
