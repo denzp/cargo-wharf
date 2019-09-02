@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use failure::{format_err, Error, ResultExt};
@@ -21,7 +21,7 @@ pub struct RustDockerImage {
     #[serde(skip_serializing)]
     source: ImageSource,
 
-    source_env: HashMap<String, String>,
+    source_env: BTreeMap<String, String>,
     source_user: Option<String>,
 
     cargo_home_env: PathBuf,

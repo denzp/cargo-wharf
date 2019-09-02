@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::convert::TryFrom;
 
 use chrono::prelude::*;
@@ -99,7 +99,7 @@ pub struct ImageConfig {
     pub exposed_ports: Option<Vec<ExposedPort>>,
 
     /// Environment variables for the process to run with.
-    pub env: Option<HashMap<String, String>>,
+    pub env: Option<BTreeMap<String, String>>,
 
     /// A list of arguments to use as the command to execute when the container starts.
     pub entrypoint: Option<Vec<String>>,
@@ -114,7 +114,7 @@ pub struct ImageConfig {
     pub working_dir: Option<String>,
 
     /// The field contains arbitrary metadata for the container.
-    pub labels: Option<HashMap<String, String>>,
+    pub labels: Option<BTreeMap<String, String>>,
 
     /// The field contains the system call signal that will be sent to the container to exit.
     pub stop_signal: Option<Signal>,
@@ -145,7 +145,7 @@ struct RawImageConfig {
     working_dir: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    labels: Option<HashMap<String, String>>,
+    labels: Option<BTreeMap<String, String>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     stop_signal: Option<Signal>,
