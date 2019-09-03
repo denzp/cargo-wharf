@@ -63,6 +63,12 @@ impl BuilderConfig {
     }
 }
 
+impl OutputConfig {
+    pub fn source(&self) -> ImageSource {
+        Source::image(&self.image).with_resolve_mode(ResolveMode::PreferLocal)
+    }
+}
+
 type ConfigCtx = (
     Option<BuilderConfig>,
     Option<OutputConfig>,

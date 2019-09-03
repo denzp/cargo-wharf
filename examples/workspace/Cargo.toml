@@ -9,6 +9,6 @@ members = [
 image = "rust"
 
 [workspace.metadata.wharf.output]
-image = "alpine"
+image = "debian:stable-slim"
 workdir = "/root"
 user = "root"

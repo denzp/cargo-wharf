@@ -10,9 +10,11 @@ use crate::shared::{tools, CONTEXT, CONTEXT_PATH};
 
 mod base;
 mod builder;
+mod output;
 
-use self::base::{BinaryDefinition, ConfigBase, OutputConfig};
+use self::base::{BinaryDefinition, ConfigBase};
 use self::builder::BuilderImage;
+use self::output::OutputImage;
 
 const OUTPUT_LAYER_PATH: &str = "/output";
 const OUTPUT_NAME: &str = "build-plan.json";
@@ -20,7 +22,7 @@ const OUTPUT_NAME: &str = "build-plan.json";
 #[derive(Debug, Serialize)]
 pub struct Config {
     builder: BuilderImage,
-    output: OutputConfig,
+    output: OutputImage,
 
     binaries: Vec<BinaryDefinition>,
 }
@@ -72,15 +74,25 @@ impl Config {
                 .context("Unable to analyse Rust builder image")?
         };
 
+        let output = OutputImage::new(base.output);
+
         Ok(Self {
             builder,
+            output,
 
-            output: base.output,
             binaries: base.binaries,
         })
     }
 
     pub fn builder_image(&self) -> &BuilderImage {
         &self.builder
+    }
+
+    pub fn output_image(&self) -> &OutputImage {
+        &self.output
+    }
+
+    pub fn find_binary(&self, name: &str) -> Option<&BinaryDefinition> {
+        self.binaries.iter().find(|bin| bin.name == name)
     }
 }

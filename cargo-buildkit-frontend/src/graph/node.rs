@@ -81,6 +81,10 @@ impl Node {
         }
     }
 
+    pub fn package_name(&self) -> &str {
+        &self.package_name
+    }
+
     pub fn command(&self) -> &NodeCommand {
         &self.command
     }

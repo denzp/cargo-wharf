@@ -22,6 +22,13 @@ pub struct GraphQuery<'a> {
     config: &'a Config,
 }
 
+struct OutputMapping<'a> {
+    from: LayerPath<'a, PathBuf>,
+    to: PathBuf,
+}
+
+type NodesCache<'a> = Vec<Option<OperationOutput<'a>>>;
+
 impl<'a> GraphQuery<'a> {
     pub fn new(graph: &'a BuildGraph, config: &'a Config) -> Self {
         Self {
@@ -57,48 +64,58 @@ impl<'a> GraphQuery<'a> {
     fn terminal(&self) -> Terminal<'a> {
         debug!("serializing all nodes");
         let nodes = self.serialize_all_nodes();
+        let outputs = self.outputs(nodes);
 
         debug!("preparing the final operation");
-        let (result, result_output) = {
-            self.original_graph
-                .node_indices()
-                .map(move |index| (index, self.original_graph.node_weight(index).unwrap()))
-                .filter(|node| node.1.kind() == NodeKind::Binary)
-                .zip(0..)
-                .fold(
-                    (FileSystem::sequence(), 0),
-                    |(output, last_idx), (node, idx)| {
-                        let from = LayerPath::Other(
-                            nodes[node.0.index()].clone().unwrap(),
-                            node.1
-                                .outputs_iter()
-                                .next()
-                                .unwrap()
-                                .strip_prefix(TARGET_PATH)
-                                .unwrap(),
-                        );
 
-                        let output = if idx == 0 {
-                            output.append(FileSystem::copy().from(from).to(
-                                OutputIdx(idx),
-                                LayerPath::Scratch(format!("/binary-{}", idx)),
-                            ))
-                        } else {
-                            output.append(FileSystem::copy().from(from).to(
-                                OutputIdx(idx),
-                                LayerPath::Own(OwnOutputIdx(last_idx), format!("/binary-{}", idx)),
-                            ))
-                        };
+        let operation = FileSystem::sequence().custom_name("Assembling output image");
+        let operation = {
+            outputs.into_iter().fold(operation, |output, mapping| {
+                let (index, layer_path) = match output.last_output_index() {
+                    Some(index) => (index + 1, LayerPath::Own(OwnOutputIdx(index), mapping.to)),
+                    None => (0, self.config.output_image().layer_path(mapping.to)),
+                };
 
-                        (output, idx)
-                    },
+                output.append(
+                    FileSystem::copy()
+                        .from(mapping.from)
+                        .to(OutputIdx(index), layer_path)
+                        .create_path(true),
                 )
+            })
         };
 
-        Terminal::with(result.ref_counted().output(result_output))
+        Terminal::with(operation.ref_counted().last_output().unwrap())
     }
 
-    fn serialize_all_nodes(&self) -> Vec<Option<OperationOutput<'a>>> {
+    fn outputs(&self, nodes: NodesCache<'a>) -> Vec<OutputMapping<'a>> {
+        self.original_graph
+            .node_indices()
+            .map(move |index| (index, self.original_graph.node_weight(index).unwrap()))
+            .filter(|(_, node)| node.kind() == NodeKind::Binary)
+            .filter_map(
+                move |(index, node)| match self.config.find_binary(node.package_name()) {
+                    Some(found) => Some((index, node, found.destination.clone())),
+                    None => None,
+                },
+            )
+            .map(move |(index, node, to)| {
+                let from = LayerPath::Other(
+                    nodes[index.index()].clone().unwrap(),
+                    node.outputs_iter()
+                        .next()
+                        .unwrap()
+                        .strip_prefix(TARGET_PATH)
+                        .unwrap()
+                        .into(),
+                );
+
+                OutputMapping { from, to }
+            })
+            .collect()
+    }
+
+    fn serialize_all_nodes(&self) -> NodesCache<'a> {
         let mut nodes = vec![None; self.original_graph.capacity().0];
         let mut deps = vec![None; self.original_graph.capacity().0];
 
@@ -107,7 +124,8 @@ impl<'a> GraphQuery<'a> {
         while let Some(index) = visitor.next(self.original_graph) {
             self.maybe_cache_dependencies(&nodes, &mut deps, index);
 
-            let (node_llb, output) = self.serialize_node(
+            let (node_llb, output) = serialize_node(
+                &self.config,
                 deps[index.index()].as_ref().unwrap(),
                 self.original_graph.node_weight(index).unwrap(),
             );
@@ -147,99 +165,97 @@ impl<'a> GraphQuery<'a> {
 
         deps[index.index()] = Some(local_deps.collect());
     }
+}
 
-    fn serialize_node(
-        &self,
-        deps: &[Mount<'a, PathBuf>],
-        node: &'a Node,
-    ) -> (Command<'a>, OutputIdx) {
-        let (mut command, index) = match node.command() {
-            NodeCommand::Simple(ref details) => {
-                self.serialize_command(self.create_target_dirs(node.output_dirs_iter()), details)
+fn serialize_node<'a>(
+    config: &'a Config,
+    deps: &[Mount<'a, PathBuf>],
+    node: &'a Node,
+) -> (Command<'a>, OutputIdx) {
+    let (mut command, index) = match node.command() {
+        NodeCommand::Simple(ref details) => {
+            serialize_command(config, create_target_dirs(node.output_dirs_iter()), details)
+        }
+
+        NodeCommand::WithBuildscript { compile, run } => {
+            let (mut compile_command, compile_index) =
+                serialize_command(config, create_target_dirs(node.output_dirs_iter()), compile);
+
+            for mount in deps {
+                compile_command = compile_command.mount(mount.clone());
             }
 
-            NodeCommand::WithBuildscript { compile, run } => {
-                let (mut compile_command, compile_index) = {
-                    self.serialize_command(
-                        self.create_target_dirs(node.output_dirs_iter()),
-                        compile,
-                    )
-                };
+            serialize_command(
+                config,
+                compile_command.ref_counted().output(compile_index.0),
+                run,
+            )
+        }
+    };
 
-                for mount in deps {
-                    compile_command = compile_command.mount(mount.clone());
-                }
+    for mount in deps {
+        command = command.mount(mount.clone());
+    }
 
-                self.serialize_command(compile_command.ref_counted().output(compile_index.0), run)
-            }
+    if let NodeKind::BuildScriptOutputConsumer(_) = node.kind() {
+        command = command.mount(Mount::ReadOnlySelector(
+            tools::IMAGE.output(),
+            tools::BUILDSCRIPT_APPLY,
+            tools::BUILDSCRIPT_APPLY,
+        ));
+    }
+
+    if let NodeKind::MergedBuildScript(_) = node.kind() {
+        command = command.mount(Mount::ReadOnlySelector(
+            tools::IMAGE.output(),
+            tools::BUILDSCRIPT_CAPTURE,
+            tools::BUILDSCRIPT_CAPTURE,
+        ));
+    }
+
+    (command, index)
+}
+
+fn serialize_command<'a, 'b: 'a>(
+    config: &'a Config,
+    target_layer: OperationOutput<'b>,
+    command: &'b NodeCommandDetails,
+) -> (Command<'a>, OutputIdx) {
+    let builder = config.builder_image();
+
+    let mut command_llb = {
+        builder
+            .populate_env(Command::run(&command.program))
+            .cwd(&command.cwd)
+            .args(&command.args)
+            .env_iter(&command.env)
+            .mount(Mount::ReadOnlyLayer(builder.source().output(), "/"))
+            .mount(Mount::Layer(OutputIdx(0), target_layer, TARGET_PATH))
+            .mount(Mount::Scratch(OutputIdx(1), "/tmp"))
+    };
+
+    if command.cwd.starts_with(CONTEXT_PATH) {
+        command_llb = command_llb.mount(Mount::ReadOnlyLayer(CONTEXT.output(), CONTEXT_PATH));
+    }
+
+    (command_llb, OutputIdx(0))
+}
+
+fn create_target_dirs<'a>(outputs: impl Iterator<Item = &'a Path>) -> OperationOutput<'static> {
+    let mut operation = FileSystem::sequence();
+
+    for output in outputs {
+        let path = output.strip_prefix(TARGET_PATH).unwrap();
+
+        let (index, layer_path) = match operation.last_output_index() {
+            Some(index) => (index + 1, LayerPath::Own(OwnOutputIdx(index), path)),
+            None => (0, LayerPath::Scratch(path)),
         };
 
-        for mount in deps {
-            command = command.mount(mount.clone());
-        }
+        let inner = FileSystem::mkdir(OutputIdx(index), layer_path).make_parents(true);
 
-        if let NodeKind::BuildScriptOutputConsumer(_) = node.kind() {
-            command = command.mount(Mount::ReadOnlySelector(
-                tools::IMAGE.output(),
-                tools::BUILDSCRIPT_APPLY,
-                tools::BUILDSCRIPT_APPLY,
-            ));
-        }
-
-        if let NodeKind::MergedBuildScript(_) = node.kind() {
-            command = command.mount(Mount::ReadOnlySelector(
-                tools::IMAGE.output(),
-                tools::BUILDSCRIPT_CAPTURE,
-                tools::BUILDSCRIPT_CAPTURE,
-            ));
-        }
-
-        (command, index)
+        operation = operation.append(inner);
     }
 
-    fn create_target_dirs(
-        &self,
-        outputs: impl Iterator<Item = &'a Path>,
-    ) -> OperationOutput<'static> {
-        let mut operation = FileSystem::sequence();
-
-        for output in outputs {
-            let path = output.strip_prefix(TARGET_PATH).unwrap();
-
-            let (index, layer_path) = match operation.last_output_index() {
-                Some(index) => (index + 1, LayerPath::Own(OwnOutputIdx(index), path)),
-                None => (0, LayerPath::Scratch(path)),
-            };
-
-            operation = operation
-                .append(FileSystem::mkdir(OutputIdx(index), layer_path).make_parents(true));
-        }
-
-        operation.ref_counted().last_output().unwrap()
-    }
-
-    fn serialize_command<'b: 'a>(
-        &self,
-        target_layer: OperationOutput<'b>,
-        command: &'b NodeCommandDetails,
-    ) -> (Command<'a>, OutputIdx) {
-        let builder = self.config.builder_image();
-
-        let mut command_llb = {
-            builder
-                .populate_env(Command::run(&command.program))
-                .cwd(&command.cwd)
-                .args(&command.args)
-                .env_iter(&command.env)
-                .mount(Mount::ReadOnlyLayer(builder.source().output(), "/"))
-                .mount(Mount::Layer(OutputIdx(0), target_layer, TARGET_PATH))
-                .mount(Mount::Scratch(OutputIdx(1), "/tmp"))
-        };
-
-        if command.cwd.starts_with(CONTEXT_PATH) {
-            command_llb = command_llb.mount(Mount::ReadOnlyLayer(CONTEXT.output(), CONTEXT_PATH));
-        }
-
-        (command_llb, OutputIdx(0))
-    }
+    operation.ref_counted().last_output().unwrap()
 }
