@@ -8,6 +8,7 @@ use log::*;
 use buildkit_frontend::run_frontend;
 
 mod config;
+mod debug;
 mod frontend;
 mod graph;
 mod plan;
