@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use failure::{format_err, Error, ResultExt};
-use lazy_static::*;
 use log::*;
 use serde::Serialize;
 
@@ -10,25 +9,23 @@ use buildkit_frontend::Bridge;
 use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
-use crate::TARGET_PATH;
-
-lazy_static! {
-    pub static ref TOOLS_IMAGE: ImageSource = Source::image("denzp/cargo-container-tools:local");
-}
+use super::base::BuilderConfig;
+use crate::shared::TARGET_PATH;
 
 #[derive(Debug, Serialize)]
-pub struct RustDockerImage {
+pub struct BuilderImage {
     #[serde(skip_serializing)]
     source: ImageSource,
+    cargo_home: PathBuf,
 
-    source_env: BTreeMap<String, String>,
-    source_user: Option<String>,
-
-    cargo_home_env: PathBuf,
+    environment: BTreeMap<String, String>,
+    user: Option<String>,
 }
 
-impl RustDockerImage {
-    pub async fn analyse(bridge: &mut Bridge, source: ImageSource) -> Result<Self, Error> {
+impl BuilderImage {
+    pub async fn analyse(bridge: &mut Bridge, config: BuilderConfig) -> Result<Self, Error> {
+        let source = config.source();
+
         let (digest, spec) = {
             bridge
                 .resolve_image_config(&source)
@@ -43,23 +40,25 @@ impl RustDockerImage {
                 .ok_or_else(|| format_err!("Missing source image config"))?
         };
 
-        let source_env = config.env.unwrap_or_default();
-        let cargo_home_env = PathBuf::from(
-            source_env
+        let environment = config.env.unwrap_or_default();
+
+        let cargo_home = PathBuf::from(
+            environment
                 .get("CARGO_HOME")
                 .ok_or_else(|| format_err!("Unable to find CARGO_HOME env variable"))?,
         );
 
         Ok(Self {
             source: source.with_digest(digest),
-            source_env,
-            source_user: config.user,
-            cargo_home_env,
+            cargo_home,
+
+            environment,
+            user: config.user,
         })
     }
 
     pub fn cargo_home(&self) -> &Path {
-        &self.cargo_home_env
+        &self.cargo_home
     }
 
     pub fn source(&self) -> &ImageSource {
@@ -69,11 +68,11 @@ impl RustDockerImage {
     pub fn populate_env<'a>(&self, mut command: Command<'a>) -> Command<'a> {
         command = command.env("CARGO_TARGET_DIR", TARGET_PATH);
 
-        if let Some(ref user) = self.source_user {
+        if let Some(ref user) = self.user {
             command = command.user(user);
         }
 
-        for (name, value) in &self.source_env {
+        for (name, value) in &self.environment {
             command = command.env(name, value);
         }
 

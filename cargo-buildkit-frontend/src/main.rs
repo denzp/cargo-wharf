@@ -10,12 +10,9 @@ use buildkit_frontend::run_frontend;
 mod config;
 mod frontend;
 mod graph;
-mod image;
 mod plan;
 mod query;
-
-const CONTEXT_PATH: &str = "/context";
-const TARGET_PATH: &str = "/target";
+mod shared;
 
 use self::frontend::CargoFrontend;
 

@@ -9,10 +9,8 @@ use buildkit_frontend::Bridge;
 use buildkit_llb::prelude::*;
 
 use crate::config::Config;
-use crate::image::TOOLS_IMAGE;
-use crate::CONTEXT_PATH;
+use crate::shared::{tools, CONTEXT, CONTEXT_PATH};
 
-const BUILD_PLAN_EXEC: &str = "/usr/local/bin/cargo-build-plan";
 const OUTPUT_LAYER_PATH: &str = "/output";
 const OUTPUT_NAME: &str = "build-plan.json";
 
@@ -51,17 +49,11 @@ impl RawBuildPlan {
         bridge: &'a mut Bridge,
         config: &'b Config,
     ) -> Result<Self, Error> {
-        let context = {
-            Source::local("context")
-                .custom_name("Using context")
-                .add_exclude_pattern("**/target")
-        };
-
         let builder = config.builder_image();
 
         let command = {
             builder
-                .populate_env(Command::run(BUILD_PLAN_EXEC))
+                .populate_env(Command::run(tools::BUILD_PLAN))
                 .args(&[
                     "--manifest-path",
                     &PathBuf::from(CONTEXT_PATH)
@@ -76,11 +68,11 @@ impl RawBuildPlan {
                 ])
                 .cwd(CONTEXT_PATH)
                 .mount(Mount::Layer(OutputIdx(0), builder.source().output(), "/"))
-                .mount(Mount::ReadOnlyLayer(context.output(), CONTEXT_PATH))
+                .mount(Mount::ReadOnlyLayer(CONTEXT.output(), CONTEXT_PATH))
                 .mount(Mount::ReadOnlySelector(
-                    TOOLS_IMAGE.output(),
-                    BUILD_PLAN_EXEC,
-                    BUILD_PLAN_EXEC,
+                    tools::IMAGE.output(),
+                    tools::BUILD_PLAN,
+                    tools::BUILD_PLAN,
                 ))
                 .mount(Mount::Scratch(OutputIdx(1), OUTPUT_LAYER_PATH))
                 .custom_name("Evaluating the build plan")

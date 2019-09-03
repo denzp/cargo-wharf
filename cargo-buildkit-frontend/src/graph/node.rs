@@ -6,9 +6,7 @@ use semver::Version;
 use serde::Serialize;
 
 use crate::plan::{RawInvocation, RawTargetKind};
-
-pub const BUILDSCRIPT_CAPTURE_EXEC: &str = "/usr/local/bin/cargo-buildscript-capture";
-pub const BUILDSCRIPT_APPLY_EXEC: &str = "/usr/local/bin/cargo-buildscript-apply";
+use crate::shared::tools::{BUILDSCRIPT_APPLY, BUILDSCRIPT_CAPTURE};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Node {
@@ -97,7 +95,7 @@ impl Node {
     pub fn add_buildscript_run_command(&mut self, mut run_command: NodeCommandDetails) {
         let out_dir: PathBuf = run_command.env.get("OUT_DIR").unwrap().into();
 
-        run_command.use_wrapper(BUILDSCRIPT_CAPTURE_EXEC);
+        run_command.use_wrapper(BUILDSCRIPT_CAPTURE);
 
         take_mut::take(&mut self.command, |command| {
             command.add_buildscript_run(run_command)
@@ -111,7 +109,7 @@ impl Node {
 
     pub fn transform_into_buildscript_consumer(&mut self, out_dir: &Path) {
         if let NodeCommand::Simple(ref mut details) = self.command {
-            details.use_wrapper(BUILDSCRIPT_APPLY_EXEC);
+            details.use_wrapper(BUILDSCRIPT_APPLY);
         }
 
         self.kind = NodeKind::BuildScriptOutputConsumer(out_dir.into());

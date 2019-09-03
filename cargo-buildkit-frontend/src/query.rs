@@ -2,30 +2,18 @@ use std::path::{Path, PathBuf};
 
 use chrono::prelude::*;
 use failure::Error;
-use lazy_static::*;
 use log::*;
 use petgraph::prelude::*;
 use petgraph::visit::{Reversed, Topo, Walker};
 
 use buildkit_frontend::oci::*;
 use buildkit_frontend::{Bridge, OutputRef};
-use buildkit_llb::ops::source::LocalSource;
 use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
 use crate::config::Config;
 use crate::graph::{BuildGraph, Node, NodeCommand, NodeCommandDetails, NodeKind};
-use crate::graph::{BUILDSCRIPT_APPLY_EXEC, BUILDSCRIPT_CAPTURE_EXEC};
-use crate::image::TOOLS_IMAGE;
-use crate::{CONTEXT_PATH, TARGET_PATH};
-
-lazy_static! {
-    static ref CONTEXT: LocalSource = {
-        Source::local("context")
-            .custom_name("Using build context")
-            .add_exclude_pattern("**/target")
-    };
-}
+use crate::shared::{tools, CONTEXT, CONTEXT_PATH, TARGET_PATH};
 
 pub struct GraphQuery<'a> {
     original_graph: &'a StableGraph<Node, ()>,
@@ -192,17 +180,17 @@ impl<'a> GraphQuery<'a> {
 
         if let NodeKind::BuildScriptOutputConsumer(_) = node.kind() {
             command = command.mount(Mount::ReadOnlySelector(
-                TOOLS_IMAGE.output(),
-                BUILDSCRIPT_APPLY_EXEC,
-                BUILDSCRIPT_APPLY_EXEC,
+                tools::IMAGE.output(),
+                tools::BUILDSCRIPT_APPLY,
+                tools::BUILDSCRIPT_APPLY,
             ));
         }
 
         if let NodeKind::MergedBuildScript(_) = node.kind() {
             command = command.mount(Mount::ReadOnlySelector(
-                TOOLS_IMAGE.output(),
-                BUILDSCRIPT_CAPTURE_EXEC,
-                BUILDSCRIPT_CAPTURE_EXEC,
+                tools::IMAGE.output(),
+                tools::BUILDSCRIPT_CAPTURE,
+                tools::BUILDSCRIPT_CAPTURE,
             ));
         }
 

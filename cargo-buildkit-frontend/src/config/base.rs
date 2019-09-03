@@ -1,141 +1,47 @@
 use std::convert::TryFrom;
 use std::path::PathBuf;
 
-use failure::{bail, format_err, Error, ResultExt};
+use failure::{bail, format_err, Error};
 use log::*;
 use serde::{Deserialize, Serialize};
 
-use buildkit_frontend::Bridge;
+use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
-use crate::image::{RustDockerImage, TOOLS_IMAGE};
-use crate::CONTEXT_PATH;
-
-const METADATA_COLLECTOR_EXEC: &str = "/usr/local/bin/cargo-metadata-collector";
-const OUTPUT_LAYER_PATH: &str = "/output";
-const OUTPUT_NAME: &str = "build-plan.json";
-
-#[derive(Debug, Serialize)]
-pub struct Config {
-    builder: BuilderConfig,
-    builder_image: RustDockerImage,
-
-    output: OutputConfig,
-
-    binaries: Vec<BinaryDefinition>,
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(try_from = "Vec<schema::MetadataWrapper>")]
+pub struct ConfigBase {
+    pub builder: BuilderConfig,
+    pub output: OutputConfig,
+    pub binaries: Vec<BinaryDefinition>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct BuilderConfig {
-    image: String,
+    pub image: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct OutputConfig {
-    image: String,
-    user: Option<String>,
-    workdir: Option<PathBuf>,
+    pub image: String,
+    pub user: Option<String>,
+    pub workdir: Option<PathBuf>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct BinaryDefinition {
-    name: String,
-    destination: PathBuf,
-}
-
-impl Config {
-    pub async fn analyse(bridge: &mut Bridge) -> Result<Self, Error> {
-        let context = {
-            Source::local("context")
-                .custom_name("Using context")
-                .add_exclude_pattern("**/target")
-        };
-
-        let command = {
-            Command::run(METADATA_COLLECTOR_EXEC)
-                .args(&[
-                    "--manifest-path",
-                    &PathBuf::from(CONTEXT_PATH)
-                        .join("Cargo.toml")
-                        .to_string_lossy(),
-                ])
-                .args(&[
-                    "--output",
-                    &PathBuf::from(OUTPUT_LAYER_PATH)
-                        .join(OUTPUT_NAME)
-                        .to_string_lossy(),
-                ])
-                .cwd(CONTEXT_PATH)
-                .mount(Mount::Layer(OutputIdx(0), TOOLS_IMAGE.output(), "/"))
-                .mount(Mount::ReadOnlyLayer(context.output(), CONTEXT_PATH))
-                .mount(Mount::Scratch(OutputIdx(1), OUTPUT_LAYER_PATH))
-                .custom_name("Collecting configuration metadata")
-        };
-
-        let metadata_layer = {
-            bridge
-                .solve(Terminal::with(command.output(1)))
-                .await
-                .context("Unable to collect metadata")?
-        };
-
-        let metadata = {
-            bridge
-                .read_file(&metadata_layer, OUTPUT_NAME, None)
-                .await
-                .context("Unable to read metadata output")?
-        };
-
-        let raw_metadata: Vec<schema::MetadataWrapper> = {
-            serde_json::from_slice(&metadata).context("Unable to parse configuration metadata")?
-        };
-
-        debug!("raw metadata: {:?}", raw_metadata);
-
-        let base = ConfigBase::try_from(raw_metadata)?;
-
-        let builder_source =
-            Source::image(&base.builder.image).with_resolve_mode(ResolveMode::PreferLocal);
-
-        let builder_image = {
-            RustDockerImage::analyse(bridge, builder_source)
-                .await
-                .context("Unable to analyse Rust builder image")?
-        };
-
-        Ok(Self {
-            builder: base.builder,
-            builder_image,
-
-            output: base.output,
-            binaries: base.binaries,
-        })
-    }
-
-    pub fn builder_image(&self) -> &RustDockerImage {
-        &self.builder_image
-    }
-}
-
-type ConfigCtx = (
-    Option<BuilderConfig>,
-    Option<OutputConfig>,
-    Vec<BinaryDefinition>,
-);
-
-#[derive(Debug, PartialEq)]
-struct ConfigBase {
-    builder: BuilderConfig,
-    output: OutputConfig,
-    binaries: Vec<BinaryDefinition>,
+    pub name: String,
+    pub destination: PathBuf,
 }
 
 impl TryFrom<Vec<schema::MetadataWrapper>> for ConfigBase {
     type Error = Error;
 
     fn try_from(raw: Vec<schema::MetadataWrapper>) -> Result<Self, Self::Error> {
+        debug!("raw metadata: {:?}", raw);
+
         let (builder, output, binaries) = {
             raw.into_iter()
                 .filter_map(|item| item.metadata)
@@ -151,6 +57,18 @@ impl TryFrom<Vec<schema::MetadataWrapper>> for ConfigBase {
     }
 }
 
+impl BuilderConfig {
+    pub fn source(&self) -> ImageSource {
+        Source::image(&self.image).with_resolve_mode(ResolveMode::PreferLocal)
+    }
+}
+
+type ConfigCtx = (
+    Option<BuilderConfig>,
+    Option<OutputConfig>,
+    Vec<BinaryDefinition>,
+);
+
 fn extract_config(cx: ConfigCtx, metadata: schema::WharfMetadata) -> Result<ConfigCtx, Error> {
     let (mut builder, mut output, mut binaries) = cx;
 
@@ -160,6 +78,7 @@ fn extract_config(cx: ConfigCtx, metadata: schema::WharfMetadata) -> Result<Conf
 
     builder = match (builder.take(), metadata.builder) {
         (builder, None) => builder,
+
         (None, Some(incoming)) => Some(incoming),
 
         (Some(_), Some(_)) => {
@@ -169,6 +88,7 @@ fn extract_config(cx: ConfigCtx, metadata: schema::WharfMetadata) -> Result<Conf
 
     output = match (output.take(), metadata.output) {
         (output, None) => output,
+
         (None, Some(incoming)) => Some(incoming),
 
         (Some(_), Some(_)) => {
