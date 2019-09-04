@@ -18,7 +18,7 @@ pub struct BuilderImage {
     source: ImageSource,
     cargo_home: PathBuf,
 
-    environment: BTreeMap<String, String>,
+    env: BTreeMap<String, String>,
     user: Option<String>,
 }
 
@@ -28,7 +28,7 @@ impl BuilderImage {
 
         let (digest, spec) = {
             bridge
-                .resolve_image_config(&source)
+                .resolve_image_config(&source, Some("resolving builder image"))
                 .await
                 .context("Unable to resolve image config")?
         };
@@ -40,11 +40,10 @@ impl BuilderImage {
                 .ok_or_else(|| format_err!("Missing source image config"))?
         };
 
-        let environment = config.env.unwrap_or_default();
+        let env = config.env.unwrap_or_default();
 
         let cargo_home = PathBuf::from(
-            environment
-                .get("CARGO_HOME")
+            env.get("CARGO_HOME")
                 .ok_or_else(|| format_err!("Unable to find CARGO_HOME env variable"))?,
         );
 
@@ -52,7 +51,7 @@ impl BuilderImage {
             source: source.with_digest(digest),
             cargo_home,
 
-            environment,
+            env,
             user: config.user,
         })
     }
@@ -72,7 +71,7 @@ impl BuilderImage {
             command = command.user(user);
         }
 
-        for (name, value) in &self.environment {
+        for (name, value) in &self.env {
             command = command.env(name, value);
         }
 

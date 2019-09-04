@@ -71,10 +71,14 @@ impl Config {
         let builder = {
             BuilderImage::analyse(bridge, base.builder)
                 .await
-                .context("Unable to analyse Rust builder image")?
+                .context("Unable to analyse builder image")?
         };
 
-        let output = OutputImage::new(base.output);
+        let output = {
+            OutputImage::analyse(bridge, base.output)
+                .await
+                .context("Unable to analyse output image")?
+        };
 
         Ok(Self {
             builder,

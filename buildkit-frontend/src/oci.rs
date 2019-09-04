@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
+use std::path::PathBuf;
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -108,10 +109,10 @@ pub struct ImageConfig {
     pub cmd: Option<Vec<String>>,
 
     /// A set of directories describing where the process is likely write data specific to a container instance.
-    pub volumes: Option<Vec<String>>,
+    pub volumes: Option<Vec<PathBuf>>,
 
     /// Sets the current working directory of the entrypoint process in the container.
-    pub working_dir: Option<String>,
+    pub working_dir: Option<PathBuf>,
 
     /// The field contains arbitrary metadata for the container.
     pub labels: Option<BTreeMap<String, String>>,
@@ -139,10 +140,10 @@ struct RawImageConfig {
     cmd: Option<Vec<String>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    volumes: Option<BTreeMap<String, Value>>,
+    volumes: Option<BTreeMap<PathBuf, Value>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    working_dir: Option<String>,
+    working_dir: Option<PathBuf>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     labels: Option<BTreeMap<String, String>>,

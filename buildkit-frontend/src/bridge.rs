@@ -45,12 +45,13 @@ impl Bridge {
     pub async fn resolve_image_config(
         &mut self,
         image: &ImageSource,
+        log: Option<&str>,
     ) -> Result<(String, ImageSpecification), Error> {
         let request = ResolveImageConfigRequest {
             r#ref: image.canonical_name().into(),
             platform: None,
             resolve_mode: image.resolve_mode().unwrap_or_default().to_string(),
-            log_name: "".into(),
+            log_name: log.unwrap_or_default().into(),
         };
 
         debug!("requesting to resolve an image: {:?}", request);
@@ -156,7 +157,6 @@ impl Bridge {
             }),
         };
 
-        debug!("sending a success result: {:#?}", request);
         self.client.r#return(Request::new(request)).compat().await?;
 
         // TODO: gracefully shutdown the HTTP/2 connection

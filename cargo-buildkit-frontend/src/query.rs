@@ -48,6 +48,8 @@ impl<'a> GraphQuery<'a> {
     }
 
     pub fn image_spec(&self) -> Result<ImageSpecification, Error> {
+        let output = self.config.output_image();
+
         Ok(ImageSpecification {
             created: Some(Utc::now()),
             author: None,
@@ -55,7 +57,19 @@ impl<'a> GraphQuery<'a> {
             architecture: Architecture::Amd64,
             os: OperatingSystem::Linux,
 
-            config: None,
+            config: Some(ImageConfig {
+                entrypoint: output.entrypoint.clone(),
+                cmd: output.cmd.clone(),
+                env: output.env.clone(),
+                user: output.user.clone(),
+                working_dir: output.workdir.clone(),
+
+                labels: None,
+                volumes: None,
+                exposed_ports: None,
+                stop_signal: None,
+            }),
+
             rootfs: None,
             history: None,
         })
@@ -68,7 +82,7 @@ impl<'a> GraphQuery<'a> {
 
         debug!("preparing the final operation");
 
-        let operation = FileSystem::sequence().custom_name("Assembling output image");
+        let operation = FileSystem::sequence().custom_name("Composing the output image");
         let operation = {
             outputs.into_iter().fold(operation, |output, mapping| {
                 let (index, layer_path) = match output.last_output_index() {
