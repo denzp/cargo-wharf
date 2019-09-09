@@ -1,0 +1,21 @@
+# syntax = denzp/cargo-buildkit-frontend:local
+
+[package]
+name = "single-bin"
+version = "0.1.0"
+authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+
+[package.metadata.wharf.builder]
+image = "rust"
+
+[package.metadata.wharf.output]
+image = "debian:stable-slim"
+workdir = "/root"
+user = "root"
+
+[[package.metadata.wharf.binary]]
+name = "single-bin"
+destination = "/bin/wharf-output"

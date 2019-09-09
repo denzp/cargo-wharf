@@ -1,8 +1,14 @@
 [workspace]
 members = [
-    #"cargo-wharf",
     "cargo-container-tools",
     "cargo-buildkit-frontend",
     "buildkit-proto",
     "buildkit-llb",
+    "buildkit-frontend",
+]
+
+exclude = [
+    "examples/workspace",
+    "examples/single-bin",
+    "examples/single-bin-with-frontend",
 ]

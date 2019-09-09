@@ -1,4 +1,5 @@
-/target
-/Makefile
+target
+debug-output
+
+Makefile
 .dockerignore
-.debug-output
