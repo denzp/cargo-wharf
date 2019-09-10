@@ -54,6 +54,7 @@ impl<'a> GraphQuery<'a> {
             created: Some(Utc::now()),
             author: None,
 
+            // TODO: don't hardcode this
             architecture: Architecture::Amd64,
             os: OperatingSystem::Linux,
 

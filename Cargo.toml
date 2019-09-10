@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "cargo-wharf",
     "cargo-container-tools",
     "cargo-buildkit-frontend",
     "buildkit-proto",
