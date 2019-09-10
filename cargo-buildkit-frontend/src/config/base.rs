@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::path::PathBuf;
 
@@ -28,6 +29,9 @@ pub struct OutputConfig {
     pub image: String,
     pub user: Option<String>,
     pub workdir: Option<PathBuf>,
+    pub entrypoint: Option<Vec<String>>,
+    pub args: Option<Vec<String>>,
+    pub env: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -117,6 +121,9 @@ fn transformation() {
                         image: "alpine:latest".into(),
                         user: Some("root".into()),
                         workdir: Some("/root".into()),
+                        entrypoint: None,
+                        args: None,
+                        env: None,
                     }),
 
                     builder: None,
@@ -175,6 +182,9 @@ fn transformation() {
                 image: "alpine:latest".into(),
                 user: Some("root".into()),
                 workdir: Some("/root".into()),
+                entrypoint: None,
+                args: None,
+                env: None,
             },
             binaries: vec![
                 BinaryDefinition {
@@ -205,6 +215,9 @@ fn duplicated_config() {
                         image: "alpine:latest".into(),
                         user: Some("root".into()),
                         workdir: Some("/root".into()),
+                        entrypoint: None,
+                        args: None,
+                        env: None,
                     }),
 
                     binary: None,
@@ -238,6 +251,9 @@ fn duplicated_config() {
                         image: "alpine:latest".into(),
                         user: Some("root".into()),
                         workdir: Some("/root".into()),
+                        entrypoint: None,
+                        args: None,
+                        env: None,
                     }),
 
                     binary: None,
@@ -251,6 +267,9 @@ fn duplicated_config() {
                         image: "rust:latest".into(),
                         user: None,
                         workdir: None,
+                        entrypoint: None,
+                        args: None,
+                        env: None,
                     }),
 
                     builder: None,
@@ -295,6 +314,9 @@ fn missing_config() {
                     image: "another".into(),
                     user: Some("root".into()),
                     workdir: Some("/root".into()),
+                    entrypoint: None,
+                    args: None,
+                    env: None,
                 }),
 
                 builder: None,

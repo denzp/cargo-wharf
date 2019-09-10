@@ -28,7 +28,7 @@ impl BuilderImage {
 
         let (digest, spec) = {
             bridge
-                .resolve_image_config(&source, Some("resolving builder image"))
+                .resolve_image_config(&source, Some("Resolving builder image"))
                 .await
                 .context("Unable to resolve image config")?
         };

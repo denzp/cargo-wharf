@@ -29,26 +29,41 @@ impl OutputImage {
 
         let (digest, spec) = {
             bridge
-                .resolve_image_config(&source, Some("resolving output image"))
+                .resolve_image_config(&source, Some("Resolving output image"))
                 .await
                 .context("Unable to resolve image config")?
         };
 
         debug!("resolved output image config: {:#?}", spec.config);
 
-        let config = {
+        let spec = {
             spec.config
                 .ok_or_else(|| format_err!("Missing source image config"))?
+        };
+
+        let env = match (spec.env, config.env) {
+            (Some(mut spec), Some(mut config)) => {
+                spec.append(&mut config);
+                Some(spec)
+            }
+
+            (spec, config) => spec.or(config),
+        };
+
+        let (entrypoint, cmd) = match (config.entrypoint, config.args) {
+            (None, _) => (spec.entrypoint, spec.cmd),
+            (entrypoint, cmd) => (entrypoint, cmd),
         };
 
         Ok(Self {
             source: source.with_digest(digest),
 
-            env: config.env,
-            user: config.user,
-            workdir: config.working_dir,
-            entrypoint: config.entrypoint,
-            cmd: config.cmd,
+            user: config.user.or(spec.user),
+            workdir: config.workdir.or(spec.working_dir),
+
+            env,
+            entrypoint,
+            cmd,
         })
     }
 

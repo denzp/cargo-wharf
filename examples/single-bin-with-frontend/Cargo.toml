@@ -15,6 +15,11 @@ image = "rust"
 image = "debian:stable-slim"
 workdir = "/root"
 user = "root"
+entrypoint = ["/bin/wharf-output"]
+args = ["predefined arg"]
+
+[package.metadata.wharf.output.env]
+"NAME 1" = "VALUE 1"
 
 [[package.metadata.wharf.binary]]
 name = "single-bin"
