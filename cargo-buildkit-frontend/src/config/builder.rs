@@ -35,16 +35,26 @@ impl BuilderImage {
 
         debug!("resolved builder image config: {:#?}", spec.config);
 
-        let config = {
+        let spec = {
             spec.config
                 .ok_or_else(|| format_err!("Missing source image config"))?
         };
 
-        let env = config.env.unwrap_or_default();
+        let env = match (spec.env, config.env) {
+            (Some(mut spec), Some(mut config)) => {
+                spec.append(&mut config);
+                spec
+            }
 
+            (spec, config) => spec.or(config).unwrap_or_default(),
+        };
+
+        let user = config.user.or(spec.user);
         let cargo_home = PathBuf::from(
             env.get("CARGO_HOME")
-                .ok_or_else(|| format_err!("Unable to find CARGO_HOME env variable"))?,
+                .cloned()
+                .or_else(|| guess_cargo_home(&user))
+                .ok_or_else(|| format_err!("Unable to find or guess CARGO_HOME env variable"))?,
         );
 
         Ok(Self {
@@ -52,7 +62,7 @@ impl BuilderImage {
             cargo_home,
 
             env,
-            user: config.user,
+            user,
         })
     }
 
@@ -80,4 +90,25 @@ impl BuilderImage {
             .mount(Mount::SharedCache(self.cargo_home().join("git")))
             .mount(Mount::SharedCache(self.cargo_home().join("registry")))
     }
+}
+
+fn guess_cargo_home(user: &Option<String>) -> Option<String> {
+    match user.as_ref().map(String::as_str) {
+        Some("root") => Some("/root/.cargo".into()),
+        Some(user) => Some(format!("/home/{}/.cargo", user)),
+        None => None,
+    }
+}
+
+#[test]
+fn cargo_home_guessing() {
+    assert_eq!(guess_cargo_home(&None), None);
+    assert_eq!(
+        guess_cargo_home(&Some("root".into())),
+        Some("/root/.cargo".into())
+    );
+    assert_eq!(
+        guess_cargo_home(&Some("den".into())),
+        Some("/home/den/.cargo".into())
+    );
 }

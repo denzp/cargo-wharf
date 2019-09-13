@@ -9,10 +9,10 @@ edition = "2018"
 [dependencies]
 
 [package.metadata.wharf.builder]
-image = "rust"
+image = "clux/muslrust:nightly-2019-08-24"
 
 [package.metadata.wharf.output]
-image = "debian:stable-slim"
+image = "scratch"
 workdir = "/root"
 user = "root"
 entrypoint = ["/bin/wharf-output"]

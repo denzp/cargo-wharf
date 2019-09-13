@@ -21,6 +21,8 @@ pub struct ConfigBase {
 #[serde(rename_all = "kebab-case")]
 pub struct BuilderConfig {
     pub image: String,
+    pub user: Option<String>,
+    pub env: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -136,6 +138,8 @@ fn transformation() {
                 wharf: Some(WharfMetadata {
                     builder: Some(BuilderConfig {
                         image: "rust:latest".into(),
+                        env: None,
+                        user: None,
                     }),
 
                     output: None,
@@ -177,6 +181,8 @@ fn transformation() {
         ConfigBase {
             builder: BuilderConfig {
                 image: "rust:latest".into(),
+                env: None,
+                user: None,
             },
             output: OutputConfig {
                 image: "alpine:latest".into(),
@@ -210,6 +216,8 @@ fn duplicated_config() {
                 wharf: Some(WharfMetadata {
                     builder: Some(BuilderConfig {
                         image: "rust:latest".into(),
+                        env: None,
+                        user: None,
                     }),
                     output: Some(OutputConfig {
                         image: "alpine:latest".into(),
@@ -229,6 +237,8 @@ fn duplicated_config() {
                 wharf: Some(WharfMetadata {
                     builder: Some(BuilderConfig {
                         image: "rust:latest".into(),
+                        env: None,
+                        user: None,
                     }),
 
                     output: None,
@@ -246,6 +256,8 @@ fn duplicated_config() {
                 wharf: Some(WharfMetadata {
                     builder: Some(BuilderConfig {
                         image: "rust:latest".into(),
+                        env: None,
+                        user: None,
                     }),
                     output: Some(OutputConfig {
                         image: "alpine:latest".into(),
@@ -297,6 +309,8 @@ fn missing_config() {
             wharf: Some(WharfMetadata {
                 builder: Some(BuilderConfig {
                     image: "another".into(),
+                    env: None,
+                    user: None,
                 }),
 
                 output: None,

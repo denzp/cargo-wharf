@@ -14,7 +14,7 @@ use super::base::OutputConfig;
 #[derive(Debug, Serialize)]
 pub struct OutputImage {
     #[serde(skip_serializing)]
-    source: ImageSource,
+    source: Option<ImageSource>,
 
     pub env: Option<BTreeMap<String, String>>,
     pub user: Option<String>,
@@ -25,6 +25,10 @@ pub struct OutputImage {
 
 impl OutputImage {
     pub async fn analyse(bridge: &mut Bridge, config: OutputConfig) -> Result<Self, Error> {
+        if config.image == "scratch" {
+            return Ok(Self::scratch(config));
+        }
+
         let source = config.source();
 
         let (digest, spec) = {
@@ -56,7 +60,7 @@ impl OutputImage {
         };
 
         Ok(Self {
-            source: source.with_digest(digest),
+            source: Some(source.with_digest(digest)),
 
             user: config.user.or(spec.user),
             workdir: config.workdir.or(spec.working_dir),
@@ -67,11 +71,24 @@ impl OutputImage {
         })
     }
 
+    fn scratch(config: OutputConfig) -> Self {
+        Self {
+            source: None,
+            user: config.user,
+            env: config.env,
+            entrypoint: config.entrypoint,
+            cmd: config.args,
+            workdir: config.workdir,
+        }
+    }
+
     pub fn layer_path<P>(&self, path: P) -> LayerPath<P>
     where
         P: AsRef<Path>,
     {
-        // TODO: handle "scratch"
-        LayerPath::Other(self.source.output(), path)
+        match self.source {
+            Some(ref source) => LayerPath::Other(source.output(), path),
+            None => LayerPath::Scratch(path),
+        }
     }
 }

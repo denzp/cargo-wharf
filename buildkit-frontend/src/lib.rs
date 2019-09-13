@@ -22,7 +22,7 @@ pub use self::bridge::Bridge;
 pub use self::error::ErrorCode;
 pub use self::options::Options;
 pub use self::stdio::StdioSocket;
-pub use self::utils::{OutputRef, ToErrorString};
+pub use self::utils::{ErrorWithCauses, OutputRef};
 
 pub trait Frontend {
     type RunFuture: Future<Output = Result<FrontendOutput, Error>>;
@@ -82,11 +82,16 @@ pub async fn run_frontend<F: Frontend>(frontend: F) -> Result<(), Error> {
         }
 
         Err(error) => {
-            error!("Frontend entrypoint failed: {}", error.to_error_string());
+            let error = ErrorWithCauses::multi_line(error);
+
+            error!("Frontend entrypoint failed: {}", error);
 
             // https://godoc.org/google.golang.org/grpc/codes#Code
             bridge
-                .finish_with_error(ErrorCode::Unknown, error.to_string())
+                .finish_with_error(
+                    ErrorCode::Unknown,
+                    ErrorWithCauses::single_line(error.into_inner()).to_string(),
+                )
                 .await
                 .context("Unable to send an error result")?;
         }
