@@ -1,3 +1,5 @@
+# syntax = denzp/cargo-buildkit-frontend:local
+
 [workspace]
 members = [
     "binary-1",

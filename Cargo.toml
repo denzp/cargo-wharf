@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "cargo-wharf",
     "cargo-container-tools",
     "cargo-buildkit-frontend",
     "buildkit-proto",
@@ -11,5 +10,4 @@ members = [
 exclude = [
     "examples/workspace",
     "examples/single-bin",
-    "examples/single-bin-with-frontend",
 ]

@@ -2,61 +2,19 @@
 # FRONTEND_VERSION = v$(shell cargo pkgid --manifest-path=cargo-buildkit-frontend/Cargo.toml | cut -d\# -f2 | cut -d: -f2)
 
 container-tools:
-	buildctl build \
-		--frontend gateway.v0 \
-		--opt source=docker/dockerfile:1.1-experimental \
-		--local context=. \
-		--local dockerfile=cargo-container-tools \
-		--output type=image,name=docker.io/denzp/cargo-container-tools:local
+	docker build -f cargo-container-tools/Dockerfile -t denzp/cargo-container-tools:local .
 
 cargo-frontend:
-	buildctl build \
-		--frontend gateway.v0 \
-		--opt source=docker/dockerfile:1.1-experimental \
-		--local context=. \
-		--local dockerfile=cargo-buildkit-frontend \
-		--output type=image,name=docker.io/denzp/cargo-buildkit-frontend:local
-
-docker:
-	buildctl build \
-		--frontend gateway.v0 \
-		--opt source=docker/dockerfile:1.1-experimental \
-		--local context=. \
-		--local dockerfile=cargo-container-tools \
-		--output type=docker,name=denzp/cargo-container-tools:local | docker load
-	buildctl build \
-		--frontend gateway.v0 \
-		--opt source=docker/dockerfile:1.1-experimental \
-		--local context=. \
-		--local dockerfile=cargo-buildkit-frontend \
-		--output type=docker,name=denzp/cargo-buildkit-frontend:local | docker load
+	docker build -f cargo-buildkit-frontend/Dockerfile -t denzp/cargo-buildkit-frontend:local .
 
 example-workspace: container-tools cargo-frontend
-	buildctl build \
-		--frontend gateway.v0 \
-		--opt source=denzp/cargo-buildkit-frontend:local \
-		--local context=examples/workspace \
-		--output type=docker,name=cargo-wharf/example-workspace | docker load
+	docker build -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace examples/workspace
 
 example-workspace-debug: container-tools cargo-frontend
-	buildctl build \
-		--frontend gateway.v0 \
-		--opt source=denzp/cargo-buildkit-frontend:local \
-		--local context=examples/workspace \
-		--opt debug=config,build-plan,build-graph,llb \
-		--output type=local,dest=debug-output
+	docker build -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace examples/workspace -o type=local,dest=debug-output --build-arg debug=config,build-plan,build-graph,llb
 
 example-single-bin: container-tools cargo-frontend
-	buildctl build \
-		--frontend gateway.v0 \
-		--opt source=denzp/cargo-buildkit-frontend:local \
-		--local context=examples/single-bin \
-		--output type=docker,name=cargo-wharf/example-single-bin | docker load
+	docker build -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin examples/single-bin
 
 example-single-bin-debug: container-tools cargo-frontend
-	buildctl build \
-		--frontend gateway.v0 \
-		--opt source=denzp/cargo-buildkit-frontend:local \
-		--local context=examples/single-bin \
-		--opt debug=config,build-plan,build-graph,llb \
-		--output type=local,dest=debug-output
+	docker build -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin examples/single-bin -o type=local,dest=debug-output --build-arg debug=config,build-plan,build-graph,llb

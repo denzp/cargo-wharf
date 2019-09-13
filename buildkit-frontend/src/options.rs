@@ -55,7 +55,11 @@ impl Options {
         }
     }
 
-    fn extract_name_and_value(raw_value: String) -> (String, OptionValue) {
+    fn extract_name_and_value(mut raw_value: String) -> (String, OptionValue) {
+        if raw_value.starts_with("build-arg:") {
+            raw_value = raw_value.trim_start_matches("build-arg:").into();
+        }
+
         let delimiter_pos = raw_value.find('=');
 
         match delimiter_pos {
@@ -166,6 +170,16 @@ fn options_parsing() {
             "name".into(),
             OptionValue::Arguments(vec!["value1,value2".into(), "value3".into()])
         )
+    );
+
+    assert_eq!(
+        Options::extract_name_and_value("build-arg:name".into()),
+        ("name".into(), OptionValue::Flag(true))
+    );
+
+    assert_eq!(
+        Options::extract_name_and_value("build-arg:name=value".into()),
+        ("name".into(), OptionValue::Arguments(vec!["value".into()]))
     );
 }
 

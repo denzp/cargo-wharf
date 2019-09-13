@@ -1,3 +1,5 @@
+# syntax = denzp/cargo-buildkit-frontend:local
+
 [package]
 name = "single-bin"
 version = "0.1.0"

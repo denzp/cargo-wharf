@@ -90,7 +90,7 @@ fn run(matches: &ArgMatches<'static>) -> CargoResult<()> {
 
 fn run_stdout(matches: &ArgMatches<'static>) -> CargoResult<()> {
     let mut config = Config::default()?;
-    config.configure(0, None, &None, true, true, false, &None, &[])?;
+    config.configure(0, None, &None, false, true, false, &None, &[])?;
 
     let mut build_config = BuildConfig::new(&config, Some(1), &None, CompileMode::Build)?;
     build_config.release = matches.is_present("release");
