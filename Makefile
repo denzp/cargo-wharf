@@ -11,10 +11,10 @@ example-workspace: container-tools cargo-frontend
 	docker build -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace examples/workspace
 
 example-workspace-debug: container-tools cargo-frontend
-	docker build -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace examples/workspace -o type=local,dest=debug-output --build-arg debug=config,build-plan,build-graph,llb
+	docker build -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace examples/workspace -o type=local,dest=debug-output --build-arg debug=true
 
 example-single-bin: container-tools cargo-frontend
 	docker build -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin examples/single-bin
 
 example-single-bin-debug: container-tools cargo-frontend
-	docker build -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin examples/single-bin -o type=local,dest=debug-output --build-arg debug=config,build-plan,build-graph,llb
+	docker build -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin examples/single-bin -o type=local,dest=debug-output --build-arg debug=true

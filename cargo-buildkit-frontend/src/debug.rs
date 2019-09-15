@@ -23,7 +23,7 @@ impl DebugOperation {
     where
         O: DebugOutput,
     {
-        if options.has_value("debug", O::KEY) {
+        if options.has_value("debug", O::KEY) || options.is_flag_set("debug") {
             self.append_debug_output(O::PATH, output);
         }
     }

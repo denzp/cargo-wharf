@@ -40,6 +40,20 @@ impl Options {
         }
     }
 
+    pub fn is_flag_set<S>(&self, name: S) -> bool
+    where
+        S: AsRef<str>,
+    {
+        match self.inner.get(name.as_ref()) {
+            Some(container) => match container {
+                OptionValue::Flag(flag) => *flag,
+                OptionValue::Arguments(_) => false,
+            },
+
+            None => false,
+        }
+    }
+
     pub fn has_value<S1, S2>(&self, name: S1, value: S2) -> bool
     where
         S1: AsRef<str>,
