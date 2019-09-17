@@ -66,6 +66,17 @@ impl BuilderImage {
         })
     }
 
+    #[cfg(test)]
+    pub fn new(source: ImageSource, cargo_home: PathBuf) -> Self {
+        BuilderImage {
+            source,
+            cargo_home,
+
+            env: Default::default(),
+            user: Default::default(),
+        }
+    }
+
     pub fn cargo_home(&self) -> &Path {
         &self.cargo_home
     }

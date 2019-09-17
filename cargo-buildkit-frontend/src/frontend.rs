@@ -19,7 +19,7 @@ impl Frontend for CargoFrontend {
             let mut debug = DebugOperation::new();
 
             let config = {
-                Config::analyse(&mut bridge)
+                Config::analyse(&mut bridge, &options)
                     .await
                     .context("Unable to analyse config")?
             };

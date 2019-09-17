@@ -69,6 +69,20 @@ impl Options {
         }
     }
 
+    pub fn get<S>(&self, name: S) -> Option<&str>
+    where
+        S: AsRef<str>,
+    {
+        match self.inner.get(name.as_ref()) {
+            Some(container) => match container {
+                OptionValue::Flag(_) => None,
+                OptionValue::Arguments(values) => values.iter().map(String::as_str).next(),
+            },
+
+            None => None,
+        }
+    }
+
     fn extract_name_and_value(mut raw_value: String) -> (String, OptionValue) {
         if raw_value.starts_with("build-arg:") {
             raw_value = raw_value.trim_start_matches("build-arg:").into();

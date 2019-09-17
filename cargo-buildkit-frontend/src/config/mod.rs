@@ -1,20 +1,22 @@
+use std::convert::TryFrom;
 use std::path::PathBuf;
 
 use failure::{Error, ResultExt};
 use serde::Serialize;
 
-use buildkit_frontend::Bridge;
+use buildkit_frontend::{Bridge, Options};
 use buildkit_llb::prelude::*;
 
+use crate::query::Mode;
 use crate::shared::{tools, CONTEXT, CONTEXT_PATH};
 
 mod base;
 mod builder;
 mod output;
 
-use self::base::{BinaryDefinition, ConfigBase};
-use self::builder::BuilderImage;
-use self::output::OutputImage;
+pub use self::base::{BinaryDefinition, ConfigBase};
+pub use self::builder::BuilderImage;
+pub use self::output::OutputImage;
 
 const OUTPUT_LAYER_PATH: &str = "/output";
 const OUTPUT_NAME: &str = "build-plan.json";
@@ -23,12 +25,13 @@ const OUTPUT_NAME: &str = "build-plan.json";
 pub struct Config {
     builder: BuilderImage,
     output: OutputImage,
+    mode: Mode,
 
     binaries: Vec<BinaryDefinition>,
 }
 
 impl Config {
-    pub async fn analyse(bridge: &mut Bridge) -> Result<Self, Error> {
+    pub async fn analyse(bridge: &mut Bridge, options: &Options) -> Result<Self, Error> {
         let command = {
             Command::run(tools::METADATA_COLLECTOR)
                 .args(&[
@@ -80,12 +83,36 @@ impl Config {
                 .context("Unable to analyse output image")?
         };
 
+        let mode = {
+            options
+                .get("mode")
+                .map(Mode::try_from)
+                .unwrap_or(Ok(Mode::Binaries))
+                .context("Unable to parse the mode")?
+        };
+
         Ok(Self {
             builder,
             output,
+            mode,
 
             binaries: base.binaries,
         })
+    }
+
+    #[cfg(test)]
+    pub fn new(
+        builder: BuilderImage,
+        output: OutputImage,
+        mode: Mode,
+        binaries: Vec<BinaryDefinition>,
+    ) -> Self {
+        Self {
+            builder,
+            output,
+            mode,
+            binaries,
+        }
     }
 
     pub fn builder_image(&self) -> &BuilderImage {
@@ -98,5 +125,9 @@ impl Config {
 
     pub fn find_binary(&self, name: &str) -> Option<&BinaryDefinition> {
         self.binaries.iter().find(|bin| bin.name == name)
+    }
+
+    pub fn mode(&self) -> Mode {
+        self.mode
     }
 }

@@ -25,4 +25,5 @@ pub mod tools {
     pub const BUILDSCRIPT_CAPTURE: &str = "/usr/local/bin/cargo-buildscript-capture";
     pub const BUILDSCRIPT_APPLY: &str = "/usr/local/bin/cargo-buildscript-apply";
     pub const BUILD_PLAN: &str = "/usr/local/bin/cargo-build-plan";
+    pub const TEST_RUNNER: &str = "/usr/local/bin/cargo-test-runner";
 }

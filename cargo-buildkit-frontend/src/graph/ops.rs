@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use log::*;
 use petgraph::prelude::*;
 
-use super::node::{Node, NodeKind};
+use super::node::{Node, NodeKind, PrimitiveNodeKind};
 
 pub fn merge_buildscript_nodes(graph: &mut StableGraph<Node, ()>) {
     debug!("merging build script nodes");
@@ -11,7 +11,7 @@ pub fn merge_buildscript_nodes(graph: &mut StableGraph<Node, ()>) {
 
     for index in indices {
         match graph.node_weight(index) {
-            Some(node) if node.kind() == NodeKind::BuildScript => {
+            Some(node) if node.kind() == NodeKind::Primitive(PrimitiveNodeKind::BuildScript) => {
                 let mut dependenents = {
                     graph
                         .neighbors_directed(index, Direction::Incoming)
@@ -102,7 +102,7 @@ mod tests {
     use maplit::btreemap;
 
     use super::*;
-    use crate::graph::{NodeCommand, NodeCommandDetails, NodeKind};
+    use crate::graph::{NodeCommand, NodeCommandDetails, NodeKind, PrimitiveNodeKind};
     use crate::plan::{RawInvocation, RawTargetKind};
 
     #[test]
@@ -171,7 +171,11 @@ mod tests {
 
         let rustc_node = graph.node_weight(NodeIndex::from(2)).unwrap();
 
-        assert_eq!(rustc_node.kind(), NodeKind::Other);
+        assert_eq!(
+            rustc_node.kind(),
+            NodeKind::Primitive(PrimitiveNodeKind::Other)
+        );
+
         assert_eq!(
             rustc_node.command(),
             &NodeCommand::Simple(NodeCommandDetails {
@@ -204,9 +208,10 @@ mod tests {
 
         assert_eq!(
             rustc_node.kind(),
-            NodeKind::BuildScriptOutputConsumer(Path::new(
-                "/target/debug/build/lib-1-c181ff77de97ab79/out"
-            ))
+            NodeKind::BuildScriptOutputConsumer(
+                PrimitiveNodeKind::Other,
+                Path::new("/target/debug/build/lib-1-c181ff77de97ab79/out")
+            )
         );
 
         assert_eq!(

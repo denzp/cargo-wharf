@@ -8,7 +8,7 @@ use serde::Serialize;
 use crate::plan::{RawInvocation, RawTargetKind};
 use crate::shared::tools::{BUILDSCRIPT_APPLY, BUILDSCRIPT_CAPTURE};
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Node {
     package_name: String,
     package_version: Version,
@@ -21,16 +21,20 @@ pub struct Node {
     links: BTreeMap<PathBuf, PathBuf>,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize)]
-pub enum NodeKind<P> {
+#[derive(Debug, PartialEq, Clone, Copy, Serialize)]
+pub enum PrimitiveNodeKind {
     Test,
     Binary,
     Example,
     Other,
     BuildScript,
+}
 
+#[derive(Debug, PartialEq, Clone, Serialize)]
+pub enum NodeKind<P> {
+    Primitive(PrimitiveNodeKind),
     MergedBuildScript(P),
-    BuildScriptOutputConsumer(P),
+    BuildScriptOutputConsumer(PrimitiveNodeKind, P),
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -70,14 +74,12 @@ impl Node {
         use NodeKind::*;
 
         match self.kind {
-            BuildScriptOutputConsumer(ref buf) => BuildScriptOutputConsumer(buf.as_path()),
+            Primitive(kind) => Primitive(kind),
             MergedBuildScript(ref buf) => MergedBuildScript(buf.as_path()),
 
-            Test => Test,
-            Binary => Binary,
-            Example => Example,
-            Other => Other,
-            BuildScript => BuildScript,
+            BuildScriptOutputConsumer(original, ref buf) => {
+                BuildScriptOutputConsumer(original, buf.as_path())
+            }
         }
     }
 
@@ -116,7 +118,10 @@ impl Node {
             details.use_wrapper(BUILDSCRIPT_APPLY);
         }
 
-        self.kind = NodeKind::BuildScriptOutputConsumer(out_dir.into());
+        self.kind = match self.kind {
+            NodeKind::Primitive(kind) => NodeKind::BuildScriptOutputConsumer(kind, out_dir.into()),
+            _ => NodeKind::BuildScriptOutputConsumer(PrimitiveNodeKind::Other, out_dir.into()),
+        };
     }
 }
 
@@ -174,24 +179,24 @@ impl From<&RawInvocation> for Node {
 impl From<&RawInvocation> for NodeKind<PathBuf> {
     fn from(invocation: &RawInvocation) -> Self {
         if invocation.args.contains(&String::from("--test")) {
-            return NodeKind::Test;
+            return NodeKind::Primitive(PrimitiveNodeKind::Test);
         }
 
         if invocation.target_kind.contains(&RawTargetKind::Bin) {
-            return NodeKind::Binary;
+            return NodeKind::Primitive(PrimitiveNodeKind::Binary);
         }
 
         if invocation.target_kind.contains(&RawTargetKind::Example) {
-            return NodeKind::Example;
+            return NodeKind::Primitive(PrimitiveNodeKind::Example);
         }
 
         if invocation.target_kind.contains(&RawTargetKind::CustomBuild)
             && invocation.program != "rustc"
         {
-            return NodeKind::BuildScript;
+            return NodeKind::Primitive(PrimitiveNodeKind::BuildScript);
         }
 
-        NodeKind::Other
+        NodeKind::Primitive(PrimitiveNodeKind::Other)
     }
 }
 

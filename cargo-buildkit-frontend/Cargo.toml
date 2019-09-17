@@ -7,6 +7,7 @@ publish = false
 
 [dependencies]
 chrono = "0.4"
+either = "1.5"
 env_logger = "0.6"
 failure = "0.1"
 futures-preview = { version = "0.3.0-alpha.16", features = ["compat"] }

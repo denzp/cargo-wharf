@@ -71,6 +71,19 @@ impl OutputImage {
         })
     }
 
+    #[cfg(test)]
+    pub fn new() -> Self {
+        Self {
+            source: None,
+
+            env: None,
+            user: None,
+            workdir: None,
+            entrypoint: None,
+            cmd: None,
+        }
+    }
+
     fn scratch(config: OutputConfig) -> Self {
         Self {
             source: None,

@@ -1,10 +1,14 @@
+use std::convert::TryFrom;
+use std::iter::once;
 use std::path::{Path, PathBuf};
 
 use chrono::prelude::*;
-use failure::Error;
+use either::Either;
+use failure::{bail, Error};
 use log::*;
 use petgraph::prelude::*;
 use petgraph::visit::{Reversed, Topo, Walker};
+use serde::Serialize;
 
 use buildkit_frontend::oci::*;
 use buildkit_frontend::{Bridge, OutputRef};
@@ -12,8 +16,17 @@ use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
 use crate::config::Config;
-use crate::graph::{BuildGraph, Node, NodeCommand, NodeCommandDetails, NodeKind};
+use crate::graph::{
+    BuildGraph, Node, NodeCommand, NodeCommandDetails, NodeKind, PrimitiveNodeKind,
+};
 use crate::shared::{tools, CONTEXT, CONTEXT_PATH, TARGET_PATH};
+
+#[derive(Copy, Clone, Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Mode {
+    Binaries,
+    Tests,
+}
 
 pub struct GraphQuery<'a> {
     original_graph: &'a StableGraph<Node, ()>,
@@ -28,6 +41,7 @@ struct OutputMapping<'a> {
 }
 
 type NodesCache<'a> = Vec<Option<OperationOutput<'a>>>;
+type BuildOutput<'a> = (NodeIndex, &'a Node, PathBuf);
 
 impl<'a> GraphQuery<'a> {
     pub fn new(graph: &'a BuildGraph, config: &'a Config) -> Self {
@@ -50,15 +64,8 @@ impl<'a> GraphQuery<'a> {
     pub fn image_spec(&self) -> Result<ImageSpecification, Error> {
         let output = self.config.output_image();
 
-        Ok(ImageSpecification {
-            created: Some(Utc::now()),
-            author: None,
-
-            // TODO: don't hardcode this
-            architecture: Architecture::Amd64,
-            os: OperatingSystem::Linux,
-
-            config: Some(ImageConfig {
+        let config = match self.config.mode() {
+            Mode::Binaries => ImageConfig {
                 entrypoint: output.entrypoint.clone(),
                 cmd: output.cmd.clone(),
                 env: output.env.clone(),
@@ -69,8 +76,38 @@ impl<'a> GraphQuery<'a> {
                 volumes: None,
                 exposed_ports: None,
                 stop_signal: None,
-            }),
+            },
 
+            Mode::Tests => ImageConfig {
+                entrypoint: Some(
+                    once(tools::TEST_RUNNER.into())
+                        .chain(
+                            self.outputs()
+                                .map(|(_, _, path)| path.to_string_lossy().into()),
+                        )
+                        .collect(),
+                ),
+                cmd: None,
+                env: output.env.clone(),
+                user: output.user.clone(),
+                working_dir: None,
+
+                labels: None,
+                volumes: None,
+                exposed_ports: None,
+                stop_signal: None,
+            },
+        };
+
+        Ok(ImageSpecification {
+            created: Some(Utc::now()),
+            author: None,
+
+            // TODO: don't hardcode this
+            architecture: Architecture::Amd64,
+            os: OperatingSystem::Linux,
+
+            config: Some(config),
             rootfs: None,
             history: None,
         })
@@ -79,7 +116,7 @@ impl<'a> GraphQuery<'a> {
     fn terminal(&self) -> Terminal<'a> {
         debug!("serializing all nodes");
         let nodes = self.serialize_all_nodes();
-        let outputs = self.outputs(nodes);
+        let outputs = self.mapped_outputs(nodes);
 
         debug!("preparing the final operation");
 
@@ -103,17 +140,61 @@ impl<'a> GraphQuery<'a> {
         Terminal::with(operation.ref_counted().last_output().unwrap())
     }
 
-    fn outputs(&self, nodes: NodesCache<'a>) -> Vec<OutputMapping<'a>> {
-        self.original_graph
-            .node_indices()
-            .map(move |index| (index, self.original_graph.node_weight(index).unwrap()))
-            .filter(|(_, node)| node.kind() == NodeKind::Binary)
-            .filter_map(
-                move |(index, node)| match self.config.find_binary(node.package_name()) {
-                    Some(found) => Some((index, node, found.destination.clone())),
-                    None => None,
-                },
-            )
+    fn outputs(&self) -> impl Iterator<Item = BuildOutput<'_>> {
+        match self.config.mode() {
+            Mode::Binaries => Either::Left(
+                self.original_graph
+                    .node_indices()
+                    .map(move |index| (index, self.original_graph.node_weight(index).unwrap()))
+                    .filter(|(_, node)| match node.kind() {
+                        NodeKind::Primitive(PrimitiveNodeKind::Binary) => true,
+                        NodeKind::BuildScriptOutputConsumer(PrimitiveNodeKind::Binary, _) => true,
+
+                        _ => false,
+                    })
+                    .filter_map(move |(index, node)| {
+                        match self.config.find_binary(node.package_name()) {
+                            Some(found) => Some((index, node, found.destination.clone())),
+                            None => None,
+                        }
+                    }),
+            ),
+
+            Mode::Tests => Either::Right(
+                self.original_graph
+                    .node_indices()
+                    .map(move |index| (index, self.original_graph.node_weight(index).unwrap()))
+                    .filter(|(_, node)| match node.kind() {
+                        NodeKind::Primitive(PrimitiveNodeKind::Test) => true,
+                        NodeKind::BuildScriptOutputConsumer(PrimitiveNodeKind::Test, _) => true,
+
+                        _ => false,
+                    })
+                    .map(|(index, node)| {
+                        let to: PathBuf = {
+                            node.outputs_iter()
+                                .next()
+                                .unwrap()
+                                .strip_prefix(TARGET_PATH)
+                                .unwrap()
+                                .into()
+                        };
+
+                        (index, node, PathBuf::from("/test").join(to))
+                    }),
+            ),
+        }
+    }
+
+    fn mapped_outputs(&self, nodes: NodesCache<'a>) -> Vec<OutputMapping<'a>> {
+        match self.config.mode() {
+            Mode::Binaries => self.binaries_mapped_outputs(nodes),
+            Mode::Tests => self.tests_mapped_outputs(nodes),
+        }
+    }
+
+    fn binaries_mapped_outputs(&self, nodes: NodesCache<'a>) -> Vec<OutputMapping<'a>> {
+        self.outputs()
             .map(move |(index, node, to)| {
                 let from = LayerPath::Other(
                     nodes[index.index()].clone().unwrap(),
@@ -127,6 +208,28 @@ impl<'a> GraphQuery<'a> {
 
                 OutputMapping { from, to }
             })
+            .collect()
+    }
+
+    fn tests_mapped_outputs(&self, nodes: NodesCache<'a>) -> Vec<OutputMapping<'a>> {
+        self.outputs()
+            .map(move |(index, node, to)| {
+                let from = LayerPath::Other(
+                    nodes[index.index()].clone().unwrap(),
+                    node.outputs_iter()
+                        .next()
+                        .unwrap()
+                        .strip_prefix(TARGET_PATH)
+                        .unwrap()
+                        .into(),
+                );
+
+                OutputMapping { from: from, to }
+            })
+            .chain(once(OutputMapping {
+                from: LayerPath::Other(tools::IMAGE.output(), tools::TEST_RUNNER.into()),
+                to: tools::TEST_RUNNER.into(),
+            }))
             .collect()
     }
 
@@ -212,7 +315,7 @@ fn serialize_node<'a>(
         command = command.mount(mount.clone());
     }
 
-    if let NodeKind::BuildScriptOutputConsumer(_) = node.kind() {
+    if let NodeKind::BuildScriptOutputConsumer(_, _) = node.kind() {
         command = command.mount(Mount::ReadOnlySelector(
             tools::IMAGE.output(),
             tools::BUILDSCRIPT_APPLY,
@@ -273,4 +376,93 @@ fn create_target_dirs<'a>(outputs: impl Iterator<Item = &'a Path>) -> OperationO
     }
 
     operation.ref_counted().last_output().unwrap()
+}
+
+impl TryFrom<&str> for Mode {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "binaries" | "bin" | "binary" => Ok(Mode::Binaries),
+            "tests" | "test" => Ok(Mode::Tests),
+
+            other => bail!("Unknown mode: {}", other),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::from_slice;
+
+    use super::*;
+    use crate::config::{BinaryDefinition, BuilderImage, OutputImage};
+    use crate::plan::RawBuildPlan;
+
+    #[test]
+    fn query_binaries() {
+        let graph = create_graph();
+        let config = create_config(Mode::Binaries);
+        let query = GraphQuery::new(&graph, &config);
+
+        assert_eq!(
+            query
+                .outputs()
+                .map(|(index, _, path)| (index, path))
+                .collect::<Vec<_>>(),
+            vec![(NodeIndex::new(25), "/usr/bin/mock-binary-1".into())]
+        );
+    }
+
+    #[test]
+    fn query_tests() {
+        let graph = create_graph();
+        let config = create_config(Mode::Tests);
+        let query = GraphQuery::new(&graph, &config);
+
+        assert_eq!(
+            query
+                .outputs()
+                .map(|(index, _, path)| (index, path))
+                .collect::<Vec<_>>(),
+            vec![
+                (
+                    NodeIndex::new(24),
+                    "/test/debug/deps/binary_1-c8e5eecb9b4009db".into()
+                ),
+                (
+                    NodeIndex::new(26),
+                    "/test/debug/deps/binary_2-70c002d692878d25".into()
+                ),
+                (
+                    NodeIndex::new(27),
+                    "/test/debug/deps/lib_1-e84716039afeb49f".into()
+                ),
+            ]
+        );
+    }
+
+    fn create_graph() -> BuildGraph {
+        BuildGraph::from(
+            from_slice::<RawBuildPlan>(include_bytes!("../tests/build-plan.json")).unwrap(),
+        )
+    }
+
+    fn create_config(mode: Mode) -> Config {
+        let builder = BuilderImage::new(Source::image("rust"), "/root/.cargo".into());
+        let output = OutputImage::new();
+
+        let binaries = vec![
+            BinaryDefinition {
+                name: "binary-1".into(),
+                destination: "/usr/bin/mock-binary-1".into(),
+            },
+            BinaryDefinition {
+                name: "binary-3".into(),
+                destination: "/bin/binary-3".into(),
+            },
+        ];
+
+        Config::new(builder, output, mode, binaries)
+    }
 }
