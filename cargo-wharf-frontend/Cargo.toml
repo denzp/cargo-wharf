@@ -1,5 +1,5 @@
 [package]
-name = "cargo-buildkit-frontend"
+name = "cargo-wharf-frontend"
 version = "0.1.0"
 authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"

@@ -1,4 +1,4 @@
-# syntax = denzp/cargo-buildkit-frontend:local
+# syntax = denzp/cargo-wharf-frontend:local
 
 [workspace]
 members = [

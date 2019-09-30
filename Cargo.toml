@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "cargo-container-tools",
-    "cargo-buildkit-frontend",
+    "cargo-wharf-frontend",
 ]
 
 exclude = [
