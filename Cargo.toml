@@ -2,9 +2,6 @@
 members = [
     "cargo-container-tools",
     "cargo-buildkit-frontend",
-    "buildkit-proto",
-    "buildkit-llb",
-    "buildkit-frontend",
 ]
 
 exclude = [

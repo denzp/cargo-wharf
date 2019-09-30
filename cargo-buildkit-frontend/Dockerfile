@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:1.1-experimental
 
-FROM clux/muslrust:nightly-2019-08-24 as builder
+FROM clux/muslrust:nightly-2019-09-28 as builder
 USER root
 
 WORKDIR /rust-src

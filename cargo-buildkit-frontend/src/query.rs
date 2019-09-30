@@ -224,7 +224,7 @@ impl<'a> GraphQuery<'a> {
                         .into(),
                 );
 
-                OutputMapping { from: from, to }
+                OutputMapping { from, to }
             })
             .chain(once(OutputMapping {
                 from: LayerPath::Other(tools::IMAGE.output(), tools::TEST_RUNNER.into()),
