@@ -9,9 +9,15 @@ lazy_static! {
             .custom_name("Using build context")
             .add_exclude_pattern("**/target")
     };
+    pub static ref DOCKERFILE: LocalSource = {
+        Source::local("dockerfile")
+            .custom_name("Using build context")
+            .add_exclude_pattern("**/target")
+    };
 }
 
 pub const CONTEXT_PATH: &str = "/context";
+pub const DOCKERFILE_PATH: &str = "/dockerfile";
 pub const TARGET_PATH: &str = "/target";
 
 pub mod tools {

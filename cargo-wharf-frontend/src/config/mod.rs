@@ -8,7 +8,7 @@ use buildkit_frontend::{Bridge, Options};
 use buildkit_llb::prelude::*;
 
 use crate::query::Mode;
-use crate::shared::{tools, CONTEXT, CONTEXT_PATH};
+use crate::shared::{tools, DOCKERFILE, DOCKERFILE_PATH};
 
 mod base;
 mod builder;
@@ -32,12 +32,14 @@ pub struct Config {
 
 impl Config {
     pub async fn analyse(bridge: &mut Bridge, options: &Options) -> Result<Self, Error> {
+        let manifest_path = options.get("filename").unwrap_or("Cargo.toml");
+
         let command = {
             Command::run(tools::METADATA_COLLECTOR)
                 .args(&[
                     "--manifest-path",
-                    &PathBuf::from(CONTEXT_PATH)
-                        .join("Cargo.toml")
+                    &PathBuf::from(DOCKERFILE_PATH)
+                        .join(manifest_path)
                         .to_string_lossy(),
                 ])
                 .args(&[
@@ -46,9 +48,9 @@ impl Config {
                         .join(OUTPUT_NAME)
                         .to_string_lossy(),
                 ])
-                .cwd(CONTEXT_PATH)
+                .cwd(DOCKERFILE_PATH)
                 .mount(Mount::Layer(OutputIdx(0), tools::IMAGE.output(), "/"))
-                .mount(Mount::ReadOnlyLayer(CONTEXT.output(), CONTEXT_PATH))
+                .mount(Mount::ReadOnlyLayer(DOCKERFILE.output(), DOCKERFILE_PATH))
                 .mount(Mount::Scratch(OutputIdx(1), OUTPUT_LAYER_PATH))
                 .custom_name("Collecting configuration metadata")
         };

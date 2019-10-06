@@ -1,4 +1,4 @@
-# syntax = denzp/cargo-wharf-frontend:local
+# syntax = denzp/cargo-wharf-frontend:master
 
 [workspace]
 members = [
