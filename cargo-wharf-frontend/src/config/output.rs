@@ -59,8 +59,14 @@ impl OutputImage {
             (entrypoint, cmd) => (entrypoint, cmd),
         };
 
+        let source = if !digest.is_empty() {
+            source.with_digest(digest)
+        } else {
+            source
+        };
+
         Ok(Self {
-            source: Some(source.with_digest(digest)),
+            source: Some(source),
 
             user: config.user.or(spec.user),
             workdir: config.workdir.or(spec.working_dir),

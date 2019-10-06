@@ -47,6 +47,13 @@ fn get_cli_app() -> App<'static, 'static> {
                     .help("Path to Cargo.toml")
             },
             {
+                Arg::with_name("target")
+                    .long("target")
+                    .takes_value(true)
+                    .value_name("TARGET")
+                    .help("Target triple for which the code is compiled")
+            },
+            {
                 Arg::with_name("release")
                     .long("release")
                     .takes_value(false)
@@ -74,6 +81,10 @@ fn run(matches: &ArgMatches<'static>) -> CargoResult<()> {
         process.arg("--manifest-path").arg(path);
     }
 
+    if let Some(target) = matches.value_of("target") {
+        process.arg("--target").arg(target);
+    }
+
     let mut child = process.spawn()?;
 
     copy(&mut child.stdout.take().unwrap(), &mut writer)
@@ -96,6 +107,7 @@ fn run_stdout(matches: &ArgMatches<'static>) -> CargoResult<()> {
     build_config.release = matches.is_present("release");
     build_config.force_rebuild = true;
     build_config.build_plan = true;
+    build_config.requested_target = matches.value_of("target").map(String::from);
 
     let options = CompileOptions {
         config: &config,

@@ -23,6 +23,7 @@ pub struct BuilderConfig {
     pub image: String,
     pub user: Option<String>,
     pub env: Option<BTreeMap<String, String>>,
+    pub target: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -140,6 +141,7 @@ fn transformation() {
                         image: "rust:latest".into(),
                         env: None,
                         user: None,
+                        target: None,
                     }),
 
                     output: None,
@@ -183,6 +185,7 @@ fn transformation() {
                 image: "rust:latest".into(),
                 env: None,
                 user: None,
+                target: None,
             },
             output: OutputConfig {
                 image: "alpine:latest".into(),
@@ -218,6 +221,7 @@ fn duplicated_config() {
                         image: "rust:latest".into(),
                         env: None,
                         user: None,
+                        target: None,
                     }),
                     output: Some(OutputConfig {
                         image: "alpine:latest".into(),
@@ -239,6 +243,7 @@ fn duplicated_config() {
                         image: "rust:latest".into(),
                         env: None,
                         user: None,
+                        target: None,
                     }),
 
                     output: None,
@@ -258,6 +263,7 @@ fn duplicated_config() {
                         image: "rust:latest".into(),
                         env: None,
                         user: None,
+                        target: None,
                     }),
                     output: Some(OutputConfig {
                         image: "alpine:latest".into(),
@@ -311,6 +317,7 @@ fn missing_config() {
                     image: "another".into(),
                     env: None,
                     user: None,
+                    target: None,
                 }),
 
                 output: None,

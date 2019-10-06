@@ -9,7 +9,8 @@ edition = "2018"
 [dependencies]
 
 [package.metadata.wharf.builder]
-image = "clux/muslrust:nightly-2019-08-24"
+image = "clux/muslrust:nightly-2019-09-28"
+target = "x86_64-unknown-linux-musl"
 
 [package.metadata.wharf.output]
 image = "scratch"

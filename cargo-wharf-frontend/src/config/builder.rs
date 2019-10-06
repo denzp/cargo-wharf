@@ -20,6 +20,7 @@ pub struct BuilderImage {
 
     env: BTreeMap<String, String>,
     user: Option<String>,
+    target: Option<String>,
 }
 
 impl BuilderImage {
@@ -63,6 +64,8 @@ impl BuilderImage {
 
             env,
             user,
+
+            target: config.target,
         })
     }
 
@@ -74,6 +77,7 @@ impl BuilderImage {
 
             env: Default::default(),
             user: Default::default(),
+            target: Default::default(),
         }
     }
 
@@ -83,6 +87,10 @@ impl BuilderImage {
 
     pub fn source(&self) -> &ImageSource {
         &self.source
+    }
+
+    pub fn target(&self) -> Option<&str> {
+        self.target.as_ref().map(String::as_str)
     }
 
     pub fn populate_env<'a>(&self, mut command: Command<'a>) -> Command<'a> {

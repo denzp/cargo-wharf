@@ -51,21 +51,28 @@ impl RawBuildPlan {
     ) -> Result<Self, Error> {
         let builder = config.builder_image();
 
+        let mut args = vec![
+            String::from("--manifest-path"),
+            PathBuf::from(CONTEXT_PATH)
+                .join("Cargo.toml")
+                .to_string_lossy()
+                .into(),
+            String::from("--output"),
+            PathBuf::from(OUTPUT_LAYER_PATH)
+                .join(OUTPUT_NAME)
+                .to_string_lossy()
+                .into(),
+        ];
+
+        if let Some(target) = config.builder_image().target() {
+            args.push("--target".into());
+            args.push(target.into());
+        }
+
         let command = {
             builder
                 .populate_env(Command::run(tools::BUILD_PLAN))
-                .args(&[
-                    "--manifest-path",
-                    &PathBuf::from(CONTEXT_PATH)
-                        .join("Cargo.toml")
-                        .to_string_lossy(),
-                ])
-                .args(&[
-                    "--output",
-                    &PathBuf::from(OUTPUT_LAYER_PATH)
-                        .join(OUTPUT_NAME)
-                        .to_string_lossy(),
-                ])
+                .args(&args)
                 .cwd(CONTEXT_PATH)
                 .mount(Mount::Layer(OutputIdx(0), builder.source().output(), "/"))
                 .mount(Mount::ReadOnlyLayer(CONTEXT.output(), CONTEXT_PATH))
