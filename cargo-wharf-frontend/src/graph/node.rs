@@ -87,6 +87,20 @@ impl Node {
         &self.package_name
     }
 
+    pub fn binary_name(&self) -> Option<&str> {
+        match self.kind {
+            NodeKind::Primitive(PrimitiveNodeKind::Binary) => {}
+            NodeKind::BuildScriptOutputConsumer(PrimitiveNodeKind::Binary, _) => {}
+
+            _ => return None,
+        };
+
+        self.links_iter()
+            .next()
+            .and_then(|(to, _)| to.file_name().and_then(|name| name.to_str()))
+            .or_else(|| Some(self.package_name()))
+    }
+
     pub fn command(&self) -> &NodeCommand {
         &self.command
     }

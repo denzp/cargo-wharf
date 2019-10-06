@@ -19,12 +19,13 @@ impl DebugOperation {
         }
     }
 
-    pub fn maybe<O>(&mut self, options: &Options, output: &O)
+    pub fn maybe<G, O>(&mut self, options: &Options, getter: G)
     where
+        G: FnOnce() -> O,
         O: DebugOutput,
     {
         if options.has_value("debug", O::KEY) || options.is_flag_set("debug") {
-            self.append_debug_output(O::PATH, output);
+            self.append_debug_output(O::PATH, &getter());
         }
     }
 
@@ -54,7 +55,7 @@ pub trait DebugOutput {
     fn as_bytes(&self) -> Vec<u8>;
 }
 
-impl DebugOutput for crate::config::Config {
+impl<'a> DebugOutput for &'a crate::config::Config {
     const KEY: &'static str = "config";
     const PATH: &'static str = "config.json";
 
@@ -63,7 +64,7 @@ impl DebugOutput for crate::config::Config {
     }
 }
 
-impl DebugOutput for crate::plan::RawBuildPlan {
+impl<'a> DebugOutput for &'a crate::plan::RawBuildPlan {
     const KEY: &'static str = "build-plan";
     const PATH: &'static str = "build-plan.json";
 
@@ -72,7 +73,7 @@ impl DebugOutput for crate::plan::RawBuildPlan {
     }
 }
 
-impl DebugOutput for crate::graph::BuildGraph {
+impl<'a> DebugOutput for &'a crate::graph::BuildGraph {
     const KEY: &'static str = "build-graph";
     const PATH: &'static str = "build-graph.json";
 

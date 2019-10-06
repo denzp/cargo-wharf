@@ -53,12 +53,12 @@ impl<'a> GraphQuery<'a> {
         }
     }
 
-    pub fn definition(&self) -> pb::Definition {
-        self.terminal().into_definition()
+    pub fn definition(&self) -> Result<pb::Definition, Error> {
+        Ok(self.terminal()?.into_definition())
     }
 
     pub async fn solve(&self, bridge: &mut Bridge) -> Result<OutputRef, Error> {
-        bridge.solve(self.terminal()).await
+        bridge.solve(self.terminal()?).await
     }
 
     pub fn image_spec(&self) -> Result<ImageSpecification, Error> {
@@ -113,10 +113,14 @@ impl<'a> GraphQuery<'a> {
         })
     }
 
-    fn terminal(&self) -> Terminal<'a> {
+    fn terminal(&self) -> Result<Terminal<'a>, Error> {
         debug!("serializing all nodes");
         let nodes = self.serialize_all_nodes();
         let outputs = self.mapped_outputs(nodes);
+
+        if outputs.is_empty() {
+            bail!("Nothing to do - no binaries were found");
+        }
 
         debug!("preparing the final operation");
 
@@ -137,7 +141,9 @@ impl<'a> GraphQuery<'a> {
             })
         };
 
-        Terminal::with(operation.ref_counted().last_output().unwrap())
+        Ok(Terminal::with(
+            operation.ref_counted().last_output().unwrap(),
+        ))
     }
 
     fn outputs(&self) -> impl Iterator<Item = BuildOutput<'_>> {
@@ -146,14 +152,8 @@ impl<'a> GraphQuery<'a> {
                 self.original_graph
                     .node_indices()
                     .map(move |index| (index, self.original_graph.node_weight(index).unwrap()))
-                    .filter(|(_, node)| match node.kind() {
-                        NodeKind::Primitive(PrimitiveNodeKind::Binary) => true,
-                        NodeKind::BuildScriptOutputConsumer(PrimitiveNodeKind::Binary, _) => true,
-
-                        _ => false,
-                    })
                     .filter_map(move |(index, node)| {
-                        match self.config.find_binary(node.package_name()) {
+                        match self.config.find_binary(node.binary_name()?) {
                             Some(found) => Some((index, node, found.destination.clone())),
                             None => None,
                         }

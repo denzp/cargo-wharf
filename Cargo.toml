@@ -7,4 +7,10 @@ members = [
 exclude = [
     "examples/workspace",
     "examples/single-bin",
+    "examples/multi-bin",
 ]
+
+# [patch.crates-io]
+# buildkit-frontend = { path = "../rust-buildkit/buildkit-frontend" }
+# buildkit-llb = { path = "../rust-buildkit/buildkit-llb" }
+# buildkit-proto = { path = "../rust-buildkit/buildkit-proto" }

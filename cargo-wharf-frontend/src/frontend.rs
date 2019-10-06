@@ -22,7 +22,7 @@ impl Frontend for CargoFrontend {
                 .context("Unable to analyse config")?
         };
 
-        debug.maybe(&options, &config);
+        debug.maybe(&options, || &config);
 
         let plan = {
             RawBuildPlan::evaluate(&mut bridge, &config)
@@ -30,13 +30,13 @@ impl Frontend for CargoFrontend {
                 .context("Unable to evaluate the Cargo build plan")?
         };
 
-        debug.maybe(&options, &plan);
+        debug.maybe(&options, || &plan);
 
         let graph: BuildGraph = plan.into();
         let query = GraphQuery::new(&graph, &config);
 
-        debug.maybe(&options, &graph);
-        debug.maybe(&options, &query.definition());
+        debug.maybe(&options, || &graph);
+        debug.maybe(&options, || query.definition().unwrap());
 
         if options.has("debug") {
             return Ok(FrontendOutput::with_ref(

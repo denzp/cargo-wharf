@@ -1,7 +1,7 @@
 # syntax = denzp/cargo-wharf-frontend:master
 
 [package]
-name = "single-bin"
+name = "multi-bin"
 version = "0.1.0"
 authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
@@ -15,12 +15,11 @@ target = "x86_64-unknown-linux-musl"
 [package.metadata.wharf.output]
 image = "scratch"
 workdir = "/"
-entrypoint = ["/bin/wharf-output"]
-args = ["predefined arg"]
-
-[package.metadata.wharf.output.env]
-"NAME 1" = "VALUE 1"
 
 [[package.metadata.wharf.binary]]
-name = "single-bin"
-destination = "/bin/wharf-output"
+name = "bin-1"
+destination = "/bin/bin-1"
+
+[[package.metadata.wharf.binary]]
+name = "bin-2"
+destination = "/bin/bin-2"
