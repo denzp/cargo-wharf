@@ -1,12 +1,13 @@
 [package]
 name = "cargo-wharf-frontend"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 publish = false
 
 [dependencies]
-buildkit-frontend = "0.1"
+async-trait = "0.1"
+buildkit-frontend = "0.2"
 buildkit-llb = "0.1"
 buildkit-proto = "0.1"
 chrono = "0.4"

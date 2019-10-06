@@ -1,6 +1,5 @@
 #![warn(clippy::all)]
 #![deny(warnings)]
-#![feature(type_alias_impl_trait)]
 
 use env_logger::Env;
 use log::*;
