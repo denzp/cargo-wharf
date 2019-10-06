@@ -1,6 +1,7 @@
 target
 debug-output
 examples
+tests/integration/**
 
 Makefile
 .dockerignore

@@ -1,2 +1,3 @@
 target
 debug-output
+tests/integration/.cache
