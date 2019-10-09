@@ -24,7 +24,10 @@ pub mod tools {
     use super::*;
 
     lazy_static! {
-        pub static ref IMAGE: ImageSource = Source::image("denzp/cargo-container-tools:local");
+        pub static ref IMAGE: ImageSource = Source::image(format!(
+            "denzp/cargo-container-tools:{}",
+            env!("CONTAINER_TOOLS_VERSION")
+        ));
     }
 
     pub const METADATA_COLLECTOR: &str = "/usr/local/bin/cargo-metadata-collector";

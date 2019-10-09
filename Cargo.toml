@@ -10,6 +10,9 @@ exclude = [
     "examples/multi-bin",
 ]
 
+[profile.release]
+lto = true
+
 # [patch.crates-io]
 # buildkit-frontend = { path = "../rust-buildkit/buildkit-frontend" }
 # buildkit-llb = { path = "../rust-buildkit/buildkit-llb" }
