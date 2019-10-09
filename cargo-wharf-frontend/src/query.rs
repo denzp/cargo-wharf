@@ -410,7 +410,7 @@ mod tests {
                 .outputs()
                 .map(|(index, _, path)| (index, path))
                 .collect::<Vec<_>>(),
-            vec![(NodeIndex::new(25), "/usr/bin/mock-binary-1".into())]
+            vec![(NodeIndex::new(15), "/usr/bin/mock-binary-1".into())]
         );
     }
 
@@ -427,16 +427,12 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec![
                 (
-                    NodeIndex::new(24),
-                    "/test/debug/deps/binary_1-c8e5eecb9b4009db".into()
+                    NodeIndex::new(16),
+                    "/test/x86_64-unknown-linux-musl/debug/deps/bin_1-5b5e8a9adfa6ccf4".into()
                 ),
                 (
-                    NodeIndex::new(26),
-                    "/test/debug/deps/binary_2-70c002d692878d25".into()
-                ),
-                (
-                    NodeIndex::new(27),
-                    "/test/debug/deps/lib_1-e84716039afeb49f".into()
+                    NodeIndex::new(18),
+                    "/test/x86_64-unknown-linux-musl/debug/deps/bin_2-92b8326325c2f547".into()
                 ),
             ]
         );
@@ -450,15 +446,15 @@ mod tests {
 
     fn create_config(mode: Mode) -> Config {
         let builder = BuilderImage::new(Source::image("rust"), "/root/.cargo".into());
-        let output = OutputImage::new();
+        let output = OutputImage::default();
 
         let binaries = vec![
             BinaryDefinition {
-                name: "binary-1".into(),
+                name: "bin-1".into(),
                 destination: "/usr/bin/mock-binary-1".into(),
             },
             BinaryDefinition {
-                name: "binary-3".into(),
+                name: "bin-3".into(),
                 destination: "/bin/binary-3".into(),
             },
         ];

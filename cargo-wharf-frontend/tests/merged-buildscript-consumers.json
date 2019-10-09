@@ -1,0 +1,288 @@
+[
+  {
+    "package_name": "libc",
+    "package_version": "0.2.62",
+    "command": {
+      "Simple": {
+        "env": {
+          "OUT_DIR": "/target/debug/build/libc-84e59eda7c0f49e4/out"
+        },
+        "program": "/usr/local/bin/cargo-buildscript-apply",
+        "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62",
+        "args": [
+          "--",
+          "rustc",
+          "--crate-name",
+          "libc",
+          "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62/src/lib.rs"
+        ]
+      }
+    },
+    "kind": {
+      "BuildScriptOutputConsumer": [
+        "Other",
+        "/target/debug/build/libc-84e59eda7c0f49e4/out"
+      ]
+    },
+    "outputs": [
+      "/target/debug/deps/liblibc-c5d8077f198ec4fc.rlib",
+      "/target/debug/deps/liblibc-c5d8077f198ec4fc.rmeta"
+    ],
+    "output_dirs": [
+      "/target/debug/deps",
+      "/target/debug/deps"
+    ],
+    "links": {}
+  },
+  {
+    "package_name": "openssl-sys",
+    "package_version": "0.9.50",
+    "command": {
+      "Simple": {
+        "env": {
+          "OUT_DIR": "/target/debug/build/openssl-sys-acfa4371985ef2b0/out"
+        },
+        "program": "/usr/local/bin/cargo-buildscript-apply",
+        "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50",
+        "args": [
+          "--",
+          "rustc",
+          "--crate-name",
+          "openssl_sys",
+          "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50/src/lib.rs"
+        ]
+      }
+    },
+    "kind": {
+      "BuildScriptOutputConsumer": [
+        "Other",
+        "/target/debug/build/openssl-sys-acfa4371985ef2b0/out"
+      ]
+    },
+    "outputs": [
+      "/target/debug/deps/libopenssl_sys-19eb4c8cc1419cae.rlib",
+      "/target/debug/deps/libopenssl_sys-19eb4c8cc1419cae.rmeta"
+    ],
+    "output_dirs": [
+      "/target/debug/deps",
+      "/target/debug/deps"
+    ],
+    "links": {}
+  },
+  {
+    "package_name": "libc",
+    "package_version": "0.2.62",
+    "command": {
+      "Simple": {
+        "env": {
+          "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/libc-881546618a069ec4/out"
+        },
+        "program": "/usr/local/bin/cargo-buildscript-apply",
+        "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62",
+        "args": [
+          "--",
+          "rustc",
+          "--crate-name",
+          "libc",
+          "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62/src/lib.rs"
+        ]
+      }
+    },
+    "kind": {
+      "BuildScriptOutputConsumer": [
+        "Other",
+        "/target/x86_64-unknown-linux-musl/debug/build/libc-881546618a069ec4/out"
+      ]
+    },
+    "outputs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps/liblibc-af6b81a75f6a7aeb.rlib",
+      "/target/x86_64-unknown-linux-musl/debug/deps/liblibc-af6b81a75f6a7aeb.rmeta"
+    ],
+    "output_dirs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps",
+      "/target/x86_64-unknown-linux-musl/debug/deps"
+    ],
+    "links": {}
+  },
+  {
+    "package_name": "openssl-sys",
+    "package_version": "0.9.50",
+    "command": {
+      "Simple": {
+        "env": {
+          "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/openssl-sys-25bfb33e9dd9eec2/out"
+        },
+        "program": "/usr/local/bin/cargo-buildscript-apply",
+        "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50",
+        "args": [
+          "--",
+          "rustc",
+          "--crate-name",
+          "openssl_sys",
+          "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50/src/lib.rs"
+        ]
+      }
+    },
+    "kind": {
+      "BuildScriptOutputConsumer": [
+        "Other",
+        "/target/x86_64-unknown-linux-musl/debug/build/openssl-sys-25bfb33e9dd9eec2/out"
+      ]
+    },
+    "outputs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps/libopenssl_sys-ee7eaf9d748340a6.rlib",
+      "/target/x86_64-unknown-linux-musl/debug/deps/libopenssl_sys-ee7eaf9d748340a6.rmeta"
+    ],
+    "output_dirs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps",
+      "/target/x86_64-unknown-linux-musl/debug/deps"
+    ],
+    "links": {}
+  },
+  {
+    "package_name": "multi-bin",
+    "package_version": "0.1.0",
+    "command": {
+      "Simple": {
+        "env": {
+          "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+        },
+        "program": "/usr/local/bin/cargo-buildscript-apply",
+        "cwd": "/context",
+        "args": [
+          "--",
+          "rustc",
+          "--edition=2018",
+          "--crate-name",
+          "bin_1",
+          "src/bin/bin-1.rs"
+        ]
+      }
+    },
+    "kind": {
+      "BuildScriptOutputConsumer": [
+        "Binary",
+        "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+      ]
+    },
+    "outputs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps/bin_1-ed273ffa407baa8b"
+    ],
+    "output_dirs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps"
+    ],
+    "links": {
+      "/target/x86_64-unknown-linux-musl/debug/bin-1": "/target/x86_64-unknown-linux-musl/debug/deps/bin_1-ed273ffa407baa8b"
+    }
+  },
+  {
+    "package_name": "multi-bin",
+    "package_version": "0.1.0",
+    "command": {
+      "Simple": {
+        "env": {
+          "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+        },
+        "program": "/usr/local/bin/cargo-buildscript-apply",
+        "cwd": "/context",
+        "args": [
+          "--",
+          "rustc",
+          "--edition=2018",
+          "--crate-name",
+          "bin_1",
+          "src/bin/bin-1.rs",
+          "--test"
+        ]
+      }
+    },
+    "kind": {
+      "BuildScriptOutputConsumer": [
+        "Test",
+        "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+      ]
+    },
+    "outputs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps/bin_1-5b5e8a9adfa6ccf4"
+    ],
+    "output_dirs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps"
+    ],
+    "links": {
+      "/target/x86_64-unknown-linux-musl/debug/bin_1-5b5e8a9adfa6ccf4": "/target/x86_64-unknown-linux-musl/debug/deps/bin_1-5b5e8a9adfa6ccf4"
+    }
+  },
+  {
+    "package_name": "multi-bin",
+    "package_version": "0.1.0",
+    "command": {
+      "Simple": {
+        "env": {
+          "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+        },
+        "program": "/usr/local/bin/cargo-buildscript-apply",
+        "cwd": "/context",
+        "args": [
+          "--",
+          "rustc",
+          "--edition=2018",
+          "--crate-name",
+          "bin_2",
+          "src/bin/bin-2.rs"
+        ]
+      }
+    },
+    "kind": {
+      "BuildScriptOutputConsumer": [
+        "Binary",
+        "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+      ]
+    },
+    "outputs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps/bin_2-d1a1ec213eb8750a"
+    ],
+    "output_dirs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps"
+    ],
+    "links": {
+      "/target/x86_64-unknown-linux-musl/debug/bin-2": "/target/x86_64-unknown-linux-musl/debug/deps/bin_2-d1a1ec213eb8750a"
+    }
+  },
+  {
+    "package_name": "multi-bin",
+    "package_version": "0.1.0",
+    "command": {
+      "Simple": {
+        "env": {
+          "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+        },
+        "program": "/usr/local/bin/cargo-buildscript-apply",
+        "cwd": "/context",
+        "args": [
+          "--",
+          "rustc",
+          "--edition=2018",
+          "--crate-name",
+          "bin_2",
+          "src/bin/bin-2.rs",
+          "--test"
+        ]
+      }
+    },
+    "kind": {
+      "BuildScriptOutputConsumer": [
+        "Test",
+        "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+      ]
+    },
+    "outputs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps/bin_2-92b8326325c2f547"
+    ],
+    "output_dirs": [
+      "/target/x86_64-unknown-linux-musl/debug/deps"
+    ],
+    "links": {
+      "/target/x86_64-unknown-linux-musl/debug/bin_2-92b8326325c2f547": "/target/x86_64-unknown-linux-musl/debug/deps/bin_2-92b8326325c2f547"
+    }
+  }
+]

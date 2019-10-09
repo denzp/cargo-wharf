@@ -3,12 +3,12 @@ use std::mem::replace;
 use std::path::{Path, PathBuf};
 
 use semver::Version;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::plan::{RawInvocation, RawTargetKind};
 use crate::shared::tools::{BUILDSCRIPT_APPLY, BUILDSCRIPT_CAPTURE};
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Node {
     package_name: String,
     package_version: Version,
@@ -21,23 +21,24 @@ pub struct Node {
     links: BTreeMap<PathBuf, PathBuf>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Deserialize, Serialize)]
 pub enum PrimitiveNodeKind {
     Test,
     Binary,
     Example,
     Other,
-    BuildScript,
+    BuildScriptCompile,
+    BuildScriptRun,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub enum NodeKind<P> {
     Primitive(PrimitiveNodeKind),
     MergedBuildScript(P),
     BuildScriptOutputConsumer(PrimitiveNodeKind, P),
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum NodeCommand {
     Simple(NodeCommandDetails),
 
@@ -47,7 +48,7 @@ pub enum NodeCommand {
     },
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct NodeCommandDetails {
     pub env: BTreeMap<String, String>,
     pub program: String,
@@ -112,19 +113,42 @@ impl Node {
         }
     }
 
-    pub fn add_buildscript_run_command(&mut self, mut run_command: NodeCommandDetails) {
-        let out_dir: PathBuf = run_command.env.get("OUT_DIR").unwrap().into();
+    pub fn add_buildscript_compile_node(&mut self, mut compile_node: Node) -> bool {
+        let out_dir: PathBuf = match self.command {
+            NodeCommand::Simple(ref mut details) => {
+                let real_buildscript_path = {
+                    compile_node
+                        .links_iter()
+                        .filter(|(to, _)| *to == Path::new(&details.program))
+                        .map(|(_, from)| from)
+                        .next()
+                };
 
-        run_command.use_wrapper(BUILDSCRIPT_CAPTURE);
+                if let Some(path) = real_buildscript_path {
+                    details.program = path.to_string_lossy().into();
+                } else {
+                    return false;
+                }
 
-        take_mut::take(&mut self.command, |command| {
-            command.add_buildscript_run(run_command)
-        });
+                details.use_wrapper(BUILDSCRIPT_CAPTURE);
+                details.env.get("OUT_DIR").unwrap().into()
+            }
+
+            NodeCommand::WithBuildscript { .. } => {
+                return false;
+            }
+        };
 
         self.kind = NodeKind::MergedBuildScript(out_dir.clone());
+        self.output_dirs.append(&mut compile_node.output_dirs);
         self.output_dirs.push(out_dir.clone());
-        self.outputs = vec![out_dir];
-        self.links.clear();
+        self.outputs.push(out_dir);
+
+        take_mut::take(&mut self.command, |command| {
+            command.add_buildscript_compile(compile_node.into_command_details())
+        });
+
+        true
     }
 
     pub fn transform_into_buildscript_consumer(&mut self, out_dir: &Path) {
@@ -140,19 +164,10 @@ impl Node {
 }
 
 impl NodeCommand {
-    pub fn add_buildscript_run(self, run: NodeCommandDetails) -> Self {
+    pub fn add_buildscript_compile(self, compile: NodeCommandDetails) -> Self {
         match self {
-            NodeCommand::Simple(compile) => NodeCommand::WithBuildscript { compile, run },
-
+            NodeCommand::Simple(run) => NodeCommand::WithBuildscript { compile, run },
             other => other,
-        }
-    }
-
-    pub fn is_simple(&self) -> bool {
-        if let NodeCommand::Simple(_) = self {
-            true
-        } else {
-            false
         }
     }
 }
@@ -207,7 +222,13 @@ impl From<&RawInvocation> for NodeKind<PathBuf> {
         if invocation.target_kind.contains(&RawTargetKind::CustomBuild)
             && invocation.program != "rustc"
         {
-            return NodeKind::Primitive(PrimitiveNodeKind::BuildScript);
+            return NodeKind::Primitive(PrimitiveNodeKind::BuildScriptRun);
+        }
+
+        if invocation.target_kind.contains(&RawTargetKind::CustomBuild)
+            && invocation.program == "rustc"
+        {
+            return NodeKind::Primitive(PrimitiveNodeKind::BuildScriptCompile);
         }
 
         NodeKind::Primitive(PrimitiveNodeKind::Other)

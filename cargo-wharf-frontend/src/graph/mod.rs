@@ -21,6 +21,17 @@ impl BuildGraph {
 
 impl From<RawBuildPlan> for BuildGraph {
     fn from(plan: RawBuildPlan) -> Self {
+        let mut graph = StableGraph::from(plan);
+
+        self::ops::merge_buildscript_nodes(&mut graph);
+        self::ops::apply_buildscript_outputs(&mut graph);
+
+        Self { graph }
+    }
+}
+
+impl From<RawBuildPlan> for StableGraph<Node, ()> {
+    fn from(plan: RawBuildPlan) -> Self {
         let mut graph = StableGraph::<Node, ()>::new();
 
         let nodes = {
@@ -39,9 +50,6 @@ impl From<RawBuildPlan> for BuildGraph {
             }
         }
 
-        self::ops::merge_buildscript_nodes(&mut graph);
-        self::ops::apply_buildscript_outputs(&mut graph);
-
-        Self { graph }
+        graph
     }
 }

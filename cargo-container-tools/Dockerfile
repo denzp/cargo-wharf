@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/rust-src/target \
 RUN --mount=type=cache,target=/rust-src/target \
     ["cp", "/rust-src/target/x86_64-unknown-linux-musl/release/cargo-test-runner", "/usr/local/bin/cargo-test-runner"]
 
-FROM alpine
+FROM scratch
 COPY --from=builder /usr/local/bin/cargo-build-plan /usr/local/bin/cargo-build-plan
 COPY --from=builder /usr/local/bin/cargo-buildscript-capture /usr/local/bin/cargo-buildscript-capture
 COPY --from=builder /usr/local/bin/cargo-buildscript-apply /usr/local/bin/cargo-buildscript-apply

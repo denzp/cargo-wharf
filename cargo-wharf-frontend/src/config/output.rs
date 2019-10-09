@@ -12,6 +12,8 @@ use buildkit_llb::prelude::*;
 use super::base::OutputConfig;
 
 #[derive(Debug, Serialize)]
+#[cfg_attr(test, derive(Default))]
+
 pub struct OutputImage {
     #[serde(skip_serializing)]
     source: Option<ImageSource>,
@@ -75,19 +77,6 @@ impl OutputImage {
             entrypoint,
             cmd,
         })
-    }
-
-    #[cfg(test)]
-    pub fn new() -> Self {
-        Self {
-            source: None,
-
-            env: None,
-            user: None,
-            workdir: None,
-            entrypoint: None,
-            cmd: None,
-        }
     }
 
     fn scratch(config: OutputConfig) -> Self {

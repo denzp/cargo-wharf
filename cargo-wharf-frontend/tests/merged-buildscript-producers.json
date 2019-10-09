@@ -1,0 +1,213 @@
+[
+  {
+    "package_name": "libc",
+    "package_version": "0.2.62",
+    "command": {
+      "WithBuildscript": {
+        "compile": {
+          "env": {},
+          "program": "rustc",
+          "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62",
+          "args": [
+            "--crate-name",
+            "build_script_build",
+            "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62/build.rs"
+          ]
+        },
+        "run": {
+          "env": {
+            "HOST": "x86_64-unknown-linux-gnu",
+            "OUT_DIR": "/target/debug/build/libc-84e59eda7c0f49e4/out",
+            "TARGET": "x86_64-unknown-linux-gnu"
+          },
+          "program": "/usr/local/bin/cargo-buildscript-capture",
+          "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62",
+          "args": [
+            "--",
+            "/target/debug/build/libc-87cd93070ba33df1/build_script_build-87cd93070ba33df1"
+          ]
+        }
+      }
+    },
+    "kind": {
+      "MergedBuildScript": "/target/debug/build/libc-84e59eda7c0f49e4/out"
+    },
+    "outputs": [
+      "/target/debug/build/libc-84e59eda7c0f49e4/out"
+    ],
+    "output_dirs": [
+      "/target/debug/build/libc-87cd93070ba33df1",
+      "/target/debug/build/libc-84e59eda7c0f49e4/out"
+    ],
+    "links": {}
+  },
+  {
+    "package_name": "openssl-sys",
+    "package_version": "0.9.50",
+    "command": {
+      "WithBuildscript": {
+        "compile": {
+          "env": {},
+          "program": "rustc",
+          "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50",
+          "args": [
+            "--crate-name",
+            "build_script_main",
+            "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50/build/main.rs"
+          ]
+        },
+        "run": {
+          "env": {
+            "HOST": "x86_64-unknown-linux-gnu",
+            "OUT_DIR": "/target/debug/build/openssl-sys-acfa4371985ef2b0/out",
+            "TARGET": "x86_64-unknown-linux-gnu"
+          },
+          "program": "/usr/local/bin/cargo-buildscript-capture",
+          "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50",
+          "args": [
+            "--",
+            "/target/debug/build/openssl-sys-87b9b219fe0676b7/build_script_main-87b9b219fe0676b7"
+          ]
+        }
+      }
+    },
+    "kind": {
+      "MergedBuildScript": "/target/debug/build/openssl-sys-acfa4371985ef2b0/out"
+    },
+    "outputs": [
+      "/target/debug/build/openssl-sys-acfa4371985ef2b0/out"
+    ],
+    "output_dirs": [
+      "/target/debug/build/openssl-sys-87b9b219fe0676b7",
+      "/target/debug/build/openssl-sys-acfa4371985ef2b0/out"
+    ],
+    "links": {}
+  },
+  {
+    "package_name": "openssl-sys",
+    "package_version": "0.9.50",
+    "command": {
+      "WithBuildscript": {
+        "compile": {
+          "env": {},
+          "program": "rustc",
+          "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50",
+          "args": [
+            "--crate-name",
+            "build_script_main",
+            "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50/build/main.rs"
+          ]
+        },
+        "run": {
+          "env": {
+            "HOST": "x86_64-unknown-linux-gnu",
+            "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/openssl-sys-25bfb33e9dd9eec2/out",
+            "TARGET": "x86_64-unknown-linux-musl"
+          },
+          "program": "/usr/local/bin/cargo-buildscript-capture",
+          "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50",
+          "args": [
+            "--",
+            "/target/debug/build/openssl-sys-87b9b219fe0676b7/build_script_main-87b9b219fe0676b7"
+          ]
+        }
+      }
+    },
+    "kind": {
+      "MergedBuildScript": "/target/x86_64-unknown-linux-musl/debug/build/openssl-sys-25bfb33e9dd9eec2/out"
+    },
+    "outputs": [
+      "/target/x86_64-unknown-linux-musl/debug/build/openssl-sys-25bfb33e9dd9eec2/out"
+    ],
+    "output_dirs": [
+      "/target/debug/build/openssl-sys-87b9b219fe0676b7",
+      "/target/x86_64-unknown-linux-musl/debug/build/openssl-sys-25bfb33e9dd9eec2/out"
+    ],
+    "links": {}
+  },
+  {
+    "package_name": "multi-bin",
+    "package_version": "0.1.0",
+    "command": {
+      "WithBuildscript": {
+        "compile": {
+          "env": {},
+          "program": "rustc",
+          "cwd": "/context",
+          "args": [
+            "--edition=2018",
+            "--crate-name",
+            "build_script_build",
+            "build.rs"
+          ]
+        },
+        "run": {
+          "env": {
+            "HOST": "x86_64-unknown-linux-gnu",
+            "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out",
+            "TARGET": "x86_64-unknown-linux-musl"
+          },
+          "program": "/usr/local/bin/cargo-buildscript-capture",
+          "cwd": "/context",
+          "args": [
+            "--",
+            "/target/debug/build/multi-bin-6b2014bd97cc5650/build_script_build-6b2014bd97cc5650"
+          ]
+        }
+      }
+    },
+    "kind": {
+      "MergedBuildScript": "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+    },
+    "outputs": [
+      "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+    ],
+    "output_dirs": [
+      "/target/debug/build/multi-bin-6b2014bd97cc5650",
+      "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+    ],
+    "links": {}
+  },
+  {
+    "package_name": "libc",
+    "package_version": "0.2.62",
+    "command": {
+      "WithBuildscript": {
+        "compile": {
+          "env": {},
+          "program": "rustc",
+          "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62",
+          "args": [
+            "--crate-name",
+            "build_script_build",
+            "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62/build.rs"
+          ]
+        },
+        "run": {
+          "env": {
+            "HOST": "x86_64-unknown-linux-gnu",
+            "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/libc-881546618a069ec4/out",
+            "TARGET": "x86_64-unknown-linux-musl"
+          },
+          "program": "/usr/local/bin/cargo-buildscript-capture",
+          "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62",
+          "args": [
+            "--",
+            "/target/debug/build/libc-87cd93070ba33df1/build_script_build-87cd93070ba33df1"
+          ]
+        }
+      }
+    },
+    "kind": {
+      "MergedBuildScript": "/target/x86_64-unknown-linux-musl/debug/build/libc-881546618a069ec4/out"
+    },
+    "outputs": [
+      "/target/x86_64-unknown-linux-musl/debug/build/libc-881546618a069ec4/out"
+    ],
+    "output_dirs": [
+      "/target/debug/build/libc-87cd93070ba33df1",
+      "/target/x86_64-unknown-linux-musl/debug/build/libc-881546618a069ec4/out"
+    ],
+    "links": {}
+  }
+]

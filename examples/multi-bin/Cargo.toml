@@ -7,6 +7,10 @@ authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+openssl-sys = "0.9"
+
+[build-dependencies]
+openssl-sys = "0.9"
 
 [package.metadata.wharf.builder]
 image = "clux/muslrust:nightly-2019-09-28"
