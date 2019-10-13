@@ -1,38 +1,48 @@
-# Docker Container builder for Rust ecosystem
+# cargo-wharf
+> Seamless and cacheable Docker container building toolkit for Rust.
 
-## Hacking and Debugging
-So far the debugging and testing workflow is next:
+## Features
+* **Small and efficient output images.**<br>
+*Only binaries (and eventually mandatory static assets) in the output image. No `target` directory or other useless build artifacts.*
+* **Share and reuse cached dependencies between the builds.**<br>
+*Yes, it's safe. Every dependency is built in its isolated environment.*
+* **Ability to produce test images.**<br>
+*The container created from that image will do the same as `cargo test` but in a safe isolated environment.*
 
-0. Ensure Docker uses BuildKit (this provides an incredible build time improvement).
+**Disclaimer #1!** The approach relies on bleeding edge features of Docker, namely [BuildKit]. The `cargo-wharf` was tested on `Docker v19.03.3` with BuildKit being enabled (please follow the ["Note for Docker users" section] about `DOCKER_BUILDKIT` environment variable).
 
-1. Create and inspect build plan:
-```
-cargo build -Z unstable-options --build-plan --manifest-path=examples/workspace/Cargo.toml --all-targets > plan.json
-```
+**Disclaimer #2!** The `cargo-wharf` **should not be used in production**, for the reason, it's being under heavy development.
 
-2. Generate and inspect Dockerfile:
-```
-cargo run --bin cargo-wharf -- wharf --crate-root examples/workspace generate plan.json --template examples/workspace/Dockerfile.hbs > examples/workspace/Dockerfile
-```
+## Common usage
 
-3. Build `container-tools` image:
-```
-docker build -t denzp/cargo-container-tools:`cargo pkgid --manifest-path=cargo-container-tools/Cargo.toml | cut -d\# -f2 | cut -d: -f2` .
-```
+Taking risks, huh?
+Well, get ready for a mind-blowing experience.
+There are several things needed to go on:
+1. Add `# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.0` as the first line of your `Cargo.toml`.
+2. Define important metadata: builder and output images, list of binaries and their final locations. Examples can be found [here](cargo-container-tools/Cargo.toml) and [there](cargo-wharf-frontend/Cargo.toml).
+3. Run `docker build -f path/to/Cargo.toml .`
+4. Change the code or dependency crates and repeat *Step 3*.
 
-4. Build the example image:
-```
-docker build -t TAG examples/workspace
-```
+Effectively, *Step 3* will use the frontend image (specified at *Step 1*) to gather build plan and image metadata (defined at *Step 2*) and kickstart image building.
 
-## Final Usage
-Sure, in real life workflow would be different (assuming `build-plan` cargo feature became stable):
-```
-cargo build --build-plan --all-targets | cargo wharf generate | docker build -t TAG -f - .
-```
+Every dependency is going be built and (which is more importantly) **cached** in a similar to a stage in extremely multi-staged Dockerfile.
+Early experiments [might be useful](https://github.com/denzp/cargo-wharf/blob/experiment-dockerfile/tests/simple.binaries.dockerfile) to understand the operation concept.
 
-Or high-level API:
-```
-cargo wharf build -t TAG1 -t TAG2
-cargo wharf test
-```
+## Components
+
+### cargo-wharf-frontend
+[Docker Hub](https://hub.docker.com/r/denzp/cargo-wharf-frontend)
+[README](cargo-wharf-frontend/README.md)
+[CHANGELOG](cargo-wharf-frontend/CHANGELOG.md)
+
+The custom frontend for BuildKit that produces LLB graph out of Cargo's build plan.
+
+### cargo-container-tools
+[Docker Hub](https://hub.docker.com/r/denzp/cargo-container-tools)
+[README](cargo-container-tools/README.md)
+[CHANGELOG](cargo-container-tools/CHANGELOG.md)
+
+Auxiliary tools that are useful for building Docker images of Rust crates and for `cargo-wharf-frontend` in particular.
+
+[BuildKit]: https://github.com/moby/buildkit
+["Note for Docker users" section]: https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/experimental.md#note-for-docker-users
