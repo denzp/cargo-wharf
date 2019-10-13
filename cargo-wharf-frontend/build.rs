@@ -7,7 +7,7 @@ fn main() {
             .expect("Unable to parse container-tools crate manifest");
 
     println!(
-        "cargo:rustc-env=CONTAINER_TOOLS_VERSION={}",
+        "cargo:rustc-env=CONTAINER_TOOLS_VERSION=v{}",
         container_tools_manifest.package.version
     );
 }

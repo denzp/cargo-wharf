@@ -150,6 +150,7 @@
           "program": "/usr/local/bin/cargo-buildscript-capture",
           "cwd": "/context",
           "args": [
+            "--with-metadata-from=/target/x86_64-unknown-linux-musl/debug/build/openssl-sys-25bfb33e9dd9eec2/out",
             "--",
             "/target/debug/build/multi-bin-6b2014bd97cc5650/build_script_build-6b2014bd97cc5650"
           ]

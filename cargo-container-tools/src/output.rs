@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use cargo::core::compiler::BuildOutput;
 use cargo::util::CargoResult;
@@ -27,6 +27,12 @@ pub struct BuildScriptOutput {
 
     /// Additional environment variables to run the compiler with.
     pub env: Vec<(String, String)>,
+
+    /// Additional metadata for the build scripts of dependent crates.
+    pub metadata: Vec<(String, String)>,
+
+    /// The manifest links value.
+    pub link_name: Option<String>,
 }
 
 impl BuildScriptOutput {
@@ -41,8 +47,12 @@ impl BuildScriptOutput {
     }
 
     pub fn deserialize() -> CargoResult<Self> {
+        Self::deserialize_from_dir(RuntimeEnv::output_dir()?)
+    }
+
+    pub fn deserialize_from_dir(dir: &Path) -> CargoResult<Self> {
         let reader = BufReader::new(
-            File::open(RuntimeEnv::output_dir()?.join(DEFAULT_FILE_NAME))
+            File::open(dir.join(DEFAULT_FILE_NAME))
                 .context("Unable to open output JSON file for reading")?,
         );
 
@@ -58,6 +68,8 @@ impl From<BuildOutput> for BuildScriptOutput {
             linker_args: output.linker_args,
             cfgs: output.cfgs,
             env: output.env,
+            metadata: output.metadata,
+            link_name: RuntimeEnv::manifest_link_name().map(String::from),
         }
     }
 }

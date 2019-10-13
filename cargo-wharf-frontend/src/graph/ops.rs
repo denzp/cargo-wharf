@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use log::*;
 use petgraph::prelude::*;
 
+use super::node::BuildScriptMergeResult::*;
 use super::node::{Node, NodeKind, PrimitiveNodeKind};
 
 pub fn merge_buildscript_nodes(graph: &mut StableGraph<Node, ()>) {
@@ -12,6 +13,8 @@ pub fn merge_buildscript_nodes(graph: &mut StableGraph<Node, ()>) {
     let mut nodes_for_removal = BTreeSet::new();
 
     for index in indices {
+        let mut dependency_build_scripts = BTreeSet::new();
+
         match graph.node_weight(index) {
             Some(node) if node.kind() == NodeKind::Primitive(PrimitiveNodeKind::BuildScriptRun) => {
                 let mut compile_indexes = {
@@ -22,16 +25,27 @@ pub fn merge_buildscript_nodes(graph: &mut StableGraph<Node, ()>) {
 
                 let run_index = index;
                 while let Some(compile_index) = compile_indexes.next_node(&graph) {
-                    let compile_node = graph.node_weight(compile_index).cloned().unwrap();
+                    let compile_node = graph[compile_index].clone();
 
-                    if graph[run_index].add_buildscript_compile_node(compile_node) {
-                        debug!(
-                            "merged buildscript compile '{:?}' with run '{:?}'",
-                            compile_index, run_index
-                        );
+                    match graph[run_index].add_buildscript_compile_node(compile_node) {
+                        Ok => {
+                            debug!(
+                                "merged buildscript compile '{:?}' with run '{:?}'",
+                                compile_index, run_index
+                            );
 
-                        move_edges(graph, compile_index, run_index);
-                        nodes_for_removal.insert(compile_index);
+                            move_edges(graph, compile_index, run_index);
+                            nodes_for_removal.insert(compile_index);
+                            break;
+                        }
+
+                        DependencyBuildScript => {
+                            dependency_build_scripts.insert(compile_index);
+                        }
+
+                        AlreadyMerged => {
+                            break;
+                        }
                     }
                 }
             }
@@ -39,6 +53,14 @@ pub fn merge_buildscript_nodes(graph: &mut StableGraph<Node, ()>) {
             _ => {
                 debug!("skipping non-buildscript node: {:?}", index);
             }
+        }
+
+        for dep_index in dependency_build_scripts {
+            debug!("adding dependency buildscript: {:?}", index);
+
+            let dep = graph[dep_index].clone();
+            graph[index].add_dependency_buildscript(dep);
+            graph.add_edge(dep_index, index, ());
         }
     }
 

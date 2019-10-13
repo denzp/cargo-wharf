@@ -15,8 +15,10 @@ local-wharf-frontend:
 
 remote-container-tools: local-container-tools
 	docker tag denzp/cargo-container-tools:local denzp/cargo-container-tools:$(TOOLS_VERSION)
-	docker push denzp/cargo-container-tools:$(TOOLS_VERSION)
 
 remote-wharf-frontend: local-wharf-frontend
 	docker tag denzp/cargo-wharf-frontend:local denzp/cargo-wharf-frontend:$(FRONTEND_VERSION)
+
+push: remote-container-tools remote-wharf-frontend
+	docker push denzp/cargo-container-tools:$(TOOLS_VERSION)
 	docker push denzp/cargo-wharf-frontend:$(FRONTEND_VERSION)

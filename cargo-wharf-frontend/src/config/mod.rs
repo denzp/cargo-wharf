@@ -19,7 +19,7 @@ pub use self::builder::BuilderImage;
 pub use self::output::OutputImage;
 
 const OUTPUT_LAYER_PATH: &str = "/output";
-const OUTPUT_NAME: &str = "build-plan.json";
+const OUTPUT_NAME: &str = "build-config.json";
 
 #[derive(Debug, Serialize)]
 pub struct Config {

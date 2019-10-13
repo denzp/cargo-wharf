@@ -56,6 +56,12 @@ pub struct NodeCommandDetails {
     pub args: Vec<String>,
 }
 
+pub enum BuildScriptMergeResult {
+    Ok,
+    DependencyBuildScript,
+    AlreadyMerged,
+}
+
 impl Node {
     pub fn outputs_iter(&self) -> impl Iterator<Item = &Path> {
         self.outputs.iter().map(|path| path.as_path())
@@ -113,7 +119,10 @@ impl Node {
         }
     }
 
-    pub fn add_buildscript_compile_node(&mut self, mut compile_node: Node) -> bool {
+    pub fn add_buildscript_compile_node(
+        &mut self,
+        mut compile_node: Node,
+    ) -> BuildScriptMergeResult {
         let out_dir: PathBuf = match self.command {
             NodeCommand::Simple(ref mut details) => {
                 let real_buildscript_path = {
@@ -127,7 +136,7 @@ impl Node {
                 if let Some(path) = real_buildscript_path {
                     details.program = path.to_string_lossy().into();
                 } else {
-                    return false;
+                    return BuildScriptMergeResult::DependencyBuildScript;
                 }
 
                 details.use_wrapper(BUILDSCRIPT_CAPTURE);
@@ -135,7 +144,7 @@ impl Node {
             }
 
             NodeCommand::WithBuildscript { .. } => {
-                return false;
+                return BuildScriptMergeResult::AlreadyMerged;
             }
         };
 
@@ -148,7 +157,7 @@ impl Node {
             command.add_buildscript_compile(compile_node.into_command_details())
         });
 
-        true
+        BuildScriptMergeResult::Ok
     }
 
     pub fn transform_into_buildscript_consumer(&mut self, out_dir: &Path) {
@@ -160,6 +169,25 @@ impl Node {
             NodeKind::Primitive(kind) => NodeKind::BuildScriptOutputConsumer(kind, out_dir.into()),
             _ => NodeKind::BuildScriptOutputConsumer(PrimitiveNodeKind::Other, out_dir.into()),
         };
+    }
+
+    pub fn add_dependency_buildscript(&mut self, dependency: Node) {
+        let out_dir = match dependency.command {
+            NodeCommand::Simple(ref details) => details.env.get("OUT_DIR"),
+            NodeCommand::WithBuildscript { ref run, .. } => run.env.get("OUT_DIR"),
+        };
+
+        let out_dir = match out_dir {
+            Some(dir) => dir,
+            None => {
+                return;
+            }
+        };
+
+        if let NodeCommand::WithBuildscript { ref mut run, .. } = self.command {
+            run.args
+                .insert(0, format!("--with-metadata-from={}", out_dir));
+        }
     }
 }
 
