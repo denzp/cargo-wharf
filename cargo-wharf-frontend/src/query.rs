@@ -305,6 +305,9 @@ fn serialize_node<'a>(
             let (mut compile_command, compile_index) =
                 serialize_command(config, create_target_dirs(node.output_dirs_iter()), compile);
 
+            compile_command = compile_command
+                .custom_name(format!("Compiling {} [build script]", node.package_name()));
+
             for mount in deps {
                 compile_command = compile_command.mount(mount.clone());
             }
@@ -337,7 +340,31 @@ fn serialize_node<'a>(
         ));
     }
 
-    (command, index)
+    let pretty_name = match node.kind() {
+        NodeKind::BuildScriptOutputConsumer(PrimitiveNodeKind::Binary, _) => {
+            format!("Compiling binary {}", node.binary_name().unwrap())
+        }
+
+        NodeKind::Primitive(PrimitiveNodeKind::Binary) => {
+            format!("Compiling binary {}", node.binary_name().unwrap())
+        }
+
+        NodeKind::BuildScriptOutputConsumer(PrimitiveNodeKind::Test, _) => {
+            format!("Compiling test {}", node.test_name().unwrap())
+        }
+
+        NodeKind::Primitive(PrimitiveNodeKind::Test) => {
+            format!("Compiling test {}", node.test_name().unwrap())
+        }
+
+        NodeKind::MergedBuildScript(_) => {
+            format!("Running   {} [build script]", node.package_name())
+        }
+
+        _ => format!("Compiling {}", node.package_name()),
+    };
+
+    (command.custom_name(pretty_name), index)
 }
 
 fn serialize_command<'a, 'b: 'a>(
