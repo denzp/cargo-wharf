@@ -6,6 +6,7 @@ version = "0.2.0-alpha.0"
 authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 publish = false
+license = "MIT/Apache-2.0"
 
 [dependencies]
 cargo = "0.38"
