@@ -20,7 +20,7 @@ function setup() {
 }
 
 @test "single-bin :: tests" {
-    docker build -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin:test examples/single-bin --build-arg mode=test
+    docker build -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin:test examples/single-bin --build-arg profile=test
 
     run docker run --rm cargo-wharf/example-single-bin:test
     [ "$status" -eq 0 ]

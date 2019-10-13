@@ -9,6 +9,7 @@ use buildkit_frontend::Bridge;
 use buildkit_llb::prelude::*;
 
 use crate::config::Config;
+use crate::query::Profile;
 use crate::shared::{tools, CONTEXT, CONTEXT_PATH};
 
 const OUTPUT_LAYER_PATH: &str = "/output";
@@ -67,6 +68,13 @@ impl RawBuildPlan {
         if let Some(target) = config.builder_image().target() {
             args.push("--target".into());
             args.push(target.into());
+        }
+
+        match config.profile() {
+            Profile::DebugBinaries | Profile::DebugTests => {}
+            Profile::ReleaseBinaries | Profile::ReleaseTests => {
+                args.push("--release".into());
+            }
         }
 
         let command = {

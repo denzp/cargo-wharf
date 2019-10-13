@@ -7,7 +7,7 @@ use serde::Serialize;
 use buildkit_frontend::{Bridge, Options};
 use buildkit_llb::prelude::*;
 
-use crate::query::Mode;
+use crate::query::Profile;
 use crate::shared::{tools, DOCKERFILE, DOCKERFILE_PATH};
 
 mod base;
@@ -25,7 +25,7 @@ const OUTPUT_NAME: &str = "build-config.json";
 pub struct Config {
     builder: BuilderImage,
     output: OutputImage,
-    mode: Mode,
+    profile: Profile,
 
     binaries: Vec<BinaryDefinition>,
 }
@@ -85,18 +85,18 @@ impl Config {
                 .context("Unable to analyse output image")?
         };
 
-        let mode = {
+        let profile = {
             options
-                .get("mode")
-                .map(Mode::try_from)
-                .unwrap_or(Ok(Mode::Binaries))
+                .get("profile")
+                .map(Profile::try_from)
+                .unwrap_or(Ok(Profile::ReleaseBinaries))
                 .context("Unable to parse the mode")?
         };
 
         Ok(Self {
             builder,
             output,
-            mode,
+            profile,
 
             binaries: base.binaries,
         })
@@ -106,13 +106,13 @@ impl Config {
     pub fn new(
         builder: BuilderImage,
         output: OutputImage,
-        mode: Mode,
+        profile: Profile,
         binaries: Vec<BinaryDefinition>,
     ) -> Self {
         Self {
             builder,
             output,
-            mode,
+            profile,
             binaries,
         }
     }
@@ -129,7 +129,7 @@ impl Config {
         self.binaries.iter().find(|bin| bin.name == name)
     }
 
-    pub fn mode(&self) -> Mode {
-        self.mode
+    pub fn profile(&self) -> Profile {
+        self.profile
     }
 }

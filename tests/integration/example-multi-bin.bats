@@ -18,7 +18,7 @@ function setup() {
 }
 
 @test "multi-bin :: tests" {
-    docker build -f examples/multi-bin/Cargo.toml -t cargo-wharf/example-multi-bin:test examples/multi-bin --build-arg mode=test
+    docker build -f examples/multi-bin/Cargo.toml -t cargo-wharf/example-multi-bin:test examples/multi-bin --build-arg profile=test
 
     run docker run --rm cargo-wharf/example-multi-bin:test
     [ "$status" -eq 0 ]

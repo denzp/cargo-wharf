@@ -24,7 +24,7 @@ function setup() {
 }
 
 @test "workspace example :: tests" {
-    docker build -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace:test examples/workspace --build-arg mode=test
+    docker build -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace:test examples/workspace --build-arg profile=test
 
     run docker run --rm cargo-wharf/example-workspace:test
     [ "$status" -eq 1 ]

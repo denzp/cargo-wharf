@@ -22,10 +22,13 @@ use crate::graph::{
 use crate::shared::{tools, CONTEXT, CONTEXT_PATH, TARGET_PATH};
 
 #[derive(Copy, Clone, Debug, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Mode {
-    Binaries,
-    Tests,
+#[serde(rename_all = "kebab-case")]
+pub enum Profile {
+    ReleaseBinaries,
+    DebugBinaries,
+
+    ReleaseTests,
+    DebugTests,
 }
 
 pub struct GraphQuery<'a> {
@@ -64,8 +67,8 @@ impl<'a> GraphQuery<'a> {
     pub fn image_spec(&self) -> Result<ImageSpecification, Error> {
         let output = self.config.output_image();
 
-        let config = match self.config.mode() {
-            Mode::Binaries => ImageConfig {
+        let config = match self.config.profile() {
+            Profile::ReleaseBinaries | Profile::DebugBinaries => ImageConfig {
                 entrypoint: output.entrypoint.clone(),
                 cmd: output.cmd.clone(),
                 env: output.env.clone(),
@@ -78,7 +81,7 @@ impl<'a> GraphQuery<'a> {
                 stop_signal: None,
             },
 
-            Mode::Tests => ImageConfig {
+            Profile::ReleaseTests | Profile::DebugTests => ImageConfig {
                 entrypoint: Some(
                     once(tools::TEST_RUNNER.into())
                         .chain(
@@ -147,8 +150,8 @@ impl<'a> GraphQuery<'a> {
     }
 
     fn outputs(&self) -> impl Iterator<Item = BuildOutput<'_>> {
-        match self.config.mode() {
-            Mode::Binaries => Either::Left(
+        match self.config.profile() {
+            Profile::ReleaseBinaries | Profile::DebugBinaries => Either::Left(
                 self.original_graph
                     .node_indices()
                     .map(move |index| (index, self.original_graph.node_weight(index).unwrap()))
@@ -160,7 +163,7 @@ impl<'a> GraphQuery<'a> {
                     }),
             ),
 
-            Mode::Tests => Either::Right(
+            Profile::ReleaseTests | Profile::DebugTests => Either::Right(
                 self.original_graph
                     .node_indices()
                     .map(move |index| (index, self.original_graph.node_weight(index).unwrap()))
@@ -187,9 +190,12 @@ impl<'a> GraphQuery<'a> {
     }
 
     fn mapped_outputs(&self, nodes: NodesCache<'a>) -> Vec<OutputMapping<'a>> {
-        match self.config.mode() {
-            Mode::Binaries => self.binaries_mapped_outputs(nodes),
-            Mode::Tests => self.tests_mapped_outputs(nodes),
+        match self.config.profile() {
+            Profile::ReleaseBinaries | Profile::DebugBinaries => {
+                self.binaries_mapped_outputs(nodes)
+            }
+
+            Profile::ReleaseTests | Profile::DebugTests => self.tests_mapped_outputs(nodes),
         }
     }
 
@@ -378,13 +384,15 @@ fn create_target_dirs<'a>(outputs: impl Iterator<Item = &'a Path>) -> OperationO
     operation.ref_counted().last_output().unwrap()
 }
 
-impl TryFrom<&str> for Mode {
+impl TryFrom<&str> for Profile {
     type Error = Error;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "binaries" | "bin" | "binary" => Ok(Mode::Binaries),
-            "tests" | "test" => Ok(Mode::Tests),
+            "release" | "release-binaries" => Ok(Profile::ReleaseBinaries),
+            "debug" | "debug-binaries" => Ok(Profile::DebugBinaries),
+            "test" | "release-test" => Ok(Profile::ReleaseTests),
+            "debug-test" => Ok(Profile::DebugTests),
 
             other => bail!("Unknown mode: {}", other),
         }
@@ -402,7 +410,7 @@ mod tests {
     #[test]
     fn query_binaries() {
         let graph = create_graph();
-        let config = create_config(Mode::Binaries);
+        let config = create_config(Profile::ReleaseBinaries);
         let query = GraphQuery::new(&graph, &config);
 
         assert_eq!(
@@ -417,7 +425,7 @@ mod tests {
     #[test]
     fn query_tests() {
         let graph = create_graph();
-        let config = create_config(Mode::Tests);
+        let config = create_config(Profile::ReleaseTests);
         let query = GraphQuery::new(&graph, &config);
 
         assert_eq!(
@@ -444,7 +452,7 @@ mod tests {
         )
     }
 
-    fn create_config(mode: Mode) -> Config {
+    fn create_config(profile: Profile) -> Config {
         let builder = BuilderImage::new(Source::image("rust"), "/root/.cargo".into());
         let output = OutputImage::default();
 
@@ -459,6 +467,6 @@ mod tests {
             },
         ];
 
-        Config::new(builder, output, mode, binaries)
+        Config::new(builder, output, profile, binaries)
     }
 }
