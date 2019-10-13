@@ -1,11 +1,11 @@
 function maybe_build_container_tools_image {
     if_changed          cargo-container-tools               build_container_tools_image
-    if_image_missing    denzp/cargo-container-tools:master  build_container_tools_image
+    if_image_missing    denzp/cargo-container-tools:local   build_container_tools_image
 }
 
 function maybe_build_frontend_image() {
     if_changed          cargo-wharf-frontend                build_frontend_image
-    if_image_missing    denzp/cargo-wharf-frontend:master   build_frontend_image
+    if_image_missing    denzp/cargo-wharf-frontend:local    build_frontend_image
 }
 
 function build_container_tools_image {
