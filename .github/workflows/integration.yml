@@ -6,6 +6,14 @@ jobs:
     name: Run integration tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - run: docker version
-      - run: DOCKER_BUILDKIT=1 bats tests/integration
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Print docker version
+        run: docker version
+
+      - name: Install bats
+        run: sudo npm install -g bats
+
+      - name: Run integration tests
+        run: DOCKER_BUILDKIT=1 bats tests/integration

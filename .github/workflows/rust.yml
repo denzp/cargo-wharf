@@ -9,13 +9,13 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Find suitable toolchain
+      - name: Find a suitable toolchain
         id: component
         uses: actions-rs/components-nightly@v1
         with:
           component: clippy
 
-      - name: Install toolchain
+      - name: Install the toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ steps.component.outputs.toolchain }}
@@ -28,7 +28,6 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
 
   fmt:
     name: Formatting lints
@@ -37,13 +36,13 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Find suitable toolchain
+      - name: Find a suitable toolchain
         id: component
         uses: actions-rs/components-nightly@v1
         with:
           component: rustfmt
 
-      - name: Install toolchain
+      - name: Install the toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ steps.component.outputs.toolchain }}
@@ -65,7 +64,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Install toolchain
+      - name: Install Nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
