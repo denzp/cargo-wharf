@@ -14,8 +14,6 @@ Although, extra one-time preparation has to be made before the build.
 4. [Create an output image config](#output-image-config)
 5. [Specify binaries](#binaries)
 
----
-
 ## BuildKit setup
 The possibility to build crates without Dockerfile is only possible thanks to [BuildKit] external frontends feature.
 
@@ -27,10 +25,9 @@ To instruct BuildKit to use the frontend, the first line of the `Cargo.toml` sho
 # syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.0
 ```
 
----
-
 ## Builder image config
 The builder image is an image that contains Rust toolchain and any extra tools that might be needed to build the crate.
+
 Configuration is made with a `[package.metadata.wharf.builder]` metadata in `Cargo.toml`.
 
 The semantics of the metadata *loosely* tries to follow `Dockerfile` directives:
@@ -56,11 +53,10 @@ image = "clux/muslrust:nightly-2019-09-28"
 target = "x86_64-unknown-linux-musl"
 ```
 
----
-
 ## Output image config
 The output image is a base where compiled binaries will be put, and tests will run.
 There are no restrictions on which image should be used.
+
 Configuration is made with a `[package.metadata.wharf.output]` metadata in `Cargo.toml`.
 
 The semantics of the metadata tries to follow `Dockerfile` directives:
@@ -89,11 +85,10 @@ image = "scratch"
 entrypoint = ["/path/to/executable"]
 ```
 
----
-
 ## Binaries
 It's also important to specify which binaries should be built and where to put them.
 Each crate can use own convention about where the binaries should go.
+
 For example, for `scratch` output image, it might be usefull to put binaries directly into `/` (root).
 
 The binaries should be specified in `[[package.metadata.wharf.binary]]` array in `Cargo.toml`:
@@ -114,8 +109,6 @@ name = "cargo-test-runner"
 destination = "/cargo-test-runner"
 ```
 
----
-
 ## Frontend parameters
 There is an additional way to control the frontend: build arguments.
 
@@ -128,8 +121,8 @@ There are several parameters supported:
 
 | Key | Data type | Description | Possible values | Default |
 |-----|-----------|-------------|-----------------|---------|
-| `profile` | `String` | Output kind - what build and copy into the output image. | `release-binaries`,<br>`debug-binaries`,<br>`release-tests`,<br>`debug-tests` | `release-binaries` |
-| `debug` | `bool` or `Vec<String>` | Special mode of the image - instead of building, dump various debug information. | `true`,<br>`config`, `build-plan`, `build-graph`, `llb`
+| `profile` | `String` | Output kind - what build and copy into the output image. | `release-binaries`<br>`debug-binaries`<br>`release-tests`<br>`debug-tests` | `release-binaries` |
+| `debug` | `bool` or `Vec<String>` | Special mode of the image - instead of building, dump various debug information. | `true`<br>`config`<br>`build-plan`<br>`build-graph`<br>`llb`
 
 **Note about debugging the frontend**
 
