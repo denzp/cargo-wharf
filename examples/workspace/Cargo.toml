@@ -1,6 +1,16 @@
+# syntax = denzp/cargo-wharf-frontend:local
+
 [workspace]
 members = [
     "binary-1",
     "binary-2",
     "lib-1",
 ]
+
+[workspace.metadata.wharf.builder]
+image = "rust"
+
+[workspace.metadata.wharf.output]
+image = "debian:stable-slim"
+workdir = "/root"
+user = "root"

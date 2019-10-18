@@ -1,5 +1,19 @@
 [workspace]
 members = [
-    "cargo-wharf",
-    "cargo-container-tools"
+    "cargo-container-tools",
+    "cargo-wharf-frontend",
 ]
+
+exclude = [
+    "examples/workspace",
+    "examples/single-bin",
+    "examples/multi-bin",
+]
+
+[profile.release]
+lto = true
+
+# [patch.crates-io]
+# buildkit-frontend = { path = "../rust-buildkit/buildkit-frontend" }
+# buildkit-llb = { path = "../rust-buildkit/buildkit-llb" }
+# buildkit-proto = { path = "../rust-buildkit/buildkit-proto" }

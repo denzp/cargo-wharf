@@ -1,15 +1,50 @@
+# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.0
+
 [package]
 name = "cargo-container-tools"
-version = "0.1.0"
+version = "0.2.0-alpha.0"
 authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 publish = false
+license = "MIT/Apache-2.0"
 
 [dependencies]
-clap = "2.32"
-cargo = "0.31"
+cargo = "0.38"
+clap = "2.33"
+either = "1.5"
 failure = "0.1"
+lazy_static = "1.4"
+semver = "0.9"
+toml = "0.5"
 
 serde = "1.0"
 serde_json = "1.0"
 serde_derive = "1.0"
+
+[package.metadata.wharf.builder]
+image = "clux/muslrust:nightly-2019-09-28"
+target = "x86_64-unknown-linux-musl"
+
+[package.metadata.wharf.output]
+image = "alpine"
+workdir = "/"
+
+[[package.metadata.wharf.binary]]
+name = "cargo-build-plan"
+destination = "/usr/local/bin/cargo-build-plan"
+
+[[package.metadata.wharf.binary]]
+name = "cargo-buildscript-capture"
+destination = "/usr/local/bin/cargo-buildscript-capture"
+
+[[package.metadata.wharf.binary]]
+name = "cargo-buildscript-apply"
+destination = "/usr/local/bin/cargo-buildscript-apply"
+
+[[package.metadata.wharf.binary]]
+name = "cargo-metadata-collector"
+destination = "/usr/local/bin/cargo-metadata-collector"
+
+[[package.metadata.wharf.binary]]
+name = "cargo-test-runner"
+destination = "/usr/local/bin/cargo-test-runner"

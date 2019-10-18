@@ -1,0 +1,458 @@
+{
+  "invocations": [
+    {
+      "package_name": "libc",
+      "package_version": "0.2.62",
+      "target_kind": [
+        "custom-build"
+      ],
+      "deps": [],
+      "outputs": [
+        "/target/debug/build/libc-87cd93070ba33df1/build_script_build-87cd93070ba33df1"
+      ],
+      "links": {
+        "/target/debug/build/libc-87cd93070ba33df1/build-script-build": "/target/debug/build/libc-87cd93070ba33df1/build_script_build-87cd93070ba33df1"
+      },
+      "program": "rustc",
+      "args": [
+        "--crate-name",
+        "build_script_build",
+        "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62/build.rs"
+      ],
+      "env": {},
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62"
+    },
+    {
+      "package_name": "libc",
+      "package_version": "0.2.62",
+      "target_kind": [
+        "custom-build"
+      ],
+      "deps": [
+        0
+      ],
+      "outputs": [],
+      "links": {},
+      "program": "/target/debug/build/libc-87cd93070ba33df1/build-script-build",
+      "args": [],
+      "env": {
+        "HOST": "x86_64-unknown-linux-gnu",
+        "OUT_DIR": "/target/debug/build/libc-84e59eda7c0f49e4/out",
+        "TARGET": "x86_64-unknown-linux-gnu"
+      },
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62"
+    },
+    {
+      "package_name": "libc",
+      "package_version": "0.2.62",
+      "target_kind": [
+        "lib"
+      ],
+      "deps": [
+        1
+      ],
+      "outputs": [
+        "/target/debug/deps/liblibc-c5d8077f198ec4fc.rlib",
+        "/target/debug/deps/liblibc-c5d8077f198ec4fc.rmeta"
+      ],
+      "links": {},
+      "program": "rustc",
+      "args": [
+        "--crate-name",
+        "libc",
+        "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62/src/lib.rs"
+      ],
+      "env": {
+        "OUT_DIR": "/target/debug/build/libc-84e59eda7c0f49e4/out"
+      },
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62"
+    },
+    {
+      "package_name": "autocfg",
+      "package_version": "0.1.6",
+      "target_kind": [
+        "lib"
+      ],
+      "deps": [],
+      "outputs": [
+        "/target/debug/deps/libautocfg-14b97424de3fa53e.rlib",
+        "/target/debug/deps/libautocfg-14b97424de3fa53e.rmeta"
+      ],
+      "links": {},
+      "program": "rustc",
+      "args": [
+        "--crate-name",
+        "autocfg",
+        "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/autocfg-0.1.6/src/lib.rs"
+      ],
+      "env": {},
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/autocfg-0.1.6"
+    },
+    {
+      "package_name": "cc",
+      "package_version": "1.0.45",
+      "target_kind": [
+        "lib"
+      ],
+      "deps": [],
+      "outputs": [
+        "/target/debug/deps/libcc-b340713b396565f0.rlib",
+        "/target/debug/deps/libcc-b340713b396565f0.rmeta"
+      ],
+      "links": {},
+      "program": "rustc",
+      "args": [
+        "--edition=2018",
+        "--crate-name",
+        "cc",
+        "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/cc-1.0.45/src/lib.rs"
+      ],
+      "env": {},
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/cc-1.0.45"
+    },
+    {
+      "package_name": "pkg-config",
+      "package_version": "0.3.16",
+      "target_kind": [
+        "lib"
+      ],
+      "deps": [],
+      "outputs": [
+        "/target/debug/deps/libpkg_config-cd76fe1b536bbc70.rlib",
+        "/target/debug/deps/libpkg_config-cd76fe1b536bbc70.rmeta"
+      ],
+      "links": {},
+      "program": "rustc",
+      "args": [
+        "--crate-name",
+        "pkg_config",
+        "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/pkg-config-0.3.16/src/lib.rs"
+      ],
+      "env": {},
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/pkg-config-0.3.16"
+    },
+    {
+      "package_name": "openssl-sys",
+      "package_version": "0.9.50",
+      "target_kind": [
+        "custom-build"
+      ],
+      "deps": [
+        3,
+        4,
+        5
+      ],
+      "outputs": [
+        "/target/debug/build/openssl-sys-87b9b219fe0676b7/build_script_main-87b9b219fe0676b7"
+      ],
+      "links": {
+        "/target/debug/build/openssl-sys-87b9b219fe0676b7/build-script-main": "/target/debug/build/openssl-sys-87b9b219fe0676b7/build_script_main-87b9b219fe0676b7"
+      },
+      "program": "rustc",
+      "args": [
+        "--crate-name",
+        "build_script_main",
+        "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50/build/main.rs"
+      ],
+      "env": {},
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50"
+    },
+    {
+      "package_name": "openssl-sys",
+      "package_version": "0.9.50",
+      "target_kind": [
+        "custom-build"
+      ],
+      "deps": [
+        6
+      ],
+      "outputs": [],
+      "links": {},
+      "program": "/target/debug/build/openssl-sys-87b9b219fe0676b7/build-script-main",
+      "args": [],
+      "env": {
+        "HOST": "x86_64-unknown-linux-gnu",
+        "OUT_DIR": "/target/debug/build/openssl-sys-acfa4371985ef2b0/out",
+        "TARGET": "x86_64-unknown-linux-gnu"
+      },
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50"
+    },
+    {
+      "package_name": "openssl-sys",
+      "package_version": "0.9.50",
+      "target_kind": [
+        "lib"
+      ],
+      "deps": [
+        2,
+        7
+      ],
+      "outputs": [
+        "/target/debug/deps/libopenssl_sys-19eb4c8cc1419cae.rlib",
+        "/target/debug/deps/libopenssl_sys-19eb4c8cc1419cae.rmeta"
+      ],
+      "links": {},
+      "program": "rustc",
+      "args": [
+        "--crate-name",
+        "openssl_sys",
+        "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50/src/lib.rs"
+      ],
+      "env": {
+        "OUT_DIR": "/target/debug/build/openssl-sys-acfa4371985ef2b0/out"
+      },
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50"
+    },
+    {
+      "package_name": "multi-bin",
+      "package_version": "0.1.0",
+      "target_kind": [
+        "custom-build"
+      ],
+      "deps": [
+        8
+      ],
+      "outputs": [
+        "/target/debug/build/multi-bin-6b2014bd97cc5650/build_script_build-6b2014bd97cc5650"
+      ],
+      "links": {
+        "/target/debug/build/multi-bin-6b2014bd97cc5650/build-script-build": "/target/debug/build/multi-bin-6b2014bd97cc5650/build_script_build-6b2014bd97cc5650"
+      },
+      "program": "rustc",
+      "args": [
+        "--edition=2018",
+        "--crate-name",
+        "build_script_build",
+        "build.rs"
+      ],
+      "env": {},
+      "cwd": "/context"
+    },
+    {
+      "package_name": "openssl-sys",
+      "package_version": "0.9.50",
+      "target_kind": [
+        "custom-build"
+      ],
+      "deps": [
+        6
+      ],
+      "outputs": [],
+      "links": {},
+      "program": "/target/debug/build/openssl-sys-87b9b219fe0676b7/build-script-main",
+      "args": [],
+      "env": {
+        "HOST": "x86_64-unknown-linux-gnu",
+        "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/openssl-sys-25bfb33e9dd9eec2/out",
+        "TARGET": "x86_64-unknown-linux-musl"
+      },
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50"
+    },
+    {
+      "package_name": "multi-bin",
+      "package_version": "0.1.0",
+      "target_kind": [
+        "custom-build"
+      ],
+      "deps": [
+        9,
+        10
+      ],
+      "outputs": [],
+      "links": {},
+      "program": "/target/debug/build/multi-bin-6b2014bd97cc5650/build-script-build",
+      "args": [],
+      "env": {
+        "HOST": "x86_64-unknown-linux-gnu",
+        "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out",
+        "TARGET": "x86_64-unknown-linux-musl"
+      },
+      "cwd": "/context"
+    },
+    {
+      "package_name": "libc",
+      "package_version": "0.2.62",
+      "target_kind": [
+        "custom-build"
+      ],
+      "deps": [
+        0
+      ],
+      "outputs": [],
+      "links": {},
+      "program": "/target/debug/build/libc-87cd93070ba33df1/build-script-build",
+      "args": [],
+      "env": {
+        "HOST": "x86_64-unknown-linux-gnu",
+        "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/libc-881546618a069ec4/out",
+        "TARGET": "x86_64-unknown-linux-musl"
+      },
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62"
+    },
+    {
+      "package_name": "libc",
+      "package_version": "0.2.62",
+      "target_kind": [
+        "lib"
+      ],
+      "deps": [
+        12
+      ],
+      "outputs": [
+        "/target/x86_64-unknown-linux-musl/debug/deps/liblibc-af6b81a75f6a7aeb.rlib",
+        "/target/x86_64-unknown-linux-musl/debug/deps/liblibc-af6b81a75f6a7aeb.rmeta"
+      ],
+      "links": {},
+      "program": "rustc",
+      "args": [
+        "--crate-name",
+        "libc",
+        "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62/src/lib.rs"
+      ],
+      "env": {
+        "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/libc-881546618a069ec4/out"
+      },
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/libc-0.2.62"
+    },
+    {
+      "package_name": "openssl-sys",
+      "package_version": "0.9.50",
+      "target_kind": [
+        "lib"
+      ],
+      "deps": [
+        13,
+        10
+      ],
+      "outputs": [
+        "/target/x86_64-unknown-linux-musl/debug/deps/libopenssl_sys-ee7eaf9d748340a6.rlib",
+        "/target/x86_64-unknown-linux-musl/debug/deps/libopenssl_sys-ee7eaf9d748340a6.rmeta"
+      ],
+      "links": {},
+      "program": "rustc",
+      "args": [
+        "--crate-name",
+        "openssl_sys",
+        "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50/src/lib.rs"
+      ],
+      "env": {
+        "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/openssl-sys-25bfb33e9dd9eec2/out"
+      },
+      "cwd": "/home//.cargo/registry/src/github.com-1ecc6299db9ec823/openssl-sys-0.9.50"
+    },
+    {
+      "package_name": "multi-bin",
+      "package_version": "0.1.0",
+      "target_kind": [
+        "bin"
+      ],
+      "deps": [
+        11,
+        14
+      ],
+      "outputs": [
+        "/target/x86_64-unknown-linux-musl/debug/deps/bin_1-ed273ffa407baa8b"
+      ],
+      "links": {
+        "/target/x86_64-unknown-linux-musl/debug/bin-1": "/target/x86_64-unknown-linux-musl/debug/deps/bin_1-ed273ffa407baa8b"
+      },
+      "program": "rustc",
+      "args": [
+        "--edition=2018",
+        "--crate-name",
+        "bin_1",
+        "src/bin/bin-1.rs"
+      ],
+      "env": {
+        "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+      },
+      "cwd": "/context"
+    },
+    {
+      "package_name": "multi-bin",
+      "package_version": "0.1.0",
+      "target_kind": [
+        "bin"
+      ],
+      "deps": [
+        11,
+        14
+      ],
+      "outputs": [
+        "/target/x86_64-unknown-linux-musl/debug/deps/bin_1-5b5e8a9adfa6ccf4"
+      ],
+      "links": {
+        "/target/x86_64-unknown-linux-musl/debug/bin_1-5b5e8a9adfa6ccf4": "/target/x86_64-unknown-linux-musl/debug/deps/bin_1-5b5e8a9adfa6ccf4"
+      },
+      "program": "rustc",
+      "args": [
+        "--edition=2018",
+        "--crate-name",
+        "bin_1",
+        "src/bin/bin-1.rs",
+        "--test"
+      ],
+      "env": {
+        "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+      },
+      "cwd": "/context"
+    },
+    {
+      "package_name": "multi-bin",
+      "package_version": "0.1.0",
+      "target_kind": [
+        "bin"
+      ],
+      "deps": [
+        11,
+        14
+      ],
+      "outputs": [
+        "/target/x86_64-unknown-linux-musl/debug/deps/bin_2-d1a1ec213eb8750a"
+      ],
+      "links": {
+        "/target/x86_64-unknown-linux-musl/debug/bin-2": "/target/x86_64-unknown-linux-musl/debug/deps/bin_2-d1a1ec213eb8750a"
+      },
+      "program": "rustc",
+      "args": [
+        "--edition=2018",
+        "--crate-name",
+        "bin_2",
+        "src/bin/bin-2.rs"
+      ],
+      "env": {
+        "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+      },
+      "cwd": "/context"
+    },
+    {
+      "package_name": "multi-bin",
+      "package_version": "0.1.0",
+      "target_kind": [
+        "bin"
+      ],
+      "deps": [
+        11,
+        14
+      ],
+      "outputs": [
+        "/target/x86_64-unknown-linux-musl/debug/deps/bin_2-92b8326325c2f547"
+      ],
+      "links": {
+        "/target/x86_64-unknown-linux-musl/debug/bin_2-92b8326325c2f547": "/target/x86_64-unknown-linux-musl/debug/deps/bin_2-92b8326325c2f547"
+      },
+      "program": "rustc",
+      "args": [
+        "--edition=2018",
+        "--crate-name",
+        "bin_2",
+        "src/bin/bin-2.rs",
+        "--test"
+      ],
+      "env": {
+        "OUT_DIR": "/target/x86_64-unknown-linux-musl/debug/build/multi-bin-b4c1d99afefc6791/out"
+      },
+      "cwd": "/context"
+    }
+  ]
+}

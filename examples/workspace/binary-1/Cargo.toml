@@ -5,7 +5,11 @@ authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-clap = "2.32"
+clap = "2.33"
 
 [dependencies.lib-1]
 path = "../lib-1"
+
+[[package.metadata.wharf.binary]]
+name = "binary-1"
+destination = "/bin/binary-1"

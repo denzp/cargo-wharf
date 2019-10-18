@@ -1,0 +1,29 @@
+# syntax = denzp/cargo-wharf-frontend:local
+
+[package]
+name = "multi-bin"
+version = "0.1.0"
+authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+openssl-sys = "0.9"
+
+[build-dependencies]
+openssl-sys = "0.9"
+
+[package.metadata.wharf.builder]
+image = "clux/muslrust:nightly-2019-09-28"
+target = "x86_64-unknown-linux-musl"
+
+[package.metadata.wharf.output]
+image = "scratch"
+workdir = "/"
+
+[[package.metadata.wharf.binary]]
+name = "bin-1"
+destination = "/bin/bin-1"
+
+[[package.metadata.wharf.binary]]
+name = "bin-2"
+destination = "/bin/bin-2"

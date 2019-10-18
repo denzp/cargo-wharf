@@ -1,0 +1,26 @@
+# syntax = denzp/cargo-wharf-frontend:local
+
+[package]
+name = "single-bin"
+version = "0.1.0"
+authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+
+[package.metadata.wharf.builder]
+image = "clux/muslrust:nightly-2019-09-28"
+target = "x86_64-unknown-linux-musl"
+
+[package.metadata.wharf.output]
+image = "scratch"
+workdir = "/"
+entrypoint = ["/bin/wharf-output"]
+args = ["predefined arg"]
+
+[package.metadata.wharf.output.env]
+"NAME 1" = "VALUE 1"
+
+[[package.metadata.wharf.binary]]
+name = "single-bin"
+destination = "/bin/wharf-output"
