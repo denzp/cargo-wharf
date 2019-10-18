@@ -1,0 +1,165 @@
+name: Continuous integration
+on:
+  pull_request:
+    branches:
+      - master
+
+  push:
+    branches:
+      - master
+
+jobs:
+  clippy:
+    name: Clippy lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Find a suitable toolchain
+        id: component
+        uses: actions-rs/components-nightly@v1
+        with:
+          component: clippy
+
+      - name: Install the toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ steps.component.outputs.toolchain }}
+          override: true
+
+      - name: Install clippy
+        run: rustup component add clippy
+
+      - name: Check with clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  fmt:
+    name: Formatting lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Find a suitable toolchain
+        id: component
+        uses: actions-rs/components-nightly@v1
+        with:
+          component: rustfmt
+
+      - name: Install the toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ steps.component.outputs.toolchain }}
+          override: true
+
+      - name: Install rustfmt
+        run: rustup component add rustfmt
+
+      - name: Check the formatting
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Install Nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+
+  integration:
+    name: Run integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Print docker info
+        run: docker info
+
+      - name: Login to Docker Hub Registry
+        run: docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Installing buildx
+        run: .ci/install-buildx.sh
+
+      - name: Install bats
+        run: sudo npm install -g bats
+
+      - name: Run integration tests
+        run: bats tests/integration
+        env:
+          DOCKER_BUILDKIT: 1
+          EXPORT_DOCKER_CACHE: 1
+
+  publish-cargo-wharf-frontend:
+    name: Publish cargo-wharf-frontend to Docker Hub with 'master' tag
+    runs-on: ubuntu-latest
+    needs: [clippy, test, fmt, integration]
+    if: github.ref == 'master'
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Print docker info
+        run: docker info
+
+      - name: Login to Docker Hub Registry
+        run: docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Installing buildx
+        run: .ci/install-buildx.sh
+
+      - name: Build and push the image
+        run: >-
+          docker buildx build --push -f cargo-wharf-frontend/Cargo.toml .
+            --tag denzp/cargo-wharf-frontend:master
+            --cache-from type=registry,ref=denzp/cargo-wharf-frontend:cache
+
+  publish-cargo-container-tools:
+    name: Publish cargo-container-tools to Docker Hub with 'master' tag
+    runs-on: ubuntu-latest
+    needs: [clippy, test, fmt, integration]
+    if: github.ref == 'master'
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Print docker info
+        run: docker info
+
+      - name: Login to Docker Hub Registry
+        run: docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Installing buildx
+        run: .ci/install-buildx.sh
+
+      - name: Build and push the image
+        run: >-
+          docker buildx build --push -f cargo-container-tools/Cargo.toml .
+            --tag denzp/cargo-container-tools:master
+            --cache-from type=registry,ref=denzp/cargo-container-tools:cache
