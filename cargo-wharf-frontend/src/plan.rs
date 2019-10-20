@@ -55,7 +55,7 @@ impl RawBuildPlan {
         let mut args = vec![
             String::from("--manifest-path"),
             PathBuf::from(CONTEXT_PATH)
-                .join("Cargo.toml")
+                .join(config.manifest_path())
                 .to_string_lossy()
                 .into(),
             String::from("--output"),
@@ -68,6 +68,15 @@ impl RawBuildPlan {
         if let Some(target) = config.builder_image().target() {
             args.push("--target".into());
             args.push(target.into());
+        }
+
+        if !config.default_features() {
+            args.push("--no-default-features".into());
+        }
+
+        for feature in config.enabled_features() {
+            args.push("--feature".into());
+            args.push(feature.into());
         }
 
         match config.profile() {

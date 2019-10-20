@@ -16,7 +16,7 @@ function build_container_tools_image {
 
 function build_frontend_image() {
     echo -e '# \rbuilding the frontend docker image...' >&3
-    docker build -f cargo-wharf-frontend/Dockerfile -t denzp/cargo-wharf-frontend:local .
+    docker build -f cargo-wharf-frontend/Dockerfile -t denzp/cargo-wharf-frontend:local . --build-arg extra_build_args="--features=local-container-tools"
     echo -e '# \rbuilding the frontend docker image... done' >&3
 }
 
