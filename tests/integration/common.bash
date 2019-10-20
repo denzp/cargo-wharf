@@ -10,13 +10,35 @@ function maybe_build_frontend_image() {
 
 function build_container_tools_image {
     echo -e '# \rbuilding the container-tools docker image...' >&3
-    docker build -f cargo-container-tools/Dockerfile -t denzp/cargo-container-tools:local .
+
+    extra_buildx_args=()
+    if [[ ! -z "${EXPORT_DOCKER_CACHE}" ]]; then
+        extra_buildx_args+=(--cache-to type=registry,ref=denzp/cargo-container-tools:cache,mode=max)
+    fi
+
+    docker buildx build --load -f cargo-container-tools/Cargo.toml . \
+        --tag denzp/cargo-container-tools:local \
+        --cache-from type=registry,ref=denzp/cargo-container-tools:cache \
+        "${extra_buildx_args[@]}" 2>&3
+
     echo -e '# \rbuilding the container-tools docker image... done' >&3
 }
 
 function build_frontend_image() {
     echo -e '# \rbuilding the frontend docker image...' >&3
-    docker build -f cargo-wharf-frontend/Dockerfile -t denzp/cargo-wharf-frontend:local . --build-arg extra_build_args="--features=local-container-tools"
+
+    extra_buildx_args=()
+    if [[ ! -z "${EXPORT_DOCKER_CACHE}" ]]; then
+        extra_buildx_args+=(--cache-to type=registry,ref=denzp/cargo-wharf-frontend:cache,mode=max)
+    fi
+
+    docker buildx build --load -f cargo-wharf-frontend/Cargo.toml . \
+        --tag denzp/cargo-wharf-frontend:local \
+        --cache-from type=registry,ref=denzp/cargo-wharf-frontend:cache \
+        --build-arg manifest-path=cargo-wharf-frontend/Cargo.toml \
+        --build-arg features=local-container-tools \
+        "${extra_buildx_args[@]}" 2>&3
+
     echo -e '# \rbuilding the frontend docker image... done' >&3
 }
 

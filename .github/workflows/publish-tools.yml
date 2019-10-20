@@ -1,0 +1,33 @@
+name: Publish the cargo-container-tools
+on:
+  push:
+    tags:
+      - cargo-container-tools-*
+
+jobs:
+  publish-requested-tag:
+    name: Publish cargo-container-tools to Docker Hub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Print docker info
+        run: docker info
+
+      - name: Login to Docker Hub Registry
+        run: docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Installing buildx
+        run: .ci/install-buildx.sh
+
+      - name: Build and push the image
+        env:
+          TAG: ${{ github.ref }}
+        run: >-
+          docker buildx build --push -f cargo-container-tools/Cargo.toml .
+            --tag denzp/cargo-container-tools:${TAG#"cargo-container-tools-"}
+            --cache-from type=registry,ref=denzp/cargo-container-tools:cache

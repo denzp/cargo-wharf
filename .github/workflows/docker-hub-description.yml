@@ -1,0 +1,37 @@
+name: Publish Docker Hub description
+on:
+  push:
+    tags:
+      - cargo-wharf-frontend-latest
+      - cargo-container-tools-latest
+
+jobs:
+  frontend-description:
+    runs-on: ubuntu-latest
+    if: github.ref == 'cargo-wharf-frontend-latest'
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Docker Hub frontend description
+        uses: peter-evans/dockerhub-description@v2.1.0
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DOCKERHUB_REPOSITORY: denzp/cargo-wharf-frontend
+          README_FILEPATH: cargo-wharf-frontend/README.md
+
+  tools-description:
+    runs-on: ubuntu-latest
+    if: github.ref == 'cargo-container-tools-latest'
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Docker Hub frontend description
+        uses: peter-evans/dockerhub-description@v2.1.0
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DOCKERHUB_REPOSITORY: denzp/cargo-container-tools
+          README_FILEPATH: cargo-container-tools/README.md

@@ -1,0 +1,33 @@
+name: Publish the cargo-wharf-frontend
+on:
+  push:
+    tags:
+      - cargo-wharf-frontend-*
+
+jobs:
+  publish-requested-tag:
+    name: Publish cargo-wharf-frontend to Docker Hub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Print docker info
+        run: docker info
+
+      - name: Login to Docker Hub Registry
+        run: docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Installing buildx
+        run: .ci/install-buildx.sh
+
+      - name: Build and push the image
+        env:
+          TAG: ${{ github.ref }}
+        run: >-
+          docker buildx build --push -f cargo-wharf-frontend/Cargo.toml .
+            --tag denzp/cargo-wharf-frontend:${TAG#"cargo-wharf-frontend-"}
+            --cache-from type=registry,ref=denzp/cargo-wharf-frontend:cache
