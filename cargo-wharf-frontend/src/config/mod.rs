@@ -1,6 +1,8 @@
 use std::convert::TryFrom;
+use std::iter::empty;
 use std::path::PathBuf;
 
+use either::Either;
 use failure::{Error, ResultExt};
 use serde::Serialize;
 
@@ -26,6 +28,9 @@ pub struct Config {
     builder: BuilderImage,
     output: OutputImage,
     profile: Profile,
+
+    default_features: bool,
+    enabled_features: Vec<String>,
 
     binaries: Vec<BinaryDefinition>,
 }
@@ -93,10 +98,22 @@ impl Config {
                 .context("Unable to parse the mode")?
         };
 
+        let enabled_features = {
+            options
+                .iter("features")
+                .map(Either::Left)
+                .unwrap_or_else(|| Either::Right(empty()))
+                .map(String::from)
+                .collect()
+        };
+
         Ok(Self {
             builder,
             output,
             profile,
+
+            default_features: !options.is_flag_set("no-default-features"),
+            enabled_features,
 
             binaries: base.binaries,
         })
@@ -114,6 +131,8 @@ impl Config {
             output,
             profile,
             binaries,
+            default_features: false,
+            enabled_features: vec![],
         }
     }
 
@@ -131,5 +150,13 @@ impl Config {
 
     pub fn profile(&self) -> Profile {
         self.profile
+    }
+
+    pub fn default_features(&self) -> bool {
+        self.default_features
+    }
+
+    pub fn enabled_features(&self) -> impl Iterator<Item = &str> {
+        self.enabled_features.iter().map(String::as_str)
     }
 }

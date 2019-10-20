@@ -70,6 +70,15 @@ impl RawBuildPlan {
             args.push(target.into());
         }
 
+        if !config.default_features() {
+            args.push("--no-default-features".into());
+        }
+
+        for feature in config.enabled_features() {
+            args.push("--feature".into());
+            args.push(feature.into());
+        }
+
         match config.profile() {
             Profile::DebugBinaries | Profile::DebugTests => {}
             Profile::ReleaseBinaries | Profile::ReleaseTests => {

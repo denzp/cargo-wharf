@@ -8,6 +8,11 @@ edition = "2018"
 
 [dependencies]
 
+[features]
+default = ["feature-1"]
+feature-1 = []
+feature-2 = []
+
 [package.metadata.wharf.builder]
 image = "clux/muslrust:nightly-2019-09-28"
 target = "x86_64-unknown-linux-musl"

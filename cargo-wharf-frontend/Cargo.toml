@@ -38,6 +38,9 @@ toml = "0.5"
 maplit = "1.0"
 pretty_assertions = "0.6"
 
+[features]
+local-container-tools = []
+
 [package.metadata.wharf.builder]
 image = "clux/muslrust:nightly-2019-09-28"
 target = "x86_64-unknown-linux-musl"

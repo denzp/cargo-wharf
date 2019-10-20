@@ -59,6 +59,20 @@ fn get_cli_app() -> App<'static, 'static> {
                     .takes_value(false)
                     .help("Build artifacts in release mode, with optimizations")
             },
+            {
+                Arg::with_name("no_default_features")
+                    .long("no-default-features")
+                    .takes_value(false)
+                    .help("Disable crate default features")
+            },
+            {
+                Arg::with_name("features")
+                    .long("feature")
+                    .takes_value(true)
+                    .value_name("NAME")
+                    .multiple(true)
+                    .help("Target triple for which the code is compiled")
+            },
         ])
 }
 
@@ -77,12 +91,20 @@ fn run(matches: &ArgMatches<'static>) -> CargoResult<()> {
         process.arg("--release");
     }
 
+    if matches.is_present("no_default_features") {
+        process.arg("--no-default-features");
+    }
+
     if let Some(path) = matches.value_of("manifest") {
         process.arg("--manifest-path").arg(path);
     }
 
     if let Some(target) = matches.value_of("target") {
         process.arg("--target").arg(target);
+    }
+
+    for feature in matches.values_of("features").unwrap_or_default() {
+        process.arg("--feature").arg(feature);
     }
 
     let mut child = process.spawn()?;
@@ -109,13 +131,21 @@ fn run_stdout(matches: &ArgMatches<'static>) -> CargoResult<()> {
     build_config.build_plan = true;
     build_config.requested_target = matches.value_of("target").map(String::from);
 
+    let features = {
+        matches
+            .values_of("features")
+            .unwrap_or_default()
+            .map(String::from)
+            .collect()
+    };
+
     let options = CompileOptions {
         config: &config,
         build_config,
 
-        features: vec![],
+        features,
         all_features: false,
-        no_default_features: false,
+        no_default_features: matches.is_present("no_default_features"),
 
         spec: Packages::All,
         filter: CompileFilter::Only {

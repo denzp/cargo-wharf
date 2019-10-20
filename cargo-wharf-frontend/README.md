@@ -122,7 +122,9 @@ There are several parameters supported:
 | Key | Data type | Description | Possible values | Default |
 |-----|-----------|-------------|-----------------|---------|
 | `profile` | `String` | Output kind - what build and copy into the output image. | `release-binaries`<br>`debug-binaries`<br>`release-tests`<br>`debug-tests` | `release-binaries` |
-| `debug` | `bool` or `Vec<String>` | Special mode of the image - instead of building, dump various debug information. | `true`<br>`config`<br>`build-plan`<br>`build-graph`<br>`llb`
+| `features` | `Vec<String>` | Enable the crate's features | `feature-1,feature-2` |
+| `no-default-features` | `bool` | Disable crate's default features | `true`<br>`false` |
+| `debug` | `bool` or `Vec<String>` | Special mode of the image - instead of building, dump various debug information. | `true`<br>`config`<br>`build-plan`<br>`build-graph`<br>`llb` |
 
 **Note about debugging the frontend**
 
