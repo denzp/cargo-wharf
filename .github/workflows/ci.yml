@@ -105,7 +105,7 @@ jobs:
         run: sudo npm install -g bats
 
       - name: Run integration tests
-        run: bats tests/integration
+        run: bats -t tests/integration
         env:
           DOCKER_BUILDKIT: 1
           EXPORT_DOCKER_CACHE: 1

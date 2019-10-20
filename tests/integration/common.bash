@@ -19,7 +19,7 @@ function build_container_tools_image {
     docker buildx build --load -f cargo-container-tools/Cargo.toml . \
         --tag denzp/cargo-container-tools:local \
         --cache-from type=registry,ref=denzp/cargo-container-tools:cache \
-        "${extra_buildx_args[@]}"
+        "${extra_buildx_args[@]}" 2>&3
 
     echo -e '# \rbuilding the container-tools docker image... done' >&3
 }
@@ -37,7 +37,7 @@ function build_frontend_image() {
         --cache-from type=registry,ref=denzp/cargo-wharf-frontend:cache \
         --build-arg manifest-path=cargo-wharf-frontend/Cargo.toml \
         --build-arg features=local-container-tools \
-        "${extra_buildx_args[@]}"
+        "${extra_buildx_args[@]}" 2>&3
 
     echo -e '# \rbuilding the frontend docker image... done' >&3
 }
