@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 use std::iter::empty;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use either::Either;
 use failure::{Error, ResultExt};
@@ -28,6 +28,7 @@ pub struct Config {
     builder: BuilderImage,
     output: OutputImage,
     profile: Profile,
+    manifest_path: PathBuf,
 
     default_features: bool,
     enabled_features: Vec<String>,
@@ -37,22 +38,24 @@ pub struct Config {
 
 impl Config {
     pub async fn analyse(bridge: &mut Bridge, options: &Options) -> Result<Self, Error> {
-        let manifest_path = options.get("filename").unwrap_or("Cargo.toml");
+        let metadata_manifest_path = options.get("filename").unwrap_or("Cargo.toml").into();
+
+        let args = vec![
+            String::from("--manifest-path"),
+            PathBuf::from(DOCKERFILE_PATH)
+                .join(&metadata_manifest_path)
+                .to_string_lossy()
+                .into(),
+            String::from("--output"),
+            PathBuf::from(OUTPUT_LAYER_PATH)
+                .join(OUTPUT_NAME)
+                .to_string_lossy()
+                .into(),
+        ];
 
         let command = {
             Command::run(tools::METADATA_COLLECTOR)
-                .args(&[
-                    "--manifest-path",
-                    &PathBuf::from(DOCKERFILE_PATH)
-                        .join(manifest_path)
-                        .to_string_lossy(),
-                ])
-                .args(&[
-                    "--output",
-                    &PathBuf::from(OUTPUT_LAYER_PATH)
-                        .join(OUTPUT_NAME)
-                        .to_string_lossy(),
-                ])
+                .args(args)
                 .cwd(DOCKERFILE_PATH)
                 .mount(Mount::Layer(OutputIdx(0), tools::IMAGE.output(), "/"))
                 .mount(Mount::ReadOnlyLayer(DOCKERFILE.output(), DOCKERFILE_PATH))
@@ -107,10 +110,17 @@ impl Config {
                 .collect()
         };
 
+        let manifest_path = if let Some(path) = options.get("manifest-path") {
+            path.into()
+        } else {
+            metadata_manifest_path
+        };
+
         Ok(Self {
             builder,
             output,
             profile,
+            manifest_path,
 
             default_features: !options.is_flag_set("no-default-features"),
             enabled_features,
@@ -131,6 +141,7 @@ impl Config {
             output,
             profile,
             binaries,
+            manifest_path: PathBuf::from("Cargo.toml"),
             default_features: false,
             enabled_features: vec![],
         }
@@ -158,5 +169,9 @@ impl Config {
 
     pub fn enabled_features(&self) -> impl Iterator<Item = &str> {
         self.enabled_features.iter().map(String::as_str)
+    }
+
+    pub fn manifest_path(&self) -> &Path {
+        self.manifest_path.as_path()
     }
 }

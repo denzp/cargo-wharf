@@ -29,11 +29,17 @@ function setup() {
     [[ "$output" == *"feature-2 is on"* ]]
 }
 
-
 @test "features" {
     docker build -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin examples/single-bin --build-arg features=feature-2
 
     run docker run --rm cargo-wharf/example-single-bin
     [[ "$output" == *"feature-1 is on"* ]]
     [[ "$output" == *"feature-2 is on"* ]]
+}
+
+@test "workspace features" {
+    docker build -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace examples/workspace --build-arg features=the-special-feature --build-arg manifest-path=binary-1/Cargo.toml
+
+    run docker run --rm cargo-wharf/example-workspace binary-1
+    [[ "$output" == *"the-special-feature is on"* ]]
 }

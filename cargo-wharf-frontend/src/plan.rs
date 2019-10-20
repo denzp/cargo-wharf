@@ -55,7 +55,7 @@ impl RawBuildPlan {
         let mut args = vec![
             String::from("--manifest-path"),
             PathBuf::from(CONTEXT_PATH)
-                .join("Cargo.toml")
+                .join(config.manifest_path())
                 .to_string_lossy()
                 .into(),
             String::from("--output"),
