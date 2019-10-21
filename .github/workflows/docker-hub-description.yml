@@ -8,7 +8,7 @@ on:
 jobs:
   frontend-description:
     runs-on: ubuntu-latest
-    if: github.ref == 'cargo-wharf-frontend-latest'
+    if: github.ref == 'refs/heads/cargo-wharf-frontend-latest'
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
@@ -23,7 +23,7 @@ jobs:
 
   tools-description:
     runs-on: ubuntu-latest
-    if: github.ref == 'cargo-container-tools-latest'
+    if: github.ref == 'refs/heads/cargo-container-tools-latest'
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1

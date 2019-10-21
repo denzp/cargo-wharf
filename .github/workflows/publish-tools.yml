@@ -28,6 +28,7 @@ jobs:
         env:
           TAG: ${{ github.ref }}
         run: >-
-          docker buildx build --push -f cargo-container-tools/Cargo.toml .
-            --tag denzp/cargo-container-tools:${TAG#"cargo-container-tools-"}
-            --cache-from type=registry,ref=denzp/cargo-container-tools:cache
+          docker buildx build
+          --push -f cargo-container-tools/Cargo.toml .
+          --tag denzp/cargo-container-tools:${TAG#"refs/heads/cargo-container-tools-"}
+          --cache-from type=registry,ref=denzp/cargo-container-tools:cache

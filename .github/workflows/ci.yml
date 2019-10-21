@@ -114,7 +114,7 @@ jobs:
     name: Publish cargo-wharf-frontend to Docker Hub with 'master' tag
     runs-on: ubuntu-latest
     needs: [clippy, test, fmt, integration]
-    if: github.ref == 'master'
+    if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
@@ -133,15 +133,16 @@ jobs:
 
       - name: Build and push the image
         run: >-
-          docker buildx build --push -f cargo-wharf-frontend/Cargo.toml .
-            --tag denzp/cargo-wharf-frontend:master
-            --cache-from type=registry,ref=denzp/cargo-wharf-frontend:cache
+          docker buildx build
+          --push -f cargo-wharf-frontend/Cargo.toml .
+          --tag denzp/cargo-wharf-frontend:master
+          --cache-from type=registry,ref=denzp/cargo-wharf-frontend:cache
 
   publish-cargo-container-tools:
     name: Publish cargo-container-tools to Docker Hub with 'master' tag
     runs-on: ubuntu-latest
     needs: [clippy, test, fmt, integration]
-    if: github.ref == 'master'
+    if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
@@ -160,6 +161,7 @@ jobs:
 
       - name: Build and push the image
         run: >-
-          docker buildx build --push -f cargo-container-tools/Cargo.toml .
-            --tag denzp/cargo-container-tools:master
-            --cache-from type=registry,ref=denzp/cargo-container-tools:cache
+          docker buildx build
+          --push -f cargo-container-tools/Cargo.toml .
+          --tag denzp/cargo-container-tools:master
+          --cache-from type=registry,ref=denzp/cargo-container-tools:cache
