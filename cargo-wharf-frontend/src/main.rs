@@ -13,10 +13,11 @@ mod graph;
 mod plan;
 mod query;
 mod shared;
+mod sources;
 
 use self::frontend::CargoFrontend;
 
-const DEFAULT_LOG_FILTER: &str = "info,cargo_buildkit=debug,buildkit=debug";
+const DEFAULT_LOG_FILTER: &str = "info,cargo_wharf_frontend=debug,buildkit=debug";
 
 #[runtime::main(runtime_tokio::Tokio)]
 async fn main() {

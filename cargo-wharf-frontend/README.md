@@ -125,7 +125,7 @@ There are several parameters supported:
 | `features` | `Vec<String>` | Enable the crate's features | `feature-1,feature-2` |
 | `no-default-features` | `bool` | Disable crate's default features | `true`<br>`false` |
 | `manifest-path` | `PathBuf` | Override the path to a crate manifest. Please note, this will not affect configuration collecting behavior. | `binary-1/Cargo.toml` |
-| `debug` | `bool` or `Vec<String>` | Special mode of the image - instead of building, dump various debug information. | `true`<br>`config`<br>`build-plan`<br>`build-graph`<br>`llb` |
+| `debug` | `bool` or `Vec<String>` | Special mode of the image - instead of building, dump various debug information. | `true`<br>`config`<br>`build-plan`<br>`sources`<br>`build-graph`<br>`llb` |
 
 **Note about debugging the frontend**
 

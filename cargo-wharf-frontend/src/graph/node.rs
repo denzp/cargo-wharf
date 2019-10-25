@@ -94,6 +94,10 @@ impl Node {
         &self.package_name
     }
 
+    pub fn package_version(&self) -> &Version {
+        &self.package_version
+    }
+
     pub fn binary_name(&self) -> Option<&str> {
         match self.kind {
             NodeKind::Primitive(PrimitiveNodeKind::Binary) => {}
@@ -201,6 +205,13 @@ impl Node {
         if let NodeCommand::WithBuildscript { ref mut run, .. } = self.command {
             run.args
                 .insert(0, format!("--with-metadata-from={}", out_dir));
+        }
+    }
+
+    pub fn sources_path(&self) -> &Path {
+        match self.command {
+            NodeCommand::Simple(ref details) => &details.cwd,
+            NodeCommand::WithBuildscript { ref compile, .. } => &compile.cwd,
         }
     }
 }

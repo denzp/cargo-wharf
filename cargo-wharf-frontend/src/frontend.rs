@@ -8,6 +8,7 @@ use crate::debug::DebugOperation;
 use crate::graph::BuildGraph;
 use crate::plan::RawBuildPlan;
 use crate::query::GraphQuery;
+use crate::sources::Sources;
 
 pub struct CargoFrontend;
 
@@ -32,8 +33,16 @@ impl Frontend for CargoFrontend {
 
         debug.maybe(&options, || &plan);
 
+        let sources = {
+            Sources::collect(&mut bridge, &config, &plan)
+                .await
+                .context("Unable to collect info about dependencies")?
+        };
+
+        debug.maybe(&options, || &sources);
+
         let graph: BuildGraph = plan.into();
-        let query = GraphQuery::new(&graph, &config);
+        let query = GraphQuery::new(&graph, &config, &sources);
 
         debug.maybe(&options, || &graph);
         debug.maybe(&options, || query.definition().unwrap());

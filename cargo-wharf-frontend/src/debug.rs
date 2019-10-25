@@ -82,6 +82,15 @@ impl<'a> DebugOutput for &'a crate::graph::BuildGraph {
     }
 }
 
+impl<'a> DebugOutput for &'a crate::sources::Sources {
+    const KEY: &'static str = "sources";
+    const PATH: &'static str = "sources.json";
+
+    fn as_bytes(&self) -> Vec<u8> {
+        serde_json::to_vec_pretty(self).unwrap()
+    }
+}
+
 impl DebugOutput for pb::Definition {
     const KEY: &'static str = "llb";
     const PATH: &'static str = "llb.pb";

@@ -99,6 +99,8 @@ impl RawBuildPlan {
                     tools::BUILD_PLAN,
                 ))
                 .mount(Mount::Scratch(OutputIdx(1), OUTPUT_LAYER_PATH))
+                .mount(Mount::SharedCache(builder.cargo_home().join("git")))
+                .mount(Mount::SharedCache(builder.cargo_home().join("registry")))
                 .custom_name("Evaluating the build plan")
         };
 

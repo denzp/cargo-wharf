@@ -94,8 +94,6 @@ impl BuilderImage {
     }
 
     pub fn populate_env<'a>(&self, mut command: Command<'a>) -> Command<'a> {
-        command = command.env("CARGO_TARGET_DIR", TARGET_PATH);
-
         if let Some(ref user) = self.user {
             command = command.user(user);
         }
@@ -105,9 +103,8 @@ impl BuilderImage {
         }
 
         command
+            .env("CARGO_TARGET_DIR", TARGET_PATH)
             .env("CARGO_HOME", self.cargo_home().display().to_string())
-            .mount(Mount::SharedCache(self.cargo_home().join("git")))
-            .mount(Mount::SharedCache(self.cargo_home().join("registry")))
     }
 }
 

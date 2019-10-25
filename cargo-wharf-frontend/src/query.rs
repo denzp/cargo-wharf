@@ -20,6 +20,7 @@ use crate::graph::{
     BuildGraph, Node, NodeCommand, NodeCommandDetails, NodeKind, PrimitiveNodeKind,
 };
 use crate::shared::{tools, CONTEXT, CONTEXT_PATH, TARGET_PATH};
+use crate::sources::{SourceKind, Sources};
 
 #[derive(Copy, Clone, Debug, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -36,6 +37,7 @@ pub struct GraphQuery<'a> {
     reversed_graph: Reversed<&'a StableGraph<Node, ()>>,
 
     config: &'a Config,
+    sources: &'a Sources,
 }
 
 struct OutputMapping<'a> {
@@ -47,12 +49,13 @@ type NodesCache<'a> = Vec<Option<OperationOutput<'a>>>;
 type BuildOutput<'a> = (NodeIndex, &'a Node, PathBuf);
 
 impl<'a> GraphQuery<'a> {
-    pub fn new(graph: &'a BuildGraph, config: &'a Config) -> Self {
+    pub fn new(graph: &'a BuildGraph, config: &'a Config, sources: &'a Sources) -> Self {
         Self {
             original_graph: graph.inner(),
             reversed_graph: Reversed(graph.inner()),
 
             config,
+            sources,
         }
     }
 
@@ -118,7 +121,7 @@ impl<'a> GraphQuery<'a> {
 
     fn terminal(&self) -> Result<Terminal<'a>, Error> {
         debug!("serializing all nodes");
-        let nodes = self.serialize_all_nodes();
+        let nodes = self.serialize_all_nodes()?;
         let outputs = self.mapped_outputs(nodes);
 
         if outputs.is_empty() {
@@ -239,7 +242,7 @@ impl<'a> GraphQuery<'a> {
             .collect()
     }
 
-    fn serialize_all_nodes(&self) -> NodesCache<'a> {
+    fn serialize_all_nodes(&self) -> Result<NodesCache<'a>, Error> {
         let mut nodes = vec![None; self.original_graph.capacity().0];
         let mut deps = vec![None; self.original_graph.capacity().0];
 
@@ -252,12 +255,13 @@ impl<'a> GraphQuery<'a> {
                 &self.config,
                 deps[index.index()].as_ref().unwrap(),
                 self.original_graph.node_weight(index).unwrap(),
-            );
+                self.sources,
+            )?;
 
             nodes[index.index()] = Some(node_llb.ref_counted().output(output.0));
         }
 
-        nodes
+        Ok(nodes)
     }
 
     fn maybe_cache_dependencies(
@@ -295,7 +299,50 @@ fn serialize_node<'a>(
     config: &'a Config,
     deps: &[Mount<'a, PathBuf>],
     node: &'a Node,
-) -> (Command<'a>, OutputIdx) {
+    sources: &'a Sources,
+) -> Result<(Command<'a>, OutputIdx), Error> {
+    let sources_mount = match sources.find_for_node(node)? {
+        SourceKind::Local => Mount::ReadOnlyLayer(CONTEXT.output(), CONTEXT_PATH).into_owned(),
+
+        SourceKind::RegistryUrl(url) => {
+            let fetch_source = Source::http(url)
+                .with_file_name(format!("{}.tar", node.package_name()))
+                .custom_name(format!("Downloading {}", node.package_name()))
+                .ref_counted();
+
+            let extract_command = Command::run("/bin/tar")
+                .args(&[
+                    "-xvzC",
+                    "/out",
+                    "--strip-components=1",
+                    "-f",
+                    &format!("/crate/{}.tar", node.package_name()),
+                ])
+                .mount(Mount::ReadOnlyLayer(
+                    config.builder_image().source().output(),
+                    "/",
+                ))
+                .mount(Mount::ReadOnlyLayer(fetch_source.output(), "/crate"))
+                .mount(Mount::Scratch(OutputIdx(0), "/out"))
+                .custom_name(format!("Extracting {}", node.package_name()))
+                .ref_counted();
+
+            Mount::ReadOnlyLayer(extract_command.output(0), node.sources_path()).into_owned()
+        }
+
+        SourceKind::GitCheckout { repo, reference } => {
+            let mut fetch_source =
+                Source::git(repo).custom_name(format!("Downloading {}", node.package_name()));
+
+            if let Some(reference) = reference {
+                fetch_source = fetch_source.with_reference(reference);
+            }
+
+            Mount::ReadOnlyLayer(fetch_source.ref_counted().output(), node.sources_path())
+                .into_owned()
+        }
+    };
+
     let (mut command, index) = match node.command() {
         NodeCommand::Simple(ref details) => {
             serialize_command(config, create_target_dirs(node.output_dirs_iter()), details)
@@ -306,6 +353,7 @@ fn serialize_node<'a>(
                 serialize_command(config, create_target_dirs(node.output_dirs_iter()), compile);
 
             compile_command = compile_command
+                .mount(sources_mount.clone())
                 .custom_name(format!("Compiling {} [build script]", node.package_name()));
 
             for mount in deps {
@@ -357,14 +405,12 @@ fn serialize_node<'a>(
             format!("Compiling test {}", node.test_name().unwrap())
         }
 
-        NodeKind::MergedBuildScript(_) => {
-            format!("Running   {} [build script]", node.package_name())
-        }
+        NodeKind::MergedBuildScript(_) => format!("Running {} [build script]", node.package_name()),
 
         _ => format!("Compiling {}", node.package_name()),
     };
 
-    (command.custom_name(pretty_name), index)
+    Ok((command.mount(sources_mount).custom_name(pretty_name), index))
 }
 
 fn serialize_command<'a, 'b: 'a>(
@@ -374,7 +420,7 @@ fn serialize_command<'a, 'b: 'a>(
 ) -> (Command<'a>, OutputIdx) {
     let builder = config.builder_image();
 
-    let mut command_llb = {
+    let command_llb = {
         builder
             .populate_env(Command::run(&command.program))
             .cwd(&command.cwd)
@@ -384,10 +430,6 @@ fn serialize_command<'a, 'b: 'a>(
             .mount(Mount::Layer(OutputIdx(0), target_layer, TARGET_PATH))
             .mount(Mount::Scratch(OutputIdx(1), "/tmp"))
     };
-
-    if command.cwd.starts_with(CONTEXT_PATH) {
-        command_llb = command_llb.mount(Mount::ReadOnlyLayer(CONTEXT.output(), CONTEXT_PATH));
-    }
 
     (command_llb, OutputIdx(0))
 }
@@ -438,7 +480,8 @@ mod tests {
     fn query_binaries() {
         let graph = create_graph();
         let config = create_config(Profile::ReleaseBinaries);
-        let query = GraphQuery::new(&graph, &config);
+        let sources = Sources::default();
+        let query = GraphQuery::new(&graph, &config, &sources);
 
         assert_eq!(
             query
@@ -453,7 +496,8 @@ mod tests {
     fn query_tests() {
         let graph = create_graph();
         let config = create_config(Profile::ReleaseTests);
-        let query = GraphQuery::new(&graph, &config);
+        let sources = Sources::default();
+        let query = GraphQuery::new(&graph, &config, &sources);
 
         assert_eq!(
             query
