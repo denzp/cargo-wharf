@@ -9,3 +9,4 @@ lazy_static = "=1.1"
 
 [dependencies.log]
 git = "https://github.com/rust-lang-nursery/log.git"
+tag = "0.4.0"

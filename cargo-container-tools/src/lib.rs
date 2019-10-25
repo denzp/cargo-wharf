@@ -8,3 +8,4 @@ mod output;
 pub use self::output::BuildScriptOutput;
 
 pub mod metadata;
+pub mod source;

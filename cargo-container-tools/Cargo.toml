@@ -34,6 +34,10 @@ name = "cargo-build-plan"
 destination = "/usr/local/bin/cargo-build-plan"
 
 [[package.metadata.wharf.binary]]
+name = "cargo-sources"
+destination = "/usr/local/bin/cargo-sources"
+
+[[package.metadata.wharf.binary]]
 name = "cargo-buildscript-capture"
 destination = "/usr/local/bin/cargo-buildscript-capture"
 
