@@ -8,7 +8,7 @@ use failure::{bail, Error};
 use log::*;
 use petgraph::prelude::*;
 use petgraph::visit::{Reversed, Topo, Walker};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use buildkit_frontend::oci::*;
 use buildkit_frontend::{Bridge, OutputRef};
@@ -16,13 +16,15 @@ use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
 use crate::config::Config;
+use crate::frontend::Options;
 use crate::graph::{
     BuildGraph, Node, NodeCommand, NodeCommandDetails, NodeKind, PrimitiveNodeKind,
 };
 use crate::shared::{tools, CONTEXT, CONTEXT_PATH, TARGET_PATH};
 
-#[derive(Copy, Clone, Debug, Serialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[serde(try_from = "String")]
 pub enum Profile {
     ReleaseBinaries,
     DebugBinaries,
@@ -60,8 +62,10 @@ impl<'a> GraphQuery<'a> {
         Ok(self.terminal()?.into_definition())
     }
 
-    pub async fn solve(&self, bridge: &mut Bridge) -> Result<OutputRef, Error> {
-        bridge.solve(self.terminal()?).await
+    pub async fn solve(&self, bridge: &mut Bridge, options: &Options) -> Result<OutputRef, Error> {
+        bridge
+            .solve_with_cache(self.terminal()?, options.cache_entries())
+            .await
     }
 
     pub fn image_spec(&self) -> Result<ImageSpecification, Error> {
@@ -411,11 +415,11 @@ fn create_target_dirs<'a>(outputs: impl Iterator<Item = &'a Path>) -> OperationO
     operation.ref_counted().last_output().unwrap()
 }
 
-impl TryFrom<&str> for Profile {
+impl TryFrom<String> for Profile {
     type Error = Error;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
             "release" | "release-binaries" => Ok(Profile::ReleaseBinaries),
             "debug" | "debug-binaries" => Ok(Profile::DebugBinaries),
             "test" | "release-test" => Ok(Profile::ReleaseTests),
@@ -423,6 +427,12 @@ impl TryFrom<&str> for Profile {
 
             other => bail!("Unknown mode: {}", other),
         }
+    }
+}
+
+impl Default for Profile {
+    fn default() -> Self {
+        Profile::ReleaseBinaries
     }
 }
 

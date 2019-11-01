@@ -125,11 +125,11 @@ There are several parameters supported:
 | `features` | `Vec<String>` | Enable the crate's features | `feature-1,feature-2` |
 | `no-default-features` | `bool` | Disable crate's default features | `true`<br>`false` |
 | `manifest-path` | `PathBuf` | Override the path to a crate manifest. Please note, this will not affect configuration collecting behavior. | `binary-1/Cargo.toml` |
-| `debug` | `bool` or `Vec<String>` | Special mode of the image - instead of building, dump various debug information. | `true`<br>`config`<br>`build-plan`<br>`build-graph`<br>`llb` |
+| `debug` | `bool` or `Vec<String>` | Special mode of the image - instead of building, dump various debug information. | `all`<br>`config`<br>`build-plan`<br>`build-graph`<br>`llb` |
 
 **Note about debugging the frontend**
 
-When `debug=true` is used, every possible debug info will be dumped.
+When `debug=all` is used, every possible debug info will be dumped.
 Otherwise, when only a partial dump is needed, several values can be specified: `debug=config,build-plan`.
 
 By default, Docker will compose an image with those debug artifacts, and it might be tedious to inspect them.

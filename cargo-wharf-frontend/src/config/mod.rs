@@ -1,12 +1,9 @@
-use std::convert::TryFrom;
-use std::iter::empty;
 use std::path::{Path, PathBuf};
 
-use either::Either;
 use failure::{Error, ResultExt};
 use serde::Serialize;
 
-use buildkit_frontend::{Bridge, Options};
+use buildkit_frontend::Bridge;
 use buildkit_llb::prelude::*;
 
 use crate::query::Profile;
@@ -19,6 +16,7 @@ mod output;
 pub use self::base::{BinaryDefinition, ConfigBase};
 pub use self::builder::BuilderImage;
 pub use self::output::OutputImage;
+pub use crate::frontend::Options;
 
 const OUTPUT_LAYER_PATH: &str = "/output";
 const OUTPUT_NAME: &str = "build-config.json";
@@ -38,7 +36,12 @@ pub struct Config {
 
 impl Config {
     pub async fn analyse(bridge: &mut Bridge, options: &Options) -> Result<Self, Error> {
-        let metadata_manifest_path = options.get("filename").unwrap_or("Cargo.toml").into();
+        let metadata_manifest_path = {
+            options
+                .filename
+                .clone()
+                .unwrap_or_else(|| PathBuf::from("Cargo.toml"))
+        };
 
         let args = vec![
             String::from("--manifest-path"),
@@ -93,37 +96,21 @@ impl Config {
                 .context("Unable to analyse output image")?
         };
 
-        let profile = {
+        let manifest_path = {
             options
-                .get("profile")
-                .map(Profile::try_from)
-                .unwrap_or(Ok(Profile::ReleaseBinaries))
-                .context("Unable to parse the mode")?
-        };
-
-        let enabled_features = {
-            options
-                .iter("features")
-                .map(Either::Left)
-                .unwrap_or_else(|| Either::Right(empty()))
-                .map(String::from)
-                .collect()
-        };
-
-        let manifest_path = if let Some(path) = options.get("manifest-path") {
-            path.into()
-        } else {
-            metadata_manifest_path
+                .manifest_path
+                .clone()
+                .unwrap_or(metadata_manifest_path)
         };
 
         Ok(Self {
             builder,
             output,
-            profile,
             manifest_path,
 
-            default_features: !options.is_flag_set("no-default-features"),
-            enabled_features,
+            profile: options.profile,
+            default_features: !options.no_default_features,
+            enabled_features: options.features.clone(),
 
             binaries: base.binaries,
         })

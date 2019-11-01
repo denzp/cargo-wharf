@@ -2,14 +2,29 @@ use std::mem::replace;
 use std::path::Path;
 
 use prost::Message;
+use serde::Deserialize;
 
-use buildkit_frontend::Options;
 use buildkit_llb::ops::fs::SequenceOperation;
 use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
+use crate::frontend::Options;
+
 pub struct DebugOperation {
     inner: SequenceOperation<'static>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Clone, Copy)]
+#[serde(untagged)]
+#[serde(field_identifier, rename_all = "kebab-case")]
+pub enum DebugKind {
+    All,
+    Config,
+    BuildPlan,
+    BuildGraph,
+
+    #[serde(rename = "llb")]
+    LLB,
 }
 
 impl DebugOperation {
@@ -24,7 +39,7 @@ impl DebugOperation {
         G: FnOnce() -> O,
         O: DebugOutput,
     {
-        if options.has_value("debug", O::KEY) || options.is_flag_set("debug") {
+        if options.debug.contains(&O::KEY) || options.debug.contains(&DebugKind::All) {
             self.append_debug_output(O::PATH, &getter());
         }
     }
@@ -49,14 +64,14 @@ impl DebugOperation {
 }
 
 pub trait DebugOutput {
-    const KEY: &'static str;
+    const KEY: DebugKind;
     const PATH: &'static str;
 
     fn as_bytes(&self) -> Vec<u8>;
 }
 
 impl<'a> DebugOutput for &'a crate::config::Config {
-    const KEY: &'static str = "config";
+    const KEY: DebugKind = DebugKind::Config;
     const PATH: &'static str = "config.json";
 
     fn as_bytes(&self) -> Vec<u8> {
@@ -65,7 +80,7 @@ impl<'a> DebugOutput for &'a crate::config::Config {
 }
 
 impl<'a> DebugOutput for &'a crate::plan::RawBuildPlan {
-    const KEY: &'static str = "build-plan";
+    const KEY: DebugKind = DebugKind::BuildPlan;
     const PATH: &'static str = "build-plan.json";
 
     fn as_bytes(&self) -> Vec<u8> {
@@ -74,7 +89,7 @@ impl<'a> DebugOutput for &'a crate::plan::RawBuildPlan {
 }
 
 impl<'a> DebugOutput for &'a crate::graph::BuildGraph {
-    const KEY: &'static str = "build-graph";
+    const KEY: DebugKind = DebugKind::BuildGraph;
     const PATH: &'static str = "build-graph.json";
 
     fn as_bytes(&self) -> Vec<u8> {
@@ -83,7 +98,7 @@ impl<'a> DebugOutput for &'a crate::graph::BuildGraph {
 }
 
 impl DebugOutput for pb::Definition {
-    const KEY: &'static str = "llb";
+    const KEY: DebugKind = DebugKind::LLB;
     const PATH: &'static str = "llb.pb";
 
     fn as_bytes(&self) -> Vec<u8> {
