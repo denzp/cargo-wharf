@@ -136,7 +136,6 @@ jobs:
           docker buildx build
           --push -f cargo-wharf-frontend/Cargo.toml .
           --tag denzp/cargo-wharf-frontend:master
-          --cache-from type=registry,ref=denzp/cargo-wharf-frontend:cache
 
   publish-cargo-container-tools:
     name: Publish cargo-container-tools to Docker Hub with 'master' tag

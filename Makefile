@@ -11,4 +11,6 @@ local-container-tools:
 local-wharf-frontend:
 	docker buildx build --load -f cargo-wharf-frontend/Cargo.toml . \
 		--tag denzp/cargo-wharf-frontend:local \
+		--build-arg manifest-path=cargo-wharf-frontend/Cargo.toml \
+		--build-arg features=local-container-tools \
 		--cache-from type=registry,ref=denzp/cargo-wharf-frontend:cache

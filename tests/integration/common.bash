@@ -28,13 +28,15 @@ function build_frontend_image() {
     echo -e '# \rbuilding the frontend docker image...' >&3
 
     extra_buildx_args=()
-    if [[ ! -z "${EXPORT_DOCKER_CACHE}" ]]; then
-        extra_buildx_args+=(--cache-to type=registry,ref=denzp/cargo-wharf-frontend:cache,mode=max)
-    fi
+
+    # caching is disabled for now
+    #
+    # if [[ ! -z "${EXPORT_DOCKER_CACHE}" ]]; then
+    #     extra_buildx_args+=(--cache-to type=registry,ref=denzp/cargo-wharf-frontend:cache,mode=max)
+    # fi
 
     docker buildx build --load -f cargo-wharf-frontend/Cargo.toml . \
         --tag denzp/cargo-wharf-frontend:local \
-        --cache-from type=registry,ref=denzp/cargo-wharf-frontend:cache \
         --build-arg manifest-path=cargo-wharf-frontend/Cargo.toml \
         --build-arg features=local-container-tools \
         "${extra_buildx_args[@]}" 2>&3
