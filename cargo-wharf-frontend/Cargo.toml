@@ -2,7 +2,7 @@
 
 [package]
 name = "cargo-wharf-frontend"
-version = "0.1.0-preview"
+version = "0.1.0-alpha.0"
 authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 publish = false
