@@ -27,8 +27,7 @@ jobs:
       - name: Build and push the image
         env:
           TAG: ${{ github.ref }}
-        run: >
+        run: >-
           docker buildx build
           --push -f cargo-wharf-frontend/Cargo.toml .
           --tag denzp/cargo-wharf-frontend:${TAG#"refs/heads/cargo-wharf-frontend-"}
-          --cache-from type=registry,ref=denzp/cargo-wharf-frontend:cache
