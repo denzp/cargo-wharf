@@ -30,4 +30,4 @@ jobs:
         run: >-
           docker buildx build
           --push -f cargo-wharf-frontend/Cargo.toml .
-          --tag denzp/cargo-wharf-frontend:${TAG#"refs/heads/cargo-wharf-frontend-"}
+          --tag denzp/cargo-wharf-frontend:${TAG#"refs/tags/cargo-wharf-frontend-"}
