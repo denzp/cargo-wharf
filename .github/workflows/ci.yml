@@ -16,16 +16,11 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Find a suitable toolchain
-        id: component
-        uses: actions-rs/components-nightly@v1
-        with:
-          component: clippy
-
-      - name: Install the toolchain
+      - name: Install Rust nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ steps.component.outputs.toolchain }}
+          toolchain: nightly
+          components: clippy
           override: true
 
       - name: Install clippy
@@ -43,16 +38,11 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Find a suitable toolchain
-        id: component
-        uses: actions-rs/components-nightly@v1
-        with:
-          component: rustfmt
-
-      - name: Install the toolchain
+      - name: Install Rust nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ steps.component.outputs.toolchain }}
+          toolchain: nightly
+          components: rustfmt
           override: true
 
       - name: Install rustfmt
@@ -71,7 +61,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Install Nightly toolchain
+      - name: Install Rust nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
