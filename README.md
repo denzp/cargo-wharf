@@ -22,7 +22,7 @@ There are several things needed to go on:
 ### Step 1: Specify a frontend directive.
 Add the following line at the beginning of your `Cargo.toml`:
 ```
-# syntax = denzp/cargo-wharf-frontend:v0.1.0-preview
+# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.0
 ```
 
 *This directive will instruct Docker (or to be precise, BuildKit) to use the image as a frontend.*
