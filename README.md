@@ -1,6 +1,8 @@
 # cargo-wharf
 > Seamless and cacheable Docker container building for Rust crates.
 
+[![asciicast](https://asciinema.org/a/280049.svg)](https://asciinema.org/a/280049?cols=95)
+
 ## Features
 * **Small and efficient output images.**<br>
 *Only binaries (and eventually mandatory static assets) in the output image. No `target` directory or other useless build artifacts.*
