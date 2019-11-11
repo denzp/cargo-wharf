@@ -6,6 +6,7 @@ use failure::{bail, format_err, Error};
 use log::*;
 use serde::{Deserialize, Serialize};
 
+use buildkit_frontend::oci::{ExposedPort, Signal};
 use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
@@ -35,6 +36,10 @@ pub struct OutputConfig {
     pub entrypoint: Option<Vec<String>>,
     pub args: Option<Vec<String>>,
     pub env: Option<BTreeMap<String, String>>,
+    pub expose: Option<Vec<ExposedPort>>,
+    pub volumes: Option<Vec<PathBuf>>,
+    pub labels: Option<BTreeMap<String, String>>,
+    pub stop_signal: Option<Signal>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -127,6 +132,10 @@ fn transformation() {
                         entrypoint: None,
                         args: None,
                         env: None,
+                        expose: None,
+                        volumes: None,
+                        labels: None,
+                        stop_signal: None,
                     }),
 
                     builder: None,
@@ -194,6 +203,10 @@ fn transformation() {
                 entrypoint: None,
                 args: None,
                 env: None,
+                expose: None,
+                volumes: None,
+                labels: None,
+                stop_signal: None,
             },
             binaries: vec![
                 BinaryDefinition {
@@ -230,6 +243,10 @@ fn duplicated_config() {
                         entrypoint: None,
                         args: None,
                         env: None,
+                        expose: None,
+                        volumes: None,
+                        labels: None,
+                        stop_signal: None,
                     }),
 
                     binary: None,
@@ -272,6 +289,10 @@ fn duplicated_config() {
                         entrypoint: None,
                         args: None,
                         env: None,
+                        expose: None,
+                        volumes: None,
+                        labels: None,
+                        stop_signal: None,
                     }),
 
                     binary: None,
@@ -288,6 +309,10 @@ fn duplicated_config() {
                         entrypoint: None,
                         args: None,
                         env: None,
+                        expose: None,
+                        volumes: None,
+                        labels: None,
+                        stop_signal: None,
                     }),
 
                     builder: None,
@@ -338,6 +363,10 @@ fn missing_config() {
                     entrypoint: None,
                     args: None,
                     env: None,
+                    expose: None,
+                    volumes: None,
+                    labels: None,
+                    stop_signal: None,
                 }),
 
                 builder: None,
