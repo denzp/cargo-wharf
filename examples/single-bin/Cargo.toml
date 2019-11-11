@@ -22,9 +22,16 @@ image = "scratch"
 workdir = "/"
 entrypoint = ["/bin/wharf-output"]
 args = ["predefined arg"]
+expose = ["3500/tcp", "3600/udp", "3700"]
+volumes = ["/local", "/data"]
+stop_signal = "SIGINT"
 
 [package.metadata.wharf.output.env]
 "NAME 1" = "VALUE 1"
+
+[package.metadata.wharf.output.labels]
+"simple-label" = "simple value"
+"my.awesome.label" = "another value"
 
 [[package.metadata.wharf.binary]]
 name = "single-bin"

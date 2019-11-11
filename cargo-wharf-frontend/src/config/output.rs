@@ -5,6 +5,7 @@ use failure::{format_err, Error, ResultExt};
 use log::*;
 use serde::Serialize;
 
+use buildkit_frontend::oci::{ExposedPort, Signal};
 use buildkit_frontend::Bridge;
 use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
@@ -23,6 +24,12 @@ pub struct OutputImage {
     pub workdir: Option<PathBuf>,
     pub entrypoint: Option<Vec<String>>,
     pub cmd: Option<Vec<String>>,
+
+    #[serde(rename = "expose")]
+    pub exposed_ports: Option<Vec<ExposedPort>>,
+    pub volumes: Option<Vec<PathBuf>>,
+    pub labels: Option<BTreeMap<String, String>>,
+    pub stop_signal: Option<Signal>,
 }
 
 impl OutputImage {
@@ -73,6 +80,11 @@ impl OutputImage {
             user: config.user.or(spec.user),
             workdir: config.workdir.or(spec.working_dir),
 
+            exposed_ports: config.expose,
+            volumes: config.volumes,
+            labels: config.labels,
+            stop_signal: config.stop_signal,
+
             env,
             entrypoint,
             cmd,
@@ -87,6 +99,10 @@ impl OutputImage {
             entrypoint: config.entrypoint,
             cmd: config.args,
             workdir: config.workdir,
+            exposed_ports: config.expose,
+            volumes: config.volumes,
+            labels: config.labels,
+            stop_signal: config.stop_signal,
         }
     }
 

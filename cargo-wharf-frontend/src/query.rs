@@ -79,10 +79,10 @@ impl<'a> GraphQuery<'a> {
                 user: output.user.clone(),
                 working_dir: output.workdir.clone(),
 
-                labels: None,
-                volumes: None,
-                exposed_ports: None,
-                stop_signal: None,
+                labels: self.config.output_image().labels.clone(),
+                volumes: self.config.output_image().volumes.clone(),
+                exposed_ports: self.config.output_image().exposed_ports.clone(),
+                stop_signal: self.config.output_image().stop_signal,
             },
 
             Profile::ReleaseTests | Profile::DebugTests => ImageConfig {
