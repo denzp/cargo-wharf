@@ -9,7 +9,7 @@ publish = false
 license = "MIT/Apache-2.0"
 
 [dependencies]
-cargo = "0.38"
+cargo = "0.40"
 clap = "2.33"
 either = "1.5"
 failure = "0.1"
