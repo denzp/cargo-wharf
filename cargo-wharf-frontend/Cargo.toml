@@ -1,4 +1,4 @@
-# syntax = denzp/cargo-wharf-frontend:v0.1.0-preview
+# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.0
 
 [package]
 name = "cargo-wharf-frontend"
