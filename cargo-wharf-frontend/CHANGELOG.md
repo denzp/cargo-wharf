@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - README and usage guide.
+- Switched to stable Rust channel.
 
 ## [0.1.0-alpha.0] - 2019-11-07
 ### Added

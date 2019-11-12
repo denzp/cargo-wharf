@@ -42,7 +42,7 @@ pretty_assertions = "0.6"
 local-container-tools = []
 
 [package.metadata.wharf.builder]
-image = "clux/muslrust:nightly-2019-09-28"
+image = "clux/muslrust:stable"
 target = "x86_64-unknown-linux-musl"
 
 [package.metadata.wharf.output]
