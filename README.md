@@ -1,4 +1,4 @@
-## Cargo Wharf - cacheable and convenient Docker images builder for Rust crates.
+## Cargo Wharf - cacheable and efficient Docker images builder for Rust.
 
 # Features
 * **Efficiently cache dependencies between the builds.**<br>
@@ -28,7 +28,7 @@
 
 The custom frontend for BuildKit that produces LLB graph out of Cargo's build plan.
 
-## cargo-container-tools
+## `cargo-container-tools`
 [[Docker Hub](https://hub.docker.com/r/denzp/cargo-container-tools)]
 [[README](cargo-container-tools/README.md)]
 [[CHANGELOG](cargo-container-tools/CHANGELOG.md)]
