@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- Advanced output image metadata (Dockerfile's `VOLUME`, `EXPOSE`, `LABEL`, `STOP_SIGNAL`).
+- Advanced output image metadata (Dockerfile's `VOLUME`, `EXPOSE`, `LABEL`, `STOPSIGNAL`).
 
 ### Changed
 - README and usage guide.
