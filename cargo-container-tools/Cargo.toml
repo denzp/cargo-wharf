@@ -1,4 +1,4 @@
-# syntax = denzp/cargo-wharf-frontend:v0.1.0-preview
+# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.0
 
 [package]
 name = "cargo-container-tools"
@@ -9,7 +9,7 @@ publish = false
 license = "MIT/Apache-2.0"
 
 [dependencies]
-cargo = "0.38"
+cargo = "0.40"
 clap = "2.33"
 either = "1.5"
 failure = "0.1"
@@ -22,7 +22,7 @@ serde_json = "1.0"
 serde_derive = "1.0"
 
 [package.metadata.wharf.builder]
-image = "clux/muslrust:nightly-2019-09-28"
+image = "clux/muslrust:stable"
 target = "x86_64-unknown-linux-musl"
 
 [package.metadata.wharf.output]
