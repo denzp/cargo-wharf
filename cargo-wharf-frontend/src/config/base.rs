@@ -25,6 +25,7 @@ pub struct BuilderConfig {
     pub user: Option<String>,
     pub env: Option<BTreeMap<String, String>>,
     pub target: Option<String>,
+    pub setup_commands: Option<Vec<CustomCommand>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -40,12 +41,27 @@ pub struct OutputConfig {
     pub volumes: Option<Vec<PathBuf>>,
     pub labels: Option<BTreeMap<String, String>>,
     pub stop_signal: Option<Signal>,
+    pub pre_install_commands: Option<Vec<CustomCommand>>,
+    pub post_install_commands: Option<Vec<CustomCommand>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct BinaryDefinition {
     pub name: String,
     pub destination: PathBuf,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+pub struct CustomCommand {
+    #[serde(flatten)]
+    pub kind: CustomCommandKind,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum CustomCommandKind {
+    Shell(String),
+    Command(Vec<String>),
 }
 
 impl TryFrom<Vec<schema::MetadataWrapper>> for ConfigBase {
@@ -136,6 +152,8 @@ fn transformation() {
                         volumes: None,
                         labels: None,
                         stop_signal: None,
+                        pre_install_commands: None,
+                        post_install_commands: None,
                     }),
 
                     builder: None,
@@ -151,6 +169,7 @@ fn transformation() {
                         env: None,
                         user: None,
                         target: None,
+                        setup_commands: None,
                     }),
 
                     output: None,
@@ -195,6 +214,7 @@ fn transformation() {
                 env: None,
                 user: None,
                 target: None,
+                setup_commands: None,
             },
             output: OutputConfig {
                 image: "alpine:latest".into(),
@@ -207,6 +227,8 @@ fn transformation() {
                 volumes: None,
                 labels: None,
                 stop_signal: None,
+                pre_install_commands: None,
+                post_install_commands: None,
             },
             binaries: vec![
                 BinaryDefinition {
@@ -235,6 +257,7 @@ fn duplicated_config() {
                         env: None,
                         user: None,
                         target: None,
+                        setup_commands: None,
                     }),
                     output: Some(OutputConfig {
                         image: "alpine:latest".into(),
@@ -247,6 +270,8 @@ fn duplicated_config() {
                         volumes: None,
                         labels: None,
                         stop_signal: None,
+                        pre_install_commands: None,
+                        post_install_commands: None,
                     }),
 
                     binary: None,
@@ -261,6 +286,7 @@ fn duplicated_config() {
                         env: None,
                         user: None,
                         target: None,
+                        setup_commands: None,
                     }),
 
                     output: None,
@@ -281,6 +307,7 @@ fn duplicated_config() {
                         env: None,
                         user: None,
                         target: None,
+                        setup_commands: None,
                     }),
                     output: Some(OutputConfig {
                         image: "alpine:latest".into(),
@@ -293,6 +320,8 @@ fn duplicated_config() {
                         volumes: None,
                         labels: None,
                         stop_signal: None,
+                        pre_install_commands: None,
+                        post_install_commands: None,
                     }),
 
                     binary: None,
@@ -313,6 +342,8 @@ fn duplicated_config() {
                         volumes: None,
                         labels: None,
                         stop_signal: None,
+                        pre_install_commands: None,
+                        post_install_commands: None,
                     }),
 
                     builder: None,
@@ -343,6 +374,7 @@ fn missing_config() {
                     env: None,
                     user: None,
                     target: None,
+                    setup_commands: None,
                 }),
 
                 output: None,
@@ -367,6 +399,8 @@ fn missing_config() {
                     volumes: None,
                     labels: None,
                     stop_signal: None,
+                    pre_install_commands: None,
+                    post_install_commands: None,
                 }),
 
                 builder: None,

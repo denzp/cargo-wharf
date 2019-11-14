@@ -10,7 +10,7 @@ use buildkit_frontend::Bridge;
 use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
-use super::base::OutputConfig;
+use super::base::{CustomCommand, OutputConfig};
 
 #[derive(Debug, Serialize)]
 #[cfg_attr(test, derive(Default))]
@@ -30,6 +30,9 @@ pub struct OutputImage {
     pub volumes: Option<Vec<PathBuf>>,
     pub labels: Option<BTreeMap<String, String>>,
     pub stop_signal: Option<Signal>,
+
+    pub pre_install_commands: Option<Vec<CustomCommand>>,
+    pub post_install_commands: Option<Vec<CustomCommand>>,
 }
 
 impl OutputImage {
@@ -84,6 +87,8 @@ impl OutputImage {
             volumes: config.volumes,
             labels: config.labels,
             stop_signal: config.stop_signal,
+            pre_install_commands: config.pre_install_commands,
+            post_install_commands: config.post_install_commands,
 
             env,
             entrypoint,
@@ -103,6 +108,8 @@ impl OutputImage {
             volumes: config.volumes,
             labels: config.labels,
             stop_signal: config.stop_signal,
+            pre_install_commands: config.pre_install_commands,
+            post_install_commands: config.post_install_commands,
         }
     }
 

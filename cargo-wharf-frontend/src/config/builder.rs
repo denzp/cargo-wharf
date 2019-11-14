@@ -9,7 +9,7 @@ use buildkit_frontend::Bridge;
 use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
-use super::base::BuilderConfig;
+use super::base::{BuilderConfig, CustomCommand};
 use crate::shared::TARGET_PATH;
 
 #[derive(Debug, Serialize)]
@@ -21,6 +21,8 @@ pub struct BuilderImage {
     env: BTreeMap<String, String>,
     user: Option<String>,
     target: Option<String>,
+
+    setup_commands: Option<Vec<CustomCommand>>,
 }
 
 impl BuilderImage {
@@ -66,6 +68,7 @@ impl BuilderImage {
             user,
 
             target: config.target,
+            setup_commands: config.setup_commands,
         })
     }
 
@@ -78,6 +81,7 @@ impl BuilderImage {
             env: Default::default(),
             user: Default::default(),
             target: Default::default(),
+            setup_commands: Default::default(),
         }
     }
 

@@ -14,3 +14,9 @@ image = "rust"
 image = "debian:stable-slim"
 workdir = "/root"
 user = "root"
+pre-install-commands = [
+  { shell = "echo '' > /tmp/custom-setup" },
+]
+post-install-commands = [
+  { shell = "echo '' > /tmp/custom-post-setup" },
+]

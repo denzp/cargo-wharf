@@ -13,7 +13,7 @@ mod base;
 mod builder;
 mod output;
 
-pub use self::base::{BinaryDefinition, ConfigBase};
+pub use self::base::{BinaryDefinition, ConfigBase, CustomCommand};
 pub use self::builder::BuilderImage;
 pub use self::output::OutputImage;
 pub use crate::frontend::Options;
