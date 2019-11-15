@@ -5,38 +5,35 @@ use failure::{format_err, Error, ResultExt};
 use log::*;
 use serde::Serialize;
 
-use buildkit_frontend::oci::{ExposedPort, Signal};
+use buildkit_frontend::oci::{self, Signal};
 use buildkit_frontend::Bridge;
 use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
-use super::base::{CustomCommand, OutputConfig};
+use super::base::BaseOutputConfig;
 
 #[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(Default))]
-
-pub struct OutputImage {
+pub struct OutputConfig {
     #[serde(skip_serializing)]
     source: Option<ImageSource>,
 
-    pub env: Option<BTreeMap<String, String>>,
-    pub user: Option<String>,
-    pub workdir: Option<PathBuf>,
-    pub entrypoint: Option<Vec<String>>,
-    pub cmd: Option<Vec<String>>,
-
-    #[serde(rename = "expose")]
-    pub exposed_ports: Option<Vec<ExposedPort>>,
-    pub volumes: Option<Vec<PathBuf>>,
-    pub labels: Option<BTreeMap<String, String>>,
-    pub stop_signal: Option<Signal>,
-
-    pub pre_install_commands: Option<Vec<CustomCommand>>,
-    pub post_install_commands: Option<Vec<CustomCommand>>,
+    overrides: BaseOutputConfig,
+    defaults: OutputConfigDefaults,
+    merged_env: BTreeMap<String, String>,
 }
 
-impl OutputImage {
-    pub async fn analyse(bridge: &mut Bridge, config: OutputConfig) -> Result<Self, Error> {
+#[derive(Debug, Serialize, Default)]
+struct OutputConfigDefaults {
+    env: Option<BTreeMap<String, String>>,
+    user: Option<String>,
+    workdir: Option<PathBuf>,
+    entrypoint: Option<Vec<String>>,
+    cmd: Option<Vec<String>>,
+    stop_signal: Option<Signal>,
+}
+
+impl OutputConfig {
+    pub async fn analyse(bridge: &mut Bridge, config: BaseOutputConfig) -> Result<Self, Error> {
         if config.image == "scratch" {
             return Ok(Self::scratch(config));
         }
@@ -57,19 +54,7 @@ impl OutputImage {
                 .ok_or_else(|| format_err!("Missing source image config"))?
         };
 
-        let env = match (spec.env, config.env) {
-            (Some(mut spec), Some(mut config)) => {
-                spec.append(&mut config);
-                Some(spec)
-            }
-
-            (spec, config) => spec.or(config),
-        };
-
-        let (entrypoint, cmd) = match (config.entrypoint, config.args) {
-            (None, _) => (spec.entrypoint, spec.cmd),
-            (entrypoint, cmd) => (entrypoint, cmd),
-        };
+        let merged_env = super::merge_spec_and_overriden_env(&spec.env, &config.env);
 
         let source = if !digest.is_empty() {
             source.with_digest(digest)
@@ -79,37 +64,29 @@ impl OutputImage {
 
         Ok(Self {
             source: Some(source),
-
-            user: config.user.or(spec.user),
-            workdir: config.workdir.or(spec.working_dir),
-
-            exposed_ports: config.expose,
-            volumes: config.volumes,
-            labels: config.labels,
-            stop_signal: config.stop_signal,
-            pre_install_commands: config.pre_install_commands,
-            post_install_commands: config.post_install_commands,
-
-            env,
-            entrypoint,
-            cmd,
+            overrides: config,
+            defaults: spec.into(),
+            merged_env,
         })
     }
 
-    fn scratch(config: OutputConfig) -> Self {
+    fn scratch(config: BaseOutputConfig) -> Self {
         Self {
             source: None,
-            user: config.user,
-            env: config.env,
-            entrypoint: config.entrypoint,
-            cmd: config.args,
-            workdir: config.workdir,
-            exposed_ports: config.expose,
-            volumes: config.volumes,
-            labels: config.labels,
-            stop_signal: config.stop_signal,
-            pre_install_commands: config.pre_install_commands,
-            post_install_commands: config.post_install_commands,
+            merged_env: config.env.clone().unwrap_or_default(),
+            overrides: config,
+            defaults: Default::default(),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn mocked_new() -> Self {
+        Self {
+            source: None,
+
+            overrides: Default::default(),
+            defaults: Default::default(),
+            merged_env: Default::default(),
         }
     }
 
@@ -120,6 +97,69 @@ impl OutputImage {
         match self.source {
             Some(ref source) => LayerPath::Other(source.output(), path),
             None => LayerPath::Scratch(path),
+        }
+    }
+
+    pub fn user(&self) -> Option<&str> {
+        self.overrides
+            .user
+            .as_ref()
+            .or_else(|| self.defaults.user.as_ref())
+            .map(String::as_str)
+    }
+
+    pub fn env(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.merged_env
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+    }
+}
+
+impl From<oci::ImageConfig> for OutputConfigDefaults {
+    fn from(config: oci::ImageConfig) -> Self {
+        Self {
+            env: config.env,
+            user: config.user,
+            entrypoint: config.entrypoint,
+            cmd: config.cmd,
+            workdir: config.working_dir,
+            stop_signal: config.stop_signal,
+        }
+    }
+}
+
+impl<'a> Into<oci::ImageConfig> for &'a OutputConfig {
+    fn into(self) -> oci::ImageConfig {
+        oci::ImageConfig {
+            entrypoint: self
+                .overrides
+                .entrypoint
+                .clone()
+                .or_else(|| self.defaults.entrypoint.clone()),
+
+            cmd: self
+                .overrides
+                .args
+                .clone()
+                .or_else(|| self.defaults.cmd.clone()),
+
+            user: self
+                .overrides
+                .user
+                .clone()
+                .or_else(|| self.defaults.user.clone()),
+
+            working_dir: self
+                .overrides
+                .workdir
+                .clone()
+                .or_else(|| self.defaults.workdir.clone()),
+
+            env: Some(self.merged_env.clone()),
+            labels: self.overrides.labels.clone(),
+            volumes: self.overrides.volumes.clone(),
+            exposed_ports: self.overrides.expose.clone(),
+            stop_signal: self.overrides.stop_signal.or(self.defaults.stop_signal),
         }
     }
 }

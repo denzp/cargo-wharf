@@ -50,7 +50,7 @@ impl RawBuildPlan {
         bridge: &'a mut Bridge,
         config: &'b Config,
     ) -> Result<Self, Error> {
-        let builder = config.builder_image();
+        let builder = config.builder();
 
         let mut args = vec![
             String::from("--manifest-path"),
@@ -65,7 +65,7 @@ impl RawBuildPlan {
                 .into(),
         ];
 
-        if let Some(target) = config.builder_image().target() {
+        if let Some(target) = builder.target() {
             args.push("--target".into());
             args.push(target.into());
         }

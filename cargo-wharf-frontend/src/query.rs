@@ -69,22 +69,10 @@ impl<'a> GraphQuery<'a> {
     }
 
     pub fn image_spec(&self) -> Result<ImageSpecification, Error> {
-        let output = self.config.output_image();
+        let output = self.config.output();
 
         let config = match self.config.profile() {
-            Profile::ReleaseBinaries | Profile::DebugBinaries => ImageConfig {
-                entrypoint: output.entrypoint.clone(),
-                cmd: output.cmd.clone(),
-                env: output.env.clone(),
-                user: output.user.clone(),
-                working_dir: output.workdir.clone(),
-
-                labels: self.config.output_image().labels.clone(),
-                volumes: self.config.output_image().volumes.clone(),
-                exposed_ports: self.config.output_image().exposed_ports.clone(),
-                stop_signal: self.config.output_image().stop_signal,
-            },
-
+            Profile::ReleaseBinaries | Profile::DebugBinaries => self.config.output().into(),
             Profile::ReleaseTests | Profile::DebugTests => ImageConfig {
                 entrypoint: Some(
                     once(tools::TEST_RUNNER.into())
@@ -94,9 +82,16 @@ impl<'a> GraphQuery<'a> {
                         )
                         .collect(),
                 ),
+
+                env: Some(
+                    output
+                        .env()
+                        .map(|(name, value)| (name.into(), value.into()))
+                        .collect(),
+                ),
+
                 cmd: None,
-                env: output.env.clone(),
-                user: output.user.clone(),
+                user: output.user().map(String::from),
                 working_dir: None,
 
                 labels: None,
@@ -136,7 +131,7 @@ impl<'a> GraphQuery<'a> {
             outputs.into_iter().fold(operation, |output, mapping| {
                 let (index, layer_path) = match output.last_output_index() {
                     Some(index) => (index + 1, LayerPath::Own(OwnOutputIdx(index), mapping.to)),
-                    None => (0, self.config.output_image().layer_path(mapping.to)),
+                    None => (0, self.config.output().layer_path(mapping.to)),
                 };
 
                 output.append(
@@ -376,7 +371,7 @@ fn serialize_command<'a, 'b: 'a>(
     target_layer: OperationOutput<'b>,
     command: &'b NodeCommandDetails,
 ) -> (Command<'a>, OutputIdx) {
-    let builder = config.builder_image();
+    let builder = config.builder();
 
     let mut command_llb = {
         builder
@@ -441,7 +436,7 @@ mod tests {
     use serde_json::from_slice;
 
     use super::*;
-    use crate::config::{BinaryDefinition, BuilderImage, OutputImage};
+    use crate::config::{BinaryDefinition, BuilderConfig, OutputConfig};
     use crate::plan::RawBuildPlan;
 
     #[test]
@@ -490,8 +485,8 @@ mod tests {
     }
 
     fn create_config(profile: Profile) -> Config {
-        let builder = BuilderImage::new(Source::image("rust"), "/root/.cargo".into());
-        let output = OutputImage::default();
+        let builder = BuilderConfig::mocked_new(Source::image("rust"), "/root/.cargo".into());
+        let output = OutputConfig::mocked_new();
 
         let binaries = vec![
             BinaryDefinition {
@@ -504,6 +499,6 @@ mod tests {
             },
         ];
 
-        Config::new(builder, output, profile, binaries)
+        Config::mocked_new(builder, output, profile, binaries)
     }
 }
