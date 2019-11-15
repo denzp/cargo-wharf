@@ -237,7 +237,7 @@ image = "scratch"
 
 | Stop signal | |
 |--:|:--|
-| Key | `package.metadata.wharf.output.stop_signal` |
+| Key | `package.metadata.wharf.output.stop-signal` |
 | Data type| `Option<Signal>` |
 | Description | System call signal that will be sent to the container to exit. |
 | `Dockerfile` counterpart | [`STOPSIGNAL`] |
@@ -245,7 +245,7 @@ image = "scratch"
 ``` toml
 [package.metadata.wharf.output]
 image = "scratch"
-stop_signal = "SIGINT"
+stop-signal = "SIGINT"
 ```
 
 # Binaries
