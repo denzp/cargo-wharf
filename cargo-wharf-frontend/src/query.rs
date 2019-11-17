@@ -15,7 +15,7 @@ use buildkit_frontend::{Bridge, OutputRef};
 use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
-use crate::config::Config;
+use crate::config::{BuilderConfig, Config, CustomCommand, CustomCommandKind};
 use crate::frontend::Options;
 use crate::graph::{
     BuildGraph, Node, NodeCommand, NodeCommandDetails, NodeKind, PrimitiveNodeKind,
@@ -38,6 +38,7 @@ pub struct GraphQuery<'a> {
     reversed_graph: Reversed<&'a StableGraph<Node, ()>>,
 
     config: &'a Config,
+    builder_source: OperationOutput<'a>,
 }
 
 struct OutputMapping<'a> {
@@ -50,11 +51,22 @@ type BuildOutput<'a> = (NodeIndex, &'a Node, PathBuf);
 
 impl<'a> GraphQuery<'a> {
     pub fn new(graph: &'a BuildGraph, config: &'a Config) -> Self {
+        let builder_source = Self::source_llb(
+            config.builder(),
+            config
+                .builder()
+                .setup_commands()
+                .as_ref()
+                .map(Vec::as_ref)
+                .unwrap_or_default(),
+        );
+
         Self {
             original_graph: graph.inner(),
             reversed_graph: Reversed(graph.inner()),
 
             config,
+            builder_source,
         }
     }
 
@@ -113,6 +125,43 @@ impl<'a> GraphQuery<'a> {
             rootfs: None,
             history: None,
         })
+    }
+
+    fn source_llb(
+        builder: &'a BuilderConfig,
+        commands: &'a [CustomCommand],
+    ) -> OperationOutput<'a> {
+        if !commands.is_empty() {
+            let mut output = builder.source().output();
+
+            for command in commands {
+                let (name, args) = match command.kind {
+                    CustomCommandKind::Command(ref name_and_args) => {
+                        let mut iter = name_and_args.iter().map(String::as_str);
+
+                        (iter.next().unwrap(), Either::Left(iter))
+                    }
+
+                    CustomCommandKind::Shell(ref shell) => (
+                        "/bin/sh",
+                        Either::Right(once("-c").chain(once(shell.as_str()))),
+                    ),
+                };
+
+                output = {
+                    builder
+                        .populate_env(Command::run(name))
+                        .args(args)
+                        .mount(Mount::Layer(OutputIdx(0), output, "/"))
+                        .ref_counted()
+                        .output(0)
+                };
+            }
+
+            output
+        } else {
+            builder.source().output()
+        }
     }
 
     fn terminal(&self) -> Result<Terminal<'a>, Error> {
@@ -249,6 +298,7 @@ impl<'a> GraphQuery<'a> {
 
             let (node_llb, output) = serialize_node(
                 &self.config,
+                self.builder_source.clone(),
                 deps[index.index()].as_ref().unwrap(),
                 self.original_graph.node_weight(index).unwrap(),
             );
@@ -292,17 +342,25 @@ impl<'a> GraphQuery<'a> {
 
 fn serialize_node<'a>(
     config: &'a Config,
+    source: OperationOutput<'a>,
     deps: &[Mount<'a, PathBuf>],
     node: &'a Node,
 ) -> (Command<'a>, OutputIdx) {
     let (mut command, index) = match node.command() {
-        NodeCommand::Simple(ref details) => {
-            serialize_command(config, create_target_dirs(node.output_dirs_iter()), details)
-        }
+        NodeCommand::Simple(ref details) => serialize_command(
+            config,
+            source,
+            create_target_dirs(node.output_dirs_iter()),
+            details,
+        ),
 
         NodeCommand::WithBuildscript { compile, run } => {
-            let (mut compile_command, compile_index) =
-                serialize_command(config, create_target_dirs(node.output_dirs_iter()), compile);
+            let (mut compile_command, compile_index) = serialize_command(
+                config,
+                source.clone(),
+                create_target_dirs(node.output_dirs_iter()),
+                compile,
+            );
 
             compile_command = compile_command
                 .custom_name(format!("Compiling {} [build script]", node.package_name()));
@@ -313,6 +371,7 @@ fn serialize_node<'a>(
 
             serialize_command(
                 config,
+                source,
                 compile_command.ref_counted().output(compile_index.0),
                 run,
             )
@@ -368,6 +427,7 @@ fn serialize_node<'a>(
 
 fn serialize_command<'a, 'b: 'a>(
     config: &'a Config,
+    source: OperationOutput<'a>,
     target_layer: OperationOutput<'b>,
     command: &'b NodeCommandDetails,
 ) -> (Command<'a>, OutputIdx) {
@@ -379,7 +439,7 @@ fn serialize_command<'a, 'b: 'a>(
             .cwd(&command.cwd)
             .args(&command.args)
             .env_iter(&command.env)
-            .mount(Mount::ReadOnlyLayer(builder.source().output(), "/"))
+            .mount(Mount::ReadOnlyLayer(source, "/"))
             .mount(Mount::Layer(OutputIdx(0), target_layer, TARGET_PATH))
             .mount(Mount::Scratch(OutputIdx(1), "/tmp"))
     };

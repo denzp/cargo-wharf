@@ -14,7 +14,7 @@ mod base;
 mod builder;
 mod output;
 
-pub use self::base::{BaseConfig, BinaryDefinition, CustomCommand};
+pub use self::base::{BaseConfig, BinaryDefinition, CustomCommand, CustomCommandKind};
 pub use self::builder::BuilderConfig;
 pub use self::output::OutputConfig;
 pub use crate::frontend::Options;

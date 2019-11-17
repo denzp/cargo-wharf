@@ -10,7 +10,8 @@ use buildkit_frontend::Bridge;
 use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
-use super::base::BaseBuilderConfig;
+use super::base::{BaseBuilderConfig, CustomCommand};
+use super::merge_spec_and_overriden_env;
 use crate::shared::TARGET_PATH;
 
 #[derive(Debug, Serialize)]
@@ -55,7 +56,7 @@ impl BuilderConfig {
             source
         };
 
-        let merged_env = super::merge_spec_and_overriden_env(&spec.env, &config.env);
+        let merged_env = merge_spec_and_overriden_env(&spec.env, &config.env);
         let user = {
             config
                 .user
@@ -119,6 +120,10 @@ impl BuilderConfig {
         self.merged_env
             .iter()
             .map(|(key, value)| (key.as_str(), value.as_str()))
+    }
+
+    pub fn setup_commands(&self) -> &Option<Vec<CustomCommand>> {
+        &self.overrides.setup_commands
     }
 
     pub fn populate_env<'a>(&self, mut command: Command<'a>) -> Command<'a> {

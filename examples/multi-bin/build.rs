@@ -6,6 +6,6 @@ fn main() {
     metadata("/usr/bin/protoc")
         .expect("Unable to find `/usr/bin/protoc`. Custom builder setup failed!");
 
-    metadata("/tmp/custom-output")
+    metadata("/custom-output")
         .expect("Unable to find `/tmp/custom-output`. Custom builder setup failed!");
 }

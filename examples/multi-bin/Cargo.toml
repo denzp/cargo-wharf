@@ -16,8 +16,9 @@ openssl-sys = "0.9"
 image = "clux/muslrust:nightly-2019-09-28"
 target = "x86_64-unknown-linux-musl"
 setup-commands = [
-  { command = ["apt-get", "install", "protoc"] },
-  { shell = "echo '' > /tmp/custom-output" },
+  { command = ["apt-get", "update"] },
+  { command = ["apt-get", "install", "-y", "protobuf-compiler"] },
+  { shell = "echo '' > /custom-output" },
 ]
 
 [package.metadata.wharf.output]
