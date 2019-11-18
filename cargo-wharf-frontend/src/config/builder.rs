@@ -11,7 +11,7 @@ use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
 use super::base::{BaseBuilderConfig, CustomCommand};
-use super::merge_spec_and_overriden_env;
+use super::{merge_spec_and_overriden_env, BaseImageConfig};
 use crate::shared::TARGET_PATH;
 
 #[derive(Debug, Serialize)]
@@ -125,8 +125,10 @@ impl BuilderConfig {
     pub fn setup_commands(&self) -> &Option<Vec<CustomCommand>> {
         &self.overrides.setup_commands
     }
+}
 
-    pub fn populate_env<'a>(&self, mut command: Command<'a>) -> Command<'a> {
+impl BaseImageConfig for BuilderConfig {
+    fn populate_env<'a>(&self, mut command: Command<'a>) -> Command<'a> {
         command = command.env("CARGO_TARGET_DIR", TARGET_PATH);
 
         if let Some(user) = self.user() {
@@ -141,6 +143,10 @@ impl BuilderConfig {
             .env("CARGO_HOME", self.cargo_home().display().to_string())
             .mount(Mount::SharedCache(self.cargo_home().join("git")))
             .mount(Mount::SharedCache(self.cargo_home().join("registry")))
+    }
+
+    fn image_source(&self) -> Option<&ImageSource> {
+        Some(&self.source)
     }
 }
 

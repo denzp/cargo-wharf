@@ -5,6 +5,7 @@ use failure::{Error, ResultExt};
 use serde::Serialize;
 
 use buildkit_frontend::Bridge;
+use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
 use crate::query::Profile;
@@ -33,6 +34,11 @@ pub struct Config {
     enabled_features: Vec<String>,
 
     binaries: Vec<BinaryDefinition>,
+}
+
+pub trait BaseImageConfig {
+    fn populate_env<'a>(&self, command: Command<'a>) -> Command<'a>;
+    fn image_source(&self) -> Option<&ImageSource>;
 }
 
 impl Config {

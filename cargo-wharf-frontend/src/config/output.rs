@@ -10,7 +10,8 @@ use buildkit_frontend::Bridge;
 use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
-use super::base::BaseOutputConfig;
+use super::base::{BaseOutputConfig, CustomCommand};
+use super::{merge_spec_and_overriden_env, BaseImageConfig};
 
 #[derive(Debug, Serialize)]
 pub struct OutputConfig {
@@ -54,7 +55,7 @@ impl OutputConfig {
                 .ok_or_else(|| format_err!("Missing source image config"))?
         };
 
-        let merged_env = super::merge_spec_and_overriden_env(&spec.env, &config.env);
+        let merged_env = merge_spec_and_overriden_env(&spec.env, &config.env);
 
         let source = if !digest.is_empty() {
             source.with_digest(digest)
@@ -112,6 +113,28 @@ impl OutputConfig {
         self.merged_env
             .iter()
             .map(|(key, value)| (key.as_str(), value.as_str()))
+    }
+
+    pub fn pre_install_commands(&self) -> &Option<Vec<CustomCommand>> {
+        &self.overrides.pre_install_commands
+    }
+}
+
+impl BaseImageConfig for OutputConfig {
+    fn populate_env<'a>(&self, mut command: Command<'a>) -> Command<'a> {
+        if let Some(user) = self.user() {
+            command = command.user(user);
+        }
+
+        for (name, value) in self.env() {
+            command = command.env(name, value);
+        }
+
+        command
+    }
+
+    fn image_source(&self) -> Option<&ImageSource> {
+        self.source.as_ref()
     }
 }
 

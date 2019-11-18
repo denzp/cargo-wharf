@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::iter::once;
 use std::path::{Path, PathBuf};
@@ -15,7 +16,7 @@ use buildkit_frontend::{Bridge, OutputRef};
 use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
-use crate::config::{BuilderConfig, Config, CustomCommand, CustomCommandKind};
+use crate::config::{BaseImageConfig, Config, CustomCommand, CustomCommandKind};
 use crate::frontend::Options;
 use crate::graph::{
     BuildGraph, Node, NodeCommand, NodeCommandDetails, NodeKind, PrimitiveNodeKind,
@@ -38,7 +39,8 @@ pub struct GraphQuery<'a> {
     reversed_graph: Reversed<&'a StableGraph<Node, ()>>,
 
     config: &'a Config,
-    builder_source: OperationOutput<'a>,
+    builder_source: Option<OperationOutput<'a>>,
+    output_source: Option<OperationOutput<'a>>,
 }
 
 struct OutputMapping<'a> {
@@ -61,12 +63,23 @@ impl<'a> GraphQuery<'a> {
                 .unwrap_or_default(),
         );
 
+        let output_source = Self::source_llb(
+            config.output(),
+            config
+                .output()
+                .pre_install_commands()
+                .as_ref()
+                .map(Vec::as_ref)
+                .unwrap_or_default(),
+        );
+
         Self {
             original_graph: graph.inner(),
             reversed_graph: Reversed(graph.inner()),
 
             config,
             builder_source,
+            output_source,
         }
     }
 
@@ -128,39 +141,56 @@ impl<'a> GraphQuery<'a> {
     }
 
     fn source_llb(
-        builder: &'a BuilderConfig,
+        config: &'a dyn BaseImageConfig,
         commands: &'a [CustomCommand],
-    ) -> OperationOutput<'a> {
+    ) -> Option<OperationOutput<'a>> {
         if !commands.is_empty() {
-            let mut output = builder.source().output();
+            let mut last_output = config.image_source().map(|source| source.output());
 
             for command in commands {
-                let (name, args) = match command.kind {
+                let (name, args, display) = match command.kind {
                     CustomCommandKind::Command(ref name_and_args) => {
                         let mut iter = name_and_args.iter().map(String::as_str);
 
-                        (iter.next().unwrap(), Either::Left(iter))
+                        (
+                            iter.next().unwrap(),
+                            Either::Left(iter),
+                            command
+                                .display
+                                .as_ref()
+                                .map(Cow::Borrowed)
+                                .unwrap_or_else(|| Cow::Owned(name_and_args.join(" "))),
+                        )
                     }
 
                     CustomCommandKind::Shell(ref shell) => (
                         "/bin/sh",
                         Either::Right(once("-c").chain(once(shell.as_str()))),
+                        command
+                            .display
+                            .as_ref()
+                            .map(Cow::Borrowed)
+                            .unwrap_or_else(|| Cow::Borrowed(shell)),
                     ),
                 };
 
-                output = {
-                    builder
+                last_output = Some(
+                    config
                         .populate_env(Command::run(name))
                         .args(args)
-                        .mount(Mount::Layer(OutputIdx(0), output, "/"))
+                        .mount(match last_output {
+                            Some(output) => Mount::Layer(OutputIdx(0), output, "/"),
+                            None => Mount::Scratch(OutputIdx(0), "/"),
+                        })
+                        .custom_name(format!("Running   `{}`", display))
                         .ref_counted()
-                        .output(0)
-                };
+                        .output(0),
+                );
             }
 
-            output
+            last_output
         } else {
-            builder.source().output()
+            config.image_source().map(|source| source.output())
         }
     }
 
@@ -180,7 +210,7 @@ impl<'a> GraphQuery<'a> {
             outputs.into_iter().fold(operation, |output, mapping| {
                 let (index, layer_path) = match output.last_output_index() {
                     Some(index) => (index + 1, LayerPath::Own(OwnOutputIdx(index), mapping.to)),
-                    None => (0, self.config.output().layer_path(mapping.to)),
+                    None => (0, self.output_layer_path(mapping.to)),
                 };
 
                 output.append(
@@ -195,6 +225,16 @@ impl<'a> GraphQuery<'a> {
         Ok(Terminal::with(
             operation.ref_counted().last_output().unwrap(),
         ))
+    }
+
+    fn output_layer_path<P>(&self, path: P) -> LayerPath<'a, P>
+    where
+        P: AsRef<Path>,
+    {
+        match self.output_source {
+            Some(ref output) => LayerPath::Other(output.clone(), path),
+            None => LayerPath::Scratch(path),
+        }
     }
 
     fn outputs(&self) -> impl Iterator<Item = BuildOutput<'_>> {
@@ -298,7 +338,7 @@ impl<'a> GraphQuery<'a> {
 
             let (node_llb, output) = serialize_node(
                 &self.config,
-                self.builder_source.clone(),
+                self.builder_source.clone().unwrap(),
                 deps[index.index()].as_ref().unwrap(),
                 self.original_graph.node_weight(index).unwrap(),
             );

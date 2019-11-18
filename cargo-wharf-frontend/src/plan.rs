@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use buildkit_frontend::Bridge;
 use buildkit_llb::prelude::*;
 
-use crate::config::Config;
+use crate::config::{BaseImageConfig, Config};
 use crate::query::Profile;
 use crate::shared::{tools, CONTEXT, CONTEXT_PATH};
 

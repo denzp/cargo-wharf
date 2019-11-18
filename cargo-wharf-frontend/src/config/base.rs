@@ -52,6 +52,8 @@ pub struct BinaryDefinition {
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct CustomCommand {
+    pub display: Option<String>,
+
     #[serde(flatten)]
     pub kind: CustomCommandKind,
 }
