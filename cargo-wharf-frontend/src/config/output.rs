@@ -115,8 +115,12 @@ impl OutputConfig {
             .map(|(key, value)| (key.as_str(), value.as_str()))
     }
 
-    pub fn pre_install_commands(&self) -> &Option<Vec<CustomCommand>> {
-        &self.overrides.pre_install_commands
+    pub fn pre_install_commands(&self) -> Option<&Vec<CustomCommand>> {
+        self.overrides.pre_install_commands.as_ref()
+    }
+
+    pub fn post_install_commands(&self) -> Option<&Vec<CustomCommand>> {
+        self.overrides.post_install_commands.as_ref()
     }
 }
 

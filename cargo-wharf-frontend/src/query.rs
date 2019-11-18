@@ -1,6 +1,5 @@
-use std::borrow::Cow;
 use std::convert::TryFrom;
-use std::iter::once;
+use std::iter::{empty, once};
 use std::path::{Path, PathBuf};
 
 use chrono::prelude::*;
@@ -16,7 +15,7 @@ use buildkit_frontend::{Bridge, OutputRef};
 use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
-use crate::config::{BaseImageConfig, Config, CustomCommand, CustomCommandKind};
+use crate::config::{BaseImageConfig, Config, CustomCommand};
 use crate::frontend::Options;
 use crate::graph::{
     BuildGraph, Node, NodeCommand, NodeCommandDetails, NodeKind, PrimitiveNodeKind,
@@ -58,7 +57,6 @@ impl<'a> GraphQuery<'a> {
             config
                 .builder()
                 .setup_commands()
-                .as_ref()
                 .map(Vec::as_ref)
                 .unwrap_or_default(),
         );
@@ -68,7 +66,6 @@ impl<'a> GraphQuery<'a> {
             config
                 .output()
                 .pre_install_commands()
-                .as_ref()
                 .map(Vec::as_ref)
                 .unwrap_or_default(),
         );
@@ -147,37 +144,11 @@ impl<'a> GraphQuery<'a> {
         if !commands.is_empty() {
             let mut last_output = config.image_source().map(|source| source.output());
 
-            for command in commands {
-                let (name, args, display) = match command.kind {
-                    CustomCommandKind::Command(ref name_and_args) => {
-                        let mut iter = name_and_args.iter().map(String::as_str);
-
-                        (
-                            iter.next().unwrap(),
-                            Either::Left(iter),
-                            command
-                                .display
-                                .as_ref()
-                                .map(Cow::Borrowed)
-                                .unwrap_or_else(|| Cow::Owned(name_and_args.join(" "))),
-                        )
-                    }
-
-                    CustomCommandKind::Shell(ref shell) => (
-                        "/bin/sh",
-                        Either::Right(once("-c").chain(once(shell.as_str()))),
-                        command
-                            .display
-                            .as_ref()
-                            .map(Cow::Borrowed)
-                            .unwrap_or_else(|| Cow::Borrowed(shell)),
-                    ),
-                };
-
+            for (name, args, display) in commands.iter().map(From::from) {
                 last_output = Some(
                     config
                         .populate_env(Command::run(name))
-                        .args(args)
+                        .args(args.iter())
                         .mount(match last_output {
                             Some(output) => Mount::Layer(OutputIdx(0), output, "/"),
                             None => Mount::Scratch(OutputIdx(0), "/"),
@@ -221,6 +192,46 @@ impl<'a> GraphQuery<'a> {
                 )
             })
         };
+
+        let mut commands_iter = {
+            self.config
+                .output()
+                .post_install_commands()
+                .map(|commands| Either::Left(commands.iter().map(From::from)))
+                .unwrap_or_else(|| Either::Right(empty()))
+        };
+
+        if let Some((name, args, display)) = commands_iter.next() {
+            let mut output = {
+                self.config
+                    .output()
+                    .populate_env(Command::run(name))
+                    .args(args.iter())
+                    .mount(Mount::Layer(
+                        OutputIdx(0),
+                        operation.ref_counted().last_output().unwrap(),
+                        "/",
+                    ))
+                    .custom_name(format!("Running   `{}`", display))
+                    .ref_counted()
+                    .output(0)
+            };
+
+            for (name, args, display) in commands_iter {
+                output = {
+                    self.config
+                        .output()
+                        .populate_env(Command::run(name))
+                        .args(args.iter())
+                        .mount(Mount::Layer(OutputIdx(0), output, "/"))
+                        .custom_name(format!("Running   `{}`", display))
+                        .ref_counted()
+                        .output(0)
+                };
+            }
+
+            return Ok(Terminal::with(output));
+        }
 
         Ok(Terminal::with(
             operation.ref_counted().last_output().unwrap(),

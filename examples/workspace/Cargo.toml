@@ -15,8 +15,8 @@ image = "debian:stable-slim"
 workdir = "/root"
 user = "root"
 pre-install-commands = [
-  { shell = "echo '' > /tmp/custom-setup", display = "My custom pre-install command" },
+  { shell = "echo 'pre-install' > /custom-setup", display = "My custom pre-install command" },
 ]
 post-install-commands = [
-  { shell = "echo '' > /tmp/custom-post-setup", display = "My custom post-install command" },
+  { shell = "echo 'post-install' > /custom-post-setup", display = "My custom post-install command" },
 ]

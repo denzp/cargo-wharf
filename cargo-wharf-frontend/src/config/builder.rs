@@ -122,8 +122,8 @@ impl BuilderConfig {
             .map(|(key, value)| (key.as_str(), value.as_str()))
     }
 
-    pub fn setup_commands(&self) -> &Option<Vec<CustomCommand>> {
-        &self.overrides.setup_commands
+    pub fn setup_commands(&self) -> Option<&Vec<CustomCommand>> {
+        self.overrides.setup_commands.as_ref()
     }
 }
 

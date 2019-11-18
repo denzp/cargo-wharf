@@ -23,6 +23,18 @@ function setup() {
     [ "${lines[1]}" = "Hello from binary 2" ]
 }
 
+@test "workspace example :: custom commands" {
+    docker build -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace examples/workspace
+
+    run docker run --rm cargo-wharf/example-workspace cat /custom-setup
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" = "pre-install" ]
+
+    run docker run --rm cargo-wharf/example-workspace cat /custom-post-setup
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" = "post-install" ]
+}
+
 @test "workspace example :: tests" {
     docker build -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace:test examples/workspace --build-arg profile=test
 

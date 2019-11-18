@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::path::PathBuf;
@@ -93,6 +94,35 @@ impl BaseBuilderConfig {
 impl BaseOutputConfig {
     pub fn source(&self) -> ImageSource {
         Source::image(&self.image).with_resolve_mode(ResolveMode::PreferLocal)
+    }
+}
+
+impl<'a> From<&'a CustomCommand> for (&'a str, Vec<&'a str>, Cow<'a, str>) {
+    fn from(command: &'a CustomCommand) -> Self {
+        match command.kind {
+            CustomCommandKind::Command(ref name_and_args) => (
+                &name_and_args[0],
+                name_and_args[1..]
+                    .iter()
+                    .map(String::as_str)
+                    .collect::<Vec<_>>(),
+                command
+                    .display
+                    .as_ref()
+                    .map(|display| Cow::Borrowed(display.as_str()))
+                    .unwrap_or_else(|| Cow::Owned(name_and_args.join(" "))),
+            ),
+
+            CustomCommandKind::Shell(ref shell) => (
+                "/bin/sh",
+                vec!["-c", shell.as_str()],
+                command
+                    .display
+                    .as_ref()
+                    .map(|display| Cow::Borrowed(display.as_str()))
+                    .unwrap_or_else(|| Cow::Borrowed(shell.as_str())),
+            ),
+        }
     }
 }
 
