@@ -15,11 +15,11 @@ openssl-sys = "0.9"
 [package.metadata.wharf.builder]
 image = "clux/muslrust:nightly-2019-09-28"
 target = "x86_64-unknown-linux-musl"
-setup-commands = [
-  { command = ["apt-get", "update"], display = "Update apt-get cache" },
-  { command = ["apt-get", "install", "-y", "protobuf-compiler"] },
-  { shell = "echo '' > /custom-output" },
-]
+# setup-commands = [
+#   { command = ["apt-get", "update"], display = "Update apt-get cache" },
+#   { command = ["apt-get", "install", "-y", "protobuf-compiler"] },
+#   { shell = "echo '' > /custom-output" },
+# ]
 
 [package.metadata.wharf.output]
 image = "scratch"
