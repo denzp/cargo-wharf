@@ -45,6 +45,22 @@ The semantics of the metadata *loosely* tries to follow `Dockerfile` directives.
 image = "rust"
 ```
 
+| Setup commands | |
+|--:|:--|
+| Key | `package.metadata.wharf.builder.setup-commands` |
+| Data type| `Option<Vec<CustomCommand>>` |
+| Description | Execute commands to setup the builder image. |
+| `Dockerfile` counterpart | [`RUN`] |
+
+``` toml
+[package.metadata.wharf.builder]
+image = "rust"
+setup-commands = [
+  { shell = "apt-get update && apt-get install -y adb" },
+  { command = ["apt-get", "install", "-y", "ffmpeg"], display = "Install ffmpeg" },
+]
+```
+
 | User | |
 |--:|:--|
 | Key | `package.metadata.wharf.builder.user` |
@@ -116,6 +132,37 @@ image = "debian:stable-slim"
 ``` toml
 [package.metadata.wharf.output]
 image = "scratch"
+```
+
+| Pre-install commands | |
+|--:|:--|
+| Key | `package.metadata.wharf.output.pre-install-commands` |
+| Data type| `Option<Vec<CustomCommand>>` |
+| Description | Execute commands in the output image before the binaries are copied. |
+| `Dockerfile` counterpart | [`RUN`] |
+
+``` toml
+[package.metadata.wharf.output]
+image = "debian"
+pre-install-commands = [
+  { shell = "apt-get update && apt-get install -y adb", display = "My custom shell command" },
+  { command = ["apt-get", "install", "-y", "ffmpeg"], display = "My custom command" },
+]
+```
+
+| Post-install commands | |
+|--:|:--|
+| Key | `package.metadata.wharf.output.post-install-commands` |
+| Data type| `Option<Vec<CustomCommand>>` |
+| Description | Execute commands in the output image after the binaries were copied. |
+| `Dockerfile` counterpart | [`RUN`] |
+
+``` toml
+[package.metadata.wharf.output]
+image = "debian"
+post-install-commands = [
+  { shell = "ldd my-binary-1 | grep -qzv 'not found'", display = "Check shared deps" },
+]
 ```
 
 | User | |
@@ -237,7 +284,7 @@ image = "scratch"
 
 | Stop signal | |
 |--:|:--|
-| Key | `package.metadata.wharf.output.stop_signal` |
+| Key | `package.metadata.wharf.output.stop-signal` |
 | Data type| `Option<Signal>` |
 | Description | System call signal that will be sent to the container to exit. |
 | `Dockerfile` counterpart | [`STOPSIGNAL`] |
@@ -245,7 +292,7 @@ image = "scratch"
 ``` toml
 [package.metadata.wharf.output]
 image = "scratch"
-stop_signal = "SIGINT"
+stop-signal = "SIGINT"
 ```
 
 # Binaries
@@ -355,6 +402,7 @@ docker build -f Cargo.toml . \
 [`EXPOSE`]: https://docs.docker.com/engine/reference/builder/#expose
 [`VOLUME`]: https://docs.docker.com/engine/reference/builder/#volume
 [`STOPSIGNAL`]: https://docs.docker.com/engine/reference/builder/#stopsignal
+[`RUN`]: https://docs.docker.com/engine/reference/builder/#run
 
 [BuildKit]: https://github.com/moby/buildkit
 ["Note for Docker users" section]: https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/experimental.md#note-for-docker-users

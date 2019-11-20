@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use std::iter::once;
+use std::iter::{empty, once};
 use std::path::{Path, PathBuf};
 
 use chrono::prelude::*;
@@ -15,7 +15,7 @@ use buildkit_frontend::{Bridge, OutputRef};
 use buildkit_llb::prelude::*;
 use buildkit_proto::pb;
 
-use crate::config::Config;
+use crate::config::{BaseImageConfig, Config, CustomCommand};
 use crate::frontend::Options;
 use crate::graph::{
     BuildGraph, Node, NodeCommand, NodeCommandDetails, NodeKind, PrimitiveNodeKind,
@@ -38,6 +38,8 @@ pub struct GraphQuery<'a> {
     reversed_graph: Reversed<&'a StableGraph<Node, ()>>,
 
     config: &'a Config,
+    builder_source: Option<OperationOutput<'a>>,
+    output_source: Option<OperationOutput<'a>>,
 }
 
 struct OutputMapping<'a> {
@@ -50,11 +52,31 @@ type BuildOutput<'a> = (NodeIndex, &'a Node, PathBuf);
 
 impl<'a> GraphQuery<'a> {
     pub fn new(graph: &'a BuildGraph, config: &'a Config) -> Self {
+        let builder_source = Self::source_llb(
+            config.builder(),
+            config
+                .builder()
+                .setup_commands()
+                .map(Vec::as_ref)
+                .unwrap_or_default(),
+        );
+
+        let output_source = Self::source_llb(
+            config.output(),
+            config
+                .output()
+                .pre_install_commands()
+                .map(Vec::as_ref)
+                .unwrap_or_default(),
+        );
+
         Self {
             original_graph: graph.inner(),
             reversed_graph: Reversed(graph.inner()),
 
             config,
+            builder_source,
+            output_source,
         }
     }
 
@@ -69,22 +91,10 @@ impl<'a> GraphQuery<'a> {
     }
 
     pub fn image_spec(&self) -> Result<ImageSpecification, Error> {
-        let output = self.config.output_image();
+        let output = self.config.output();
 
         let config = match self.config.profile() {
-            Profile::ReleaseBinaries | Profile::DebugBinaries => ImageConfig {
-                entrypoint: output.entrypoint.clone(),
-                cmd: output.cmd.clone(),
-                env: output.env.clone(),
-                user: output.user.clone(),
-                working_dir: output.workdir.clone(),
-
-                labels: self.config.output_image().labels.clone(),
-                volumes: self.config.output_image().volumes.clone(),
-                exposed_ports: self.config.output_image().exposed_ports.clone(),
-                stop_signal: self.config.output_image().stop_signal,
-            },
-
+            Profile::ReleaseBinaries | Profile::DebugBinaries => self.config.output().into(),
             Profile::ReleaseTests | Profile::DebugTests => ImageConfig {
                 entrypoint: Some(
                     once(tools::TEST_RUNNER.into())
@@ -94,9 +104,16 @@ impl<'a> GraphQuery<'a> {
                         )
                         .collect(),
                 ),
+
+                env: Some(
+                    output
+                        .env()
+                        .map(|(name, value)| (name.into(), value.into()))
+                        .collect(),
+                ),
+
                 cmd: None,
-                env: output.env.clone(),
-                user: output.user.clone(),
+                user: output.user().map(String::from),
                 working_dir: None,
 
                 labels: None,
@@ -120,6 +137,34 @@ impl<'a> GraphQuery<'a> {
         })
     }
 
+    fn source_llb(
+        config: &'a dyn BaseImageConfig,
+        commands: &'a [CustomCommand],
+    ) -> Option<OperationOutput<'a>> {
+        if !commands.is_empty() {
+            let mut last_output = config.image_source().map(|source| source.output());
+
+            for (name, args, display) in commands.iter().map(From::from) {
+                last_output = Some(
+                    config
+                        .populate_env(Command::run(name))
+                        .args(args.iter())
+                        .mount(match last_output {
+                            Some(output) => Mount::Layer(OutputIdx(0), output, "/"),
+                            None => Mount::Scratch(OutputIdx(0), "/"),
+                        })
+                        .custom_name(format!("Running   `{}`", display))
+                        .ref_counted()
+                        .output(0),
+                );
+            }
+
+            last_output
+        } else {
+            config.image_source().map(|source| source.output())
+        }
+    }
+
     fn terminal(&self) -> Result<Terminal<'a>, Error> {
         debug!("serializing all nodes");
         let nodes = self.serialize_all_nodes();
@@ -136,7 +181,7 @@ impl<'a> GraphQuery<'a> {
             outputs.into_iter().fold(operation, |output, mapping| {
                 let (index, layer_path) = match output.last_output_index() {
                     Some(index) => (index + 1, LayerPath::Own(OwnOutputIdx(index), mapping.to)),
-                    None => (0, self.config.output_image().layer_path(mapping.to)),
+                    None => (0, self.output_layer_path(mapping.to)),
                 };
 
                 output.append(
@@ -148,9 +193,59 @@ impl<'a> GraphQuery<'a> {
             })
         };
 
+        let mut commands_iter = {
+            self.config
+                .output()
+                .post_install_commands()
+                .map(|commands| Either::Left(commands.iter().map(From::from)))
+                .unwrap_or_else(|| Either::Right(empty()))
+        };
+
+        if let Some((name, args, display)) = commands_iter.next() {
+            let mut output = {
+                self.config
+                    .output()
+                    .populate_env(Command::run(name))
+                    .args(args.iter())
+                    .mount(Mount::Layer(
+                        OutputIdx(0),
+                        operation.ref_counted().last_output().unwrap(),
+                        "/",
+                    ))
+                    .custom_name(format!("Running   `{}`", display))
+                    .ref_counted()
+                    .output(0)
+            };
+
+            for (name, args, display) in commands_iter {
+                output = {
+                    self.config
+                        .output()
+                        .populate_env(Command::run(name))
+                        .args(args.iter())
+                        .mount(Mount::Layer(OutputIdx(0), output, "/"))
+                        .custom_name(format!("Running   `{}`", display))
+                        .ref_counted()
+                        .output(0)
+                };
+            }
+
+            return Ok(Terminal::with(output));
+        }
+
         Ok(Terminal::with(
             operation.ref_counted().last_output().unwrap(),
         ))
+    }
+
+    fn output_layer_path<P>(&self, path: P) -> LayerPath<'a, P>
+    where
+        P: AsRef<Path>,
+    {
+        match self.output_source {
+            Some(ref output) => LayerPath::Other(output.clone(), path),
+            None => LayerPath::Scratch(path),
+        }
     }
 
     fn outputs(&self) -> impl Iterator<Item = BuildOutput<'_>> {
@@ -254,6 +349,7 @@ impl<'a> GraphQuery<'a> {
 
             let (node_llb, output) = serialize_node(
                 &self.config,
+                self.builder_source.clone().unwrap(),
                 deps[index.index()].as_ref().unwrap(),
                 self.original_graph.node_weight(index).unwrap(),
             );
@@ -297,17 +393,25 @@ impl<'a> GraphQuery<'a> {
 
 fn serialize_node<'a>(
     config: &'a Config,
+    source: OperationOutput<'a>,
     deps: &[Mount<'a, PathBuf>],
     node: &'a Node,
 ) -> (Command<'a>, OutputIdx) {
     let (mut command, index) = match node.command() {
-        NodeCommand::Simple(ref details) => {
-            serialize_command(config, create_target_dirs(node.output_dirs_iter()), details)
-        }
+        NodeCommand::Simple(ref details) => serialize_command(
+            config,
+            source,
+            create_target_dirs(node.output_dirs_iter()),
+            details,
+        ),
 
         NodeCommand::WithBuildscript { compile, run } => {
-            let (mut compile_command, compile_index) =
-                serialize_command(config, create_target_dirs(node.output_dirs_iter()), compile);
+            let (mut compile_command, compile_index) = serialize_command(
+                config,
+                source.clone(),
+                create_target_dirs(node.output_dirs_iter()),
+                compile,
+            );
 
             compile_command = compile_command
                 .custom_name(format!("Compiling {} [build script]", node.package_name()));
@@ -318,6 +422,7 @@ fn serialize_node<'a>(
 
             serialize_command(
                 config,
+                source,
                 compile_command.ref_counted().output(compile_index.0),
                 run,
             )
@@ -373,10 +478,11 @@ fn serialize_node<'a>(
 
 fn serialize_command<'a, 'b: 'a>(
     config: &'a Config,
+    source: OperationOutput<'a>,
     target_layer: OperationOutput<'b>,
     command: &'b NodeCommandDetails,
 ) -> (Command<'a>, OutputIdx) {
-    let builder = config.builder_image();
+    let builder = config.builder();
 
     let mut command_llb = {
         builder
@@ -384,7 +490,7 @@ fn serialize_command<'a, 'b: 'a>(
             .cwd(&command.cwd)
             .args(&command.args)
             .env_iter(&command.env)
-            .mount(Mount::ReadOnlyLayer(builder.source().output(), "/"))
+            .mount(Mount::ReadOnlyLayer(source, "/"))
             .mount(Mount::Layer(OutputIdx(0), target_layer, TARGET_PATH))
             .mount(Mount::Scratch(OutputIdx(1), "/tmp"))
     };
@@ -441,7 +547,7 @@ mod tests {
     use serde_json::from_slice;
 
     use super::*;
-    use crate::config::{BinaryDefinition, BuilderImage, OutputImage};
+    use crate::config::{BinaryDefinition, BuilderConfig, OutputConfig};
     use crate::plan::RawBuildPlan;
 
     #[test]
@@ -490,8 +596,8 @@ mod tests {
     }
 
     fn create_config(profile: Profile) -> Config {
-        let builder = BuilderImage::new(Source::image("rust"), "/root/.cargo".into());
-        let output = OutputImage::default();
+        let builder = BuilderConfig::mocked_new(Source::image("rust"), "/root/.cargo".into());
+        let output = OutputConfig::mocked_new();
 
         let binaries = vec![
             BinaryDefinition {
@@ -504,6 +610,6 @@ mod tests {
             },
         ];
 
-        Config::new(builder, output, profile, binaries)
+        Config::mocked_new(builder, output, profile, binaries)
     }
 }

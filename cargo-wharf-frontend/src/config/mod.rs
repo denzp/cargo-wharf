@@ -1,9 +1,11 @@
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use failure::{Error, ResultExt};
 use serde::Serialize;
 
 use buildkit_frontend::Bridge;
+use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
 use crate::query::Profile;
@@ -13,9 +15,9 @@ mod base;
 mod builder;
 mod output;
 
-pub use self::base::{BinaryDefinition, ConfigBase};
-pub use self::builder::BuilderImage;
-pub use self::output::OutputImage;
+pub use self::base::{BaseConfig, BinaryDefinition, CustomCommand, CustomCommandKind};
+pub use self::builder::BuilderConfig;
+pub use self::output::OutputConfig;
 pub use crate::frontend::Options;
 
 const OUTPUT_LAYER_PATH: &str = "/output";
@@ -23,8 +25,8 @@ const OUTPUT_NAME: &str = "build-config.json";
 
 #[derive(Debug, Serialize)]
 pub struct Config {
-    builder: BuilderImage,
-    output: OutputImage,
+    builder: BuilderConfig,
+    output: OutputConfig,
     profile: Profile,
     manifest_path: PathBuf,
 
@@ -32,6 +34,11 @@ pub struct Config {
     enabled_features: Vec<String>,
 
     binaries: Vec<BinaryDefinition>,
+}
+
+pub trait BaseImageConfig {
+    fn populate_env<'a>(&self, command: Command<'a>) -> Command<'a>;
+    fn image_source(&self) -> Option<&ImageSource>;
 }
 
 impl Config {
@@ -80,18 +87,18 @@ impl Config {
                 .context("Unable to read metadata output")?
         };
 
-        let base: ConfigBase = {
+        let base: BaseConfig = {
             serde_json::from_slice(&metadata).context("Unable to parse configuration metadata")?
         };
 
         let builder = {
-            BuilderImage::analyse(bridge, base.builder)
+            BuilderConfig::analyse(bridge, base.builder)
                 .await
                 .context("Unable to analyse builder image")?
         };
 
         let output = {
-            OutputImage::analyse(bridge, base.output)
+            OutputConfig::analyse(bridge, base.output)
                 .await
                 .context("Unable to analyse output image")?
         };
@@ -117,9 +124,9 @@ impl Config {
     }
 
     #[cfg(test)]
-    pub fn new(
-        builder: BuilderImage,
-        output: OutputImage,
+    pub fn mocked_new(
+        builder: BuilderConfig,
+        output: OutputConfig,
         profile: Profile,
         binaries: Vec<BinaryDefinition>,
     ) -> Self {
@@ -134,11 +141,11 @@ impl Config {
         }
     }
 
-    pub fn builder_image(&self) -> &BuilderImage {
+    pub fn builder(&self) -> &BuilderConfig {
         &self.builder
     }
 
-    pub fn output_image(&self) -> &OutputImage {
+    pub fn output(&self) -> &OutputConfig {
         &self.output
     }
 
@@ -160,5 +167,19 @@ impl Config {
 
     pub fn manifest_path(&self) -> &Path {
         self.manifest_path.as_path()
+    }
+}
+
+fn merge_spec_and_overriden_env(
+    spec_env: &Option<BTreeMap<String, String>>,
+    overriden_env: &Option<BTreeMap<String, String>>,
+) -> BTreeMap<String, String> {
+    match (spec_env.clone(), overriden_env.clone()) {
+        (Some(mut spec), Some(mut config)) => {
+            spec.append(&mut config);
+            spec
+        }
+
+        (spec, config) => spec.or(config).unwrap_or_default(),
     }
 }

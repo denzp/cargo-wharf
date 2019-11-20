@@ -100,6 +100,18 @@ jobs:
           DOCKER_BUILDKIT: 1
           EXPORT_DOCKER_CACHE: 1
 
+      - name: Dump dmesg output
+        if: failure()
+        run: dmesg
+
+      - name: Dump buildkit logs
+        if: failure()
+        run: docker logs buildx_buildkit_ci-builder0
+
+      - name: Dump docker logs
+        if: failure()
+        run: sudo journalctl -eu docker
+
   publish-cargo-wharf-frontend:
     name: Publish cargo-wharf-frontend to Docker Hub with 'master' tag
     runs-on: ubuntu-latest

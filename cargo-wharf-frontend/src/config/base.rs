@@ -1,9 +1,9 @@
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::path::PathBuf;
 
 use failure::{bail, format_err, Error};
-use log::*;
 use serde::{Deserialize, Serialize};
 
 use buildkit_frontend::oci::{ExposedPort, Signal};
@@ -12,24 +12,25 @@ use buildkit_llb::prelude::*;
 
 #[derive(Debug, PartialEq, Deserialize)]
 #[serde(try_from = "Vec<schema::MetadataWrapper>")]
-pub struct ConfigBase {
-    pub builder: BuilderConfig,
-    pub output: OutputConfig,
+pub struct BaseConfig {
+    pub builder: BaseBuilderConfig,
+    pub output: BaseOutputConfig,
     pub binaries: Vec<BinaryDefinition>,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
-pub struct BuilderConfig {
+pub struct BaseBuilderConfig {
     pub image: String,
     pub user: Option<String>,
     pub env: Option<BTreeMap<String, String>>,
     pub target: Option<String>,
+    pub setup_commands: Option<Vec<CustomCommand>>,
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
-pub struct OutputConfig {
+pub struct BaseOutputConfig {
     pub image: String,
     pub user: Option<String>,
     pub workdir: Option<PathBuf>,
@@ -40,6 +41,8 @@ pub struct OutputConfig {
     pub volumes: Option<Vec<PathBuf>>,
     pub labels: Option<BTreeMap<String, String>>,
     pub stop_signal: Option<Signal>,
+    pub pre_install_commands: Option<Vec<CustomCommand>>,
+    pub post_install_commands: Option<Vec<CustomCommand>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -48,12 +51,25 @@ pub struct BinaryDefinition {
     pub destination: PathBuf,
 }
 
-impl TryFrom<Vec<schema::MetadataWrapper>> for ConfigBase {
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+pub struct CustomCommand {
+    pub display: Option<String>,
+
+    #[serde(flatten)]
+    pub kind: CustomCommandKind,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum CustomCommandKind {
+    Shell(String),
+    Command(Vec<String>),
+}
+
+impl TryFrom<Vec<schema::MetadataWrapper>> for BaseConfig {
     type Error = Error;
 
     fn try_from(raw: Vec<schema::MetadataWrapper>) -> Result<Self, Self::Error> {
-        debug!("raw metadata: {:?}", raw);
-
         let (builder, output, binaries) = {
             raw.into_iter()
                 .filter_map(|item| item.metadata)
@@ -69,21 +85,50 @@ impl TryFrom<Vec<schema::MetadataWrapper>> for ConfigBase {
     }
 }
 
-impl BuilderConfig {
+impl BaseBuilderConfig {
     pub fn source(&self) -> ImageSource {
         Source::image(&self.image).with_resolve_mode(ResolveMode::PreferLocal)
     }
 }
 
-impl OutputConfig {
+impl BaseOutputConfig {
     pub fn source(&self) -> ImageSource {
         Source::image(&self.image).with_resolve_mode(ResolveMode::PreferLocal)
+    }
+}
+
+impl<'a> From<&'a CustomCommand> for (&'a str, Vec<&'a str>, Cow<'a, str>) {
+    fn from(command: &'a CustomCommand) -> Self {
+        match command.kind {
+            CustomCommandKind::Command(ref name_and_args) => (
+                &name_and_args[0],
+                name_and_args[1..]
+                    .iter()
+                    .map(String::as_str)
+                    .collect::<Vec<_>>(),
+                command
+                    .display
+                    .as_ref()
+                    .map(|display| Cow::Borrowed(display.as_str()))
+                    .unwrap_or_else(|| Cow::Owned(name_and_args.join(" "))),
+            ),
+
+            CustomCommandKind::Shell(ref shell) => (
+                "/bin/sh",
+                vec!["-c", shell.as_str()],
+                command
+                    .display
+                    .as_ref()
+                    .map(|display| Cow::Borrowed(display.as_str()))
+                    .unwrap_or_else(|| Cow::Borrowed(shell.as_str())),
+            ),
+        }
     }
 }
 
 type ConfigCtx = (
-    Option<BuilderConfig>,
-    Option<OutputConfig>,
+    Option<BaseBuilderConfig>,
+    Option<BaseOutputConfig>,
     Vec<BinaryDefinition>,
 );
 
@@ -125,7 +170,7 @@ fn transformation() {
         MetadataWrapper {
             metadata: Some(PackageMetadata {
                 wharf: Some(WharfMetadata {
-                    output: Some(OutputConfig {
+                    output: Some(BaseOutputConfig {
                         image: "alpine:latest".into(),
                         user: Some("root".into()),
                         workdir: Some("/root".into()),
@@ -136,6 +181,8 @@ fn transformation() {
                         volumes: None,
                         labels: None,
                         stop_signal: None,
+                        pre_install_commands: None,
+                        post_install_commands: None,
                     }),
 
                     builder: None,
@@ -146,11 +193,12 @@ fn transformation() {
         MetadataWrapper {
             metadata: Some(PackageMetadata {
                 wharf: Some(WharfMetadata {
-                    builder: Some(BuilderConfig {
+                    builder: Some(BaseBuilderConfig {
                         image: "rust:latest".into(),
                         env: None,
                         user: None,
                         target: None,
+                        setup_commands: None,
                     }),
 
                     output: None,
@@ -188,15 +236,16 @@ fn transformation() {
     ];
 
     assert_eq!(
-        ConfigBase::try_from(raw).unwrap(),
-        ConfigBase {
-            builder: BuilderConfig {
+        BaseConfig::try_from(raw).unwrap(),
+        BaseConfig {
+            builder: BaseBuilderConfig {
                 image: "rust:latest".into(),
                 env: None,
                 user: None,
                 target: None,
+                setup_commands: None,
             },
-            output: OutputConfig {
+            output: BaseOutputConfig {
                 image: "alpine:latest".into(),
                 user: Some("root".into()),
                 workdir: Some("/root".into()),
@@ -207,6 +256,8 @@ fn transformation() {
                 volumes: None,
                 labels: None,
                 stop_signal: None,
+                pre_install_commands: None,
+                post_install_commands: None,
             },
             binaries: vec![
                 BinaryDefinition {
@@ -230,13 +281,14 @@ fn duplicated_config() {
         MetadataWrapper {
             metadata: Some(PackageMetadata {
                 wharf: Some(WharfMetadata {
-                    builder: Some(BuilderConfig {
+                    builder: Some(BaseBuilderConfig {
                         image: "rust:latest".into(),
                         env: None,
                         user: None,
                         target: None,
+                        setup_commands: None,
                     }),
-                    output: Some(OutputConfig {
+                    output: Some(BaseOutputConfig {
                         image: "alpine:latest".into(),
                         user: Some("root".into()),
                         workdir: Some("/root".into()),
@@ -247,6 +299,8 @@ fn duplicated_config() {
                         volumes: None,
                         labels: None,
                         stop_signal: None,
+                        pre_install_commands: None,
+                        post_install_commands: None,
                     }),
 
                     binary: None,
@@ -256,11 +310,12 @@ fn duplicated_config() {
         MetadataWrapper {
             metadata: Some(PackageMetadata {
                 wharf: Some(WharfMetadata {
-                    builder: Some(BuilderConfig {
+                    builder: Some(BaseBuilderConfig {
                         image: "rust:latest".into(),
                         env: None,
                         user: None,
                         target: None,
+                        setup_commands: None,
                     }),
 
                     output: None,
@@ -270,19 +325,20 @@ fn duplicated_config() {
         },
     ];
 
-    assert!(ConfigBase::try_from(raw).is_err());
+    assert!(BaseConfig::try_from(raw).is_err());
 
     let raw = vec![
         MetadataWrapper {
             metadata: Some(PackageMetadata {
                 wharf: Some(WharfMetadata {
-                    builder: Some(BuilderConfig {
+                    builder: Some(BaseBuilderConfig {
                         image: "rust:latest".into(),
                         env: None,
                         user: None,
                         target: None,
+                        setup_commands: None,
                     }),
-                    output: Some(OutputConfig {
+                    output: Some(BaseOutputConfig {
                         image: "alpine:latest".into(),
                         user: Some("root".into()),
                         workdir: Some("/root".into()),
@@ -293,6 +349,8 @@ fn duplicated_config() {
                         volumes: None,
                         labels: None,
                         stop_signal: None,
+                        pre_install_commands: None,
+                        post_install_commands: None,
                     }),
 
                     binary: None,
@@ -302,7 +360,7 @@ fn duplicated_config() {
         MetadataWrapper {
             metadata: Some(PackageMetadata {
                 wharf: Some(WharfMetadata {
-                    output: Some(OutputConfig {
+                    output: Some(BaseOutputConfig {
                         image: "rust:latest".into(),
                         user: None,
                         workdir: None,
@@ -313,6 +371,8 @@ fn duplicated_config() {
                         volumes: None,
                         labels: None,
                         stop_signal: None,
+                        pre_install_commands: None,
+                        post_install_commands: None,
                     }),
 
                     builder: None,
@@ -322,7 +382,7 @@ fn duplicated_config() {
         },
     ];
 
-    assert!(ConfigBase::try_from(raw).is_err());
+    assert!(BaseConfig::try_from(raw).is_err());
 }
 
 #[test]
@@ -333,16 +393,17 @@ fn missing_config() {
         metadata: Some(PackageMetadata { wharf: None }),
     }];
 
-    assert!(ConfigBase::try_from(raw).is_err());
+    assert!(BaseConfig::try_from(raw).is_err());
 
     let raw = vec![MetadataWrapper {
         metadata: Some(PackageMetadata {
             wharf: Some(WharfMetadata {
-                builder: Some(BuilderConfig {
+                builder: Some(BaseBuilderConfig {
                     image: "another".into(),
                     env: None,
                     user: None,
                     target: None,
+                    setup_commands: None,
                 }),
 
                 output: None,
@@ -351,12 +412,12 @@ fn missing_config() {
         }),
     }];
 
-    assert!(ConfigBase::try_from(raw).is_err());
+    assert!(BaseConfig::try_from(raw).is_err());
 
     let raw = vec![MetadataWrapper {
         metadata: Some(PackageMetadata {
             wharf: Some(WharfMetadata {
-                output: Some(OutputConfig {
+                output: Some(BaseOutputConfig {
                     image: "another".into(),
                     user: Some("root".into()),
                     workdir: Some("/root".into()),
@@ -367,6 +428,8 @@ fn missing_config() {
                     volumes: None,
                     labels: None,
                     stop_signal: None,
+                    pre_install_commands: None,
+                    post_install_commands: None,
                 }),
 
                 builder: None,
@@ -375,7 +438,7 @@ fn missing_config() {
         }),
     }];
 
-    assert!(ConfigBase::try_from(raw).is_err());
+    assert!(BaseConfig::try_from(raw).is_err());
 }
 
 mod schema {
@@ -393,8 +456,8 @@ mod schema {
 
     #[derive(Debug, Deserialize)]
     pub(super) struct WharfMetadata {
-        pub(super) builder: Option<BuilderConfig>,
-        pub(super) output: Option<OutputConfig>,
+        pub(super) builder: Option<BaseBuilderConfig>,
+        pub(super) output: Option<BaseOutputConfig>,
         pub(super) binary: Option<Vec<BinaryDefinition>>,
     }
 }

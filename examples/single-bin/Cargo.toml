@@ -24,7 +24,7 @@ entrypoint = ["/bin/wharf-output"]
 args = ["predefined arg"]
 expose = ["3500/tcp", "3600/udp", "3700"]
 volumes = ["/local", "/data"]
-stop_signal = "SIGINT"
+stop-signal = "SIGINT"
 
 [package.metadata.wharf.output.env]
 "NAME 1" = "VALUE 1"

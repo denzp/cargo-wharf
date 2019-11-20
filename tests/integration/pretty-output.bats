@@ -9,6 +9,9 @@ function setup() {
     run docker build -f examples/multi-bin/Cargo.toml examples/multi-bin
 
     [ "$status" -eq 0 ]
+    # [[ "$output" == *"Running   \`Update apt-get cache\`"* ]]
+    # [[ "$output" == *"Running   \`apt-get install -y protobuf-compiler\`"* ]]
+    # [[ "$output" == *"Running   \`echo '' > /custom-output\`"* ]]
     [[ "$output" == *"Compiling pkg-config"* ]]
     [[ "$output" == *"Compiling cc"* ]]
     [[ "$output" == *"Compiling openssl-sys [build script]"* ]]
@@ -22,6 +25,9 @@ function setup() {
     run docker build -f examples/multi-bin/Cargo.toml examples/multi-bin --build-arg profile=test
 
     [ "$status" -eq 0 ]
+    # [[ "$output" == *"Running   \`Update apt-get cache\`"* ]]
+    # [[ "$output" == *"Running   \`apt-get install -y protobuf-compiler\`"* ]]
+    # [[ "$output" == *"Running   \`echo '' > /custom-output\`"* ]]
     [[ "$output" == *"Compiling pkg-config"* ]]
     [[ "$output" == *"Compiling cc"* ]]
     [[ "$output" == *"Compiling openssl-sys [build script]"* ]]
