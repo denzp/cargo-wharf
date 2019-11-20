@@ -1,4 +1,4 @@
-# syntax = denzp/cargo-wharf-frontend:local
+# syntax = localhost:10395/denzp/cargo-wharf-frontend:local
 
 [package]
 name = "single-bin"

@@ -1,11 +1,15 @@
 function maybe_build_container_tools_image {
-    if_changed          cargo-container-tools               build_container_tools_image
-    if_image_missing    denzp/cargo-container-tools:local   build_container_tools_image
+    if_changed          cargo-container-tools                               build_container_tools_image
+    if_image_missing    localhost:10395/denzp/cargo-container-tools:local   build_container_tools_image
+
+    docker push localhost:10395/denzp/cargo-container-tools:local
 }
 
 function maybe_build_frontend_image() {
-    if_changed          cargo-wharf-frontend                build_frontend_image
-    if_image_missing    denzp/cargo-wharf-frontend:local    build_frontend_image
+    if_changed          cargo-wharf-frontend                                build_frontend_image
+    if_image_missing    localhost:10395/denzp/cargo-wharf-frontend:local    build_frontend_image
+
+    docker push localhost:10395/denzp/cargo-wharf-frontend:local
 }
 
 function build_container_tools_image {
@@ -16,8 +20,9 @@ function build_container_tools_image {
         extra_buildx_args+=(--cache-to type=registry,ref=denzp/cargo-container-tools:cache,mode=max)
     fi
 
-    docker buildx build --load -f cargo-container-tools/Cargo.toml . \
-        --tag denzp/cargo-container-tools:local \
+    docker buildx build --load \
+        -f cargo-container-tools/Cargo.toml . \
+        --tag localhost:10395/denzp/cargo-container-tools:local \
         --cache-from type=registry,ref=denzp/cargo-container-tools:cache \
         "${extra_buildx_args[@]}" 2>&3
 
@@ -28,17 +33,15 @@ function build_frontend_image() {
     echo -e '# \rbuilding the frontend docker image...' >&3
 
     extra_buildx_args=()
+    if [[ ! -z "${EXPORT_DOCKER_CACHE}" ]]; then
+        extra_buildx_args+=(--cache-to type=registry,ref=denzp/cargo-wharf-frontend:cache,mode=max)
+    fi
 
-    # caching is disabled for now
-    #
-    # if [[ ! -z "${EXPORT_DOCKER_CACHE}" ]]; then
-    #     extra_buildx_args+=(--cache-to type=registry,ref=denzp/cargo-wharf-frontend:cache,mode=max)
-    # fi
-
-    docker buildx build --load -f cargo-wharf-frontend/Cargo.toml . \
-        --tag denzp/cargo-wharf-frontend:local \
+    docker buildx build --load \
+        -f cargo-wharf-frontend/Cargo.toml . \
+        --tag localhost:10395/denzp/cargo-wharf-frontend:local \
         --build-arg manifest-path=cargo-wharf-frontend/Cargo.toml \
-        --build-arg features=local-container-tools \
+        --build-arg features=integration-testing \
         "${extra_buildx_args[@]}" 2>&3
 
     echo -e '# \rbuilding the frontend docker image... done' >&3
