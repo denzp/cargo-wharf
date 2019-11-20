@@ -1,12 +1,21 @@
-load common
+load helpers/images
+load helpers/registry
 
 function setup() {
+    install_registry
     maybe_build_container_tools_image
     maybe_build_frontend_image
 }
 
+function teardown() {
+    remove_registry
+
+    docker rmi -f cargo-wharf/example-multi-bin:test || true
+    docker rmi -f cargo-wharf/example-multi-bin || true
+}
+
 @test "multi-bin :: binaries" {
-    docker build -f examples/multi-bin/Cargo.toml -t cargo-wharf/example-multi-bin examples/multi-bin
+    docker buildx build --load -f examples/multi-bin/Cargo.toml -t cargo-wharf/example-multi-bin examples/multi-bin
 
     run docker run --rm cargo-wharf/example-multi-bin /bin/bin-1
     [ "$status" -eq 0 ]
@@ -18,7 +27,7 @@ function setup() {
 }
 
 @test "multi-bin :: tests" {
-    docker build -f examples/multi-bin/Cargo.toml -t cargo-wharf/example-multi-bin:test examples/multi-bin --build-arg profile=test
+    docker buildx build --load -f examples/multi-bin/Cargo.toml -t cargo-wharf/example-multi-bin:test examples/multi-bin --build-arg profile=test
 
     run docker run --rm cargo-wharf/example-multi-bin:test
     [ "$status" -eq 0 ]

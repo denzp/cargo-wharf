@@ -1,12 +1,21 @@
-load common
+load helpers/images
+load helpers/registry
 
 function setup() {
+    install_registry
     maybe_build_container_tools_image
     maybe_build_frontend_image
 }
 
+function teardown() {
+    remove_registry
+
+    docker rmi -f cargo-wharf/example-single-bin:test || true
+    docker rmi -f cargo-wharf/example-single-bin || true
+}
+
 @test "single-bin :: binaries" {
-    docker build -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin examples/single-bin
+    docker buildx build --load -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin examples/single-bin
 
     run docker run --rm cargo-wharf/example-single-bin
     [ "$status" -eq 0 ]
@@ -20,7 +29,7 @@ function setup() {
 }
 
 @test "single-bin :: tests" {
-    docker build -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin:test examples/single-bin --build-arg profile=test
+    docker buildx build --load -f examples/single-bin/Cargo.toml -t cargo-wharf/example-single-bin:test examples/single-bin --build-arg profile=test
 
     run docker run --rm cargo-wharf/example-single-bin:test
     [ "$status" -eq 0 ]
