@@ -11,7 +11,7 @@ use crate::config::Config;
 use crate::debug::{DebugKind, DebugOperation};
 use crate::graph::BuildGraph;
 use crate::plan::RawBuildPlan;
-use crate::query::{GraphQuery, Profile};
+use crate::query::{Profile, WharfQuery, WharfStorage};
 
 pub struct CargoFrontend;
 
@@ -61,10 +61,10 @@ impl Frontend<Options> for CargoFrontend {
         debug.maybe(&options, || &plan);
 
         let graph: BuildGraph = plan.into();
-        let query = GraphQuery::new(&graph, &config);
+        let storage = WharfStorage::new(&graph, &config);
 
         debug.maybe(&options, || &graph);
-        debug.maybe(&options, || query.definition().unwrap());
+        debug.maybe(&options, || storage.definition().unwrap());
 
         if !options.debug.is_empty() {
             return Ok(FrontendOutput::with_ref(
@@ -76,8 +76,8 @@ impl Frontend<Options> for CargoFrontend {
         }
 
         Ok(FrontendOutput::with_spec_and_ref(
-            query.image_spec().context("Unable to build image spec")?,
-            query
+            storage.image_spec().context("Unable to build image spec")?,
+            storage
                 .solve(&mut bridge, &options)
                 .await
                 .context("Unable to build the crate")?,

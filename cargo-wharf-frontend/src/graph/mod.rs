@@ -17,6 +17,11 @@ impl BuildGraph {
     pub fn inner(&self) -> &StableGraph<Node, ()> {
         &self.graph
     }
+
+    #[cfg(test)]
+    pub fn into_inner(self) -> StableGraph<Node, ()> {
+        self.graph
+    }
 }
 
 impl From<RawBuildPlan> for BuildGraph {
