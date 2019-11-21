@@ -1,6 +1,6 @@
-## `cargo-wharf` - BuildKit frontend for Cargo and Rust
+# `cargo-wharf-frontend` - BuildKit frontend for Rust
 
-# Usage
+## Usage
 Almost simple as it is:
 ```
 docker build -f Cargo.toml .
@@ -14,18 +14,18 @@ Although, extra one-time setup has to be made before the build.
 4. [Create an output image config](#output-image-config)
 5. [Specify binaries](#binaries)
 
-# BuildKit setup
+## BuildKit setup
 The possibility to build crates without Dockerfile is only possible thanks to [BuildKit] external frontends feature.
 
 As for **Docker v19.03.3**, BuildKit can be enabled just by setting `DOCKER_BUILDKIT=1` env variable when running `docker build`.
 
-# Frontend directive
+## Frontend directive
 To instruct BuildKit to use the frontend, the first line of the `Cargo.toml` should be:
 ```
 # syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.0
 ```
 
-# Builder image config
+## Builder image config
 The builder image is an image that contains Rust toolchain and any extra tools that might be needed to build the crate.
 
 Configuration is made with a `[package.metadata.wharf.builder]` metadata in `Cargo.toml`.
@@ -108,7 +108,7 @@ image = "clux/muslrust:nightly-2019-09-28"
 target = "x86_64-unknown-linux-musl"
 ```
 
-# Output image config
+## Output image config
 The output image is a base where compiled binaries will be put, and tests will run.
 There are no restrictions on which image should be used.
 
@@ -295,7 +295,7 @@ image = "scratch"
 stop-signal = "SIGINT"
 ```
 
-# Binaries
+## Binaries
 It's also important to specify which binaries should be built and where to put them.
 Each crate can use own convention about where the binaries should go.
 
@@ -318,7 +318,7 @@ name = "cargo-test-runner"
 destination = "/cargo-test-runner"
 ```
 
-# Frontend parameters
+## Frontend parameters
 There is an additional way to control the frontend: build arguments.
 
 | Profile | |
