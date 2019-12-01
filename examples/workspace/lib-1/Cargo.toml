@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 lazy_static = "=1.1"
+lexical-core = "0.4"
 
 [dependencies.log]
 git = "https://github.com/rust-lang-nursery/log.git"

@@ -32,12 +32,13 @@ pub struct RawInvocation {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum RawTargetKind {
-    Lib,
     Bin,
     Test,
     CustomBuild,
-    ProcMacro,
     Example,
+
+    #[serde(other)]
+    Other,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
