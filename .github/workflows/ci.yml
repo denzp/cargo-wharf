@@ -113,7 +113,7 @@ jobs:
         run: sudo journalctl -eu docker
 
   publish-cargo-wharf-frontend:
-    name: Publish cargo-wharf-frontend to Docker Hub with 'master' tag
+    name: Publish denzp/cargo-wharf-frontend:master
     runs-on: ubuntu-latest
     needs: [clippy, test, fmt, integration]
     if: github.ref == 'refs/heads/master'
@@ -138,9 +138,11 @@ jobs:
           docker buildx build
           --push -f cargo-wharf-frontend/Cargo.toml .
           --tag denzp/cargo-wharf-frontend:master
+          --build-arg manifest-path=cargo-wharf-frontend/Cargo.toml
+          --build-arg features=container-tools-master
 
   publish-cargo-container-tools:
-    name: Publish cargo-container-tools to Docker Hub with 'master' tag
+    name: Publish denzp/cargo-container-tools:master
     runs-on: ubuntu-latest
     needs: [clippy, test, fmt, integration]
     if: github.ref == 'refs/heads/master'

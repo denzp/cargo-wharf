@@ -41,7 +41,7 @@ function build_frontend_image() {
         -f cargo-wharf-frontend/Cargo.toml . \
         --tag localhost:10395/denzp/cargo-wharf-frontend:local \
         --build-arg manifest-path=cargo-wharf-frontend/Cargo.toml \
-        --build-arg features=integration-testing \
+        --build-arg features=container-tools-testing \
         "${extra_buildx_args[@]}" 2>&3
 
     echo -e '# \rbuilding the frontend docker image... done' >&3

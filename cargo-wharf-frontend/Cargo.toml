@@ -40,8 +40,9 @@ maplit = "1.0"
 pretty_assertions = "0.6"
 
 [features]
-integration-testing = []
-local-container-tools = []
+container-tools-testing = []
+container-tools-local = []
+container-tools-master = []
 
 [package.metadata.wharf.builder]
 image = "clux/muslrust:stable"

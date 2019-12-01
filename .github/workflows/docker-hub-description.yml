@@ -1,4 +1,4 @@
-name: Publish Docker Hub description
+name: Docker Hub description
 on:
   push:
     tags:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Docker Hub frontend description
+      - name: Frontend description
         uses: peter-evans/dockerhub-description@v2.1.0
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
@@ -28,7 +28,7 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Docker Hub frontend description
+      - name: Container Tools description
         uses: peter-evans/dockerhub-description@v2.1.0
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}

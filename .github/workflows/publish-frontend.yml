@@ -6,7 +6,7 @@ on:
 
 jobs:
   publish-requested-tag:
-    name: Publish cargo-wharf-frontend to Docker Hub
+    name: Publish denzp/cargo-wharf-frontend
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources

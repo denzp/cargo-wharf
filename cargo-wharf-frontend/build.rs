@@ -9,13 +9,17 @@ fn main() {
 }
 
 cfg_if::cfg_if! {
-    if #[cfg(feature = "integration-testing")] {
+    if #[cfg(feature = "container-tools-testing")] {
         fn get_container_tools_ref() -> &'static str {
             "localhost:10395/denzp/cargo-container-tools:local"
         }
-    } else if #[cfg(feature = "local-container-tools")] {
+    } else if #[cfg(feature = "container-tools-local")] {
         fn get_container_tools_ref() -> &'static str {
             "denzp/cargo-container-tools:local"
+        }
+    } else if #[cfg(feature = "container-tools-master")] {
+        fn get_container_tools_ref() -> &'static str {
+            "denzp/cargo-container-tools:master"
         }
     } else {
         fn get_container_tools_ref() -> String {

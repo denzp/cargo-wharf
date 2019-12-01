@@ -6,7 +6,7 @@ on:
 
 jobs:
   publish-requested-tag:
-    name: Publish cargo-container-tools to Docker Hub
+    name: Publish denzp/cargo-container-tools
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
