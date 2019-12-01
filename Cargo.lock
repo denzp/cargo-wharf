@@ -264,7 +264,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-container-tools"
-version = "0.2.0-alpha.1"
+version = "0.2.0-alpha.2"
 dependencies = [
  "cargo 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -280,7 +280,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-wharf-frontend"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 dependencies = [
  "async-trait 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "buildkit-frontend 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
