@@ -100,6 +100,8 @@ impl RawBuildPlan {
                     tools::BUILD_PLAN,
                 ))
                 .mount(Mount::Scratch(OutputIdx(1), OUTPUT_LAYER_PATH))
+                .mount(Mount::OptionalSshAgent("/run/cargo-wharf/ssh-agent-0"))
+                .env("SSH_AUTH_SOCK", "/run/cargo-wharf/ssh-agent-0")
                 .custom_name("Evaluating the build plan")
         };
 
