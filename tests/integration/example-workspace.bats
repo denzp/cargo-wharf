@@ -15,7 +15,7 @@ function teardown() {
 }
 
 @test "workspace example :: binaries" {
-    docker buildx build --load -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace examples/workspace
+    docker buildx build --load -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace examples/workspace --ssh=default
 
     run docker run --rm cargo-wharf/example-workspace
     [ "$status" -eq 0 ]
@@ -33,7 +33,7 @@ function teardown() {
 }
 
 @test "workspace example :: custom commands" {
-    docker buildx build --load -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace examples/workspace
+    docker buildx build --load -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace examples/workspace --ssh=default
 
     run docker run --rm cargo-wharf/example-workspace cat /custom-setup
     [ "$status" -eq 0 ]
@@ -45,7 +45,7 @@ function teardown() {
 }
 
 @test "workspace example :: tests" {
-    docker buildx build --load -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace:test examples/workspace --build-arg profile=test
+    docker buildx build --load -f examples/workspace/Cargo.toml -t cargo-wharf/example-workspace:test examples/workspace --build-arg profile=test --ssh=default
 
     run docker run --rm cargo-wharf/example-workspace:test
     [ "$status" -eq 1 ]

@@ -5,6 +5,7 @@ authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+nix = { git = "ssh://git@github.com/nix-rust/nix.git" }
 
 [dependencies.lib-1]
 path = "../lib-1"

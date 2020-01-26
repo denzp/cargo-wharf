@@ -94,6 +94,11 @@ jobs:
       - name: Install bats
         run: sudo npm install -g bats
 
+      - name: Initialize SSH Agent
+        uses: webfactory/ssh-agent@v0.2.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
       - name: Run integration tests
         run: bats -t tests/integration
         env:
