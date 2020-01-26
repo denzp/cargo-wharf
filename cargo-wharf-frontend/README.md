@@ -22,7 +22,7 @@ As for **Docker v19.03.3**, BuildKit can be enabled just by setting `DOCKER_BUIL
 ## Frontend directive
 To instruct BuildKit to use the frontend, the first line of the `Cargo.toml` should be:
 ```
-# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.0
+# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.2
 ```
 
 ## Builder image config

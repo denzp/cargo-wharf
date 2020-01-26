@@ -31,9 +31,6 @@ take_mut = "0.2"
 
 [build-dependencies]
 cfg-if = "0.1"
-semver = { version = "0.9", features = ["serde"] }
-serde = "1.0"
-toml = "0.5"
 
 [dev-dependencies]
 maplit = "1.0"
