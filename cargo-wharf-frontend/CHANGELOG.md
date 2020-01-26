@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - Use host SSH Agent when available (exactly, when `--ssh=default` flag is passed for `docker build`).
+- Reduce logging verbosity.
 
 ## [0.1.0-alpha.1] - 2019-12-01
 ### Added

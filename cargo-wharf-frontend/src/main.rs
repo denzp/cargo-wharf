@@ -16,11 +16,9 @@ mod shared;
 
 use self::frontend::CargoFrontend;
 
-const DEFAULT_LOG_FILTER: &str = "info,cargo_buildkit=debug,buildkit=debug";
-
 #[runtime::main(runtime_tokio::Tokio)]
 async fn main() {
-    env_logger::init_from_env(Env::default().filter_or("RUST_LOG", DEFAULT_LOG_FILTER));
+    env_logger::init_from_env(Env::default().filter_or("RUST_LOG", "info"));
 
     if let Err(error) = run_frontend(CargoFrontend).await {
         error!("{}", error);
