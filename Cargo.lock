@@ -280,7 +280,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-wharf-frontend"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 dependencies = [
  "async-trait 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "buildkit-frontend 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",

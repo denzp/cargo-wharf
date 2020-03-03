@@ -1,8 +1,8 @@
-# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.1
+# syntax = denzp/cargo-wharf-frontend:v0.1.0-alpha.2
 
 [package]
 name = "cargo-wharf-frontend"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 publish = false
