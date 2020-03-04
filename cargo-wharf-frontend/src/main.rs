@@ -16,7 +16,7 @@ mod shared;
 
 use self::frontend::CargoFrontend;
 
-#[runtime::main(runtime_tokio::Tokio)]
+#[tokio::main]
 async fn main() {
     env_logger::init_from_env(Env::default().filter_or("RUST_LOG", "info"));
 
