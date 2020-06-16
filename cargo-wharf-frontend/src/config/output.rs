@@ -11,7 +11,7 @@ use buildkit_llb::ops::source::ImageSource;
 use buildkit_llb::prelude::*;
 
 use super::base::{BaseOutputConfig, CustomCommand};
-use super::{merge_spec_and_overriden_env, BaseImageConfig};
+use super::{merge_spec_and_overriden_env, BaseImageConfig, StaticAssetDefinition};
 
 #[derive(Debug, Serialize)]
 pub struct OutputConfig {
@@ -121,6 +121,10 @@ impl OutputConfig {
 
     pub fn post_install_commands(&self) -> Option<&Vec<CustomCommand>> {
         self.overrides.post_install_commands.as_ref()
+    }
+
+    pub fn copy_commands(&self) -> Option<&Vec<StaticAssetDefinition>> {
+        self.overrides.copy.as_ref()
     }
 }
 

@@ -10,7 +10,7 @@ use buildkit_llb::prelude::*;
 
 use crate::config::BaseImageConfig;
 use crate::graph::{Node, NodeKind, PrimitiveNodeKind};
-use crate::shared::{tools, TARGET_PATH};
+use crate::shared::{CONTEXT, tools, TARGET_PATH};
 
 use super::print::{PrettyPrintQuery, PrintKind};
 use super::{Profile, SerializationQuery, WharfDatabase};
@@ -55,6 +55,21 @@ pub trait TerminalQuery: WharfDatabase + SerializationQuery + PrettyPrintQuery {
                         .create_path(true),
                 )
             })
+        };
+        let operation = if let Some(copy_commands) = self.config().output().copy_commands() {
+            copy_commands.into_iter().fold(operation, |output, asset| {
+                let (index, layer_path) = match output.last_output_index() {
+                    Some(index) => (index + 1, LayerPath::Own(OwnOutputIdx(index), asset.dst.as_path())),
+                    None => (0, self.output_layer_path(asset.dst.as_path())),
+                };
+                output.append(
+                    FileSystem::copy()
+                        .from(LayerPath::Other(CONTEXT.output(), asset.src.as_path()))
+                        .to(OutputIdx(index), layer_path)
+                )
+            })
+        } else {
+            operation
         };
 
         let mut commands_iter = {

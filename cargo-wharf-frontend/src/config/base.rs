@@ -25,7 +25,7 @@ pub struct BaseBuilderConfig {
     pub user: Option<String>,
     pub env: Option<BTreeMap<String, String>>,
     pub target: Option<String>,
-    pub setup_commands: Option<Vec<CustomCommand>>,
+    pub setup_commands: Option<Vec<CustomCommand>>
 }
 
 #[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
@@ -43,12 +43,19 @@ pub struct BaseOutputConfig {
     pub stop_signal: Option<Signal>,
     pub pre_install_commands: Option<Vec<CustomCommand>>,
     pub post_install_commands: Option<Vec<CustomCommand>>,
+    pub copy: Option<Vec<StaticAssetDefinition>>
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct BinaryDefinition {
     pub name: String,
     pub destination: PathBuf,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+pub struct StaticAssetDefinition {
+    pub src: PathBuf,
+    pub dst: PathBuf,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
@@ -183,6 +190,7 @@ fn transformation() {
                         stop_signal: None,
                         pre_install_commands: None,
                         post_install_commands: None,
+                        copy: None,
                     }),
 
                     builder: None,
@@ -198,7 +206,7 @@ fn transformation() {
                         env: None,
                         user: None,
                         target: None,
-                        setup_commands: None,
+                        setup_commands: None
                     }),
 
                     output: None,
@@ -258,6 +266,7 @@ fn transformation() {
                 stop_signal: None,
                 pre_install_commands: None,
                 post_install_commands: None,
+                copy: None,
             },
             binaries: vec![
                 BinaryDefinition {
@@ -268,7 +277,7 @@ fn transformation() {
                     name: "binary-2".into(),
                     destination: "/usr/local/bin/binary-2".into(),
                 }
-            ]
+            ],
         }
     );
 }
@@ -301,6 +310,7 @@ fn duplicated_config() {
                         stop_signal: None,
                         pre_install_commands: None,
                         post_install_commands: None,
+                        copy: None,
                     }),
 
                     binary: None,
@@ -351,6 +361,7 @@ fn duplicated_config() {
                         stop_signal: None,
                         pre_install_commands: None,
                         post_install_commands: None,
+                        copy: None,
                     }),
 
                     binary: None,
@@ -373,6 +384,7 @@ fn duplicated_config() {
                         stop_signal: None,
                         pre_install_commands: None,
                         post_install_commands: None,
+                        copy: None,
                     }),
 
                     builder: None,
@@ -430,6 +442,7 @@ fn missing_config() {
                     stop_signal: None,
                     pre_install_commands: None,
                     post_install_commands: None,
+                    copy: None,
                 }),
 
                 builder: None,
