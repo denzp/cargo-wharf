@@ -7,13 +7,13 @@ use cargo::core::Shell;
 use cargo::util::CargoResult;
 
 use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
-use failure::{bail, ResultExt};
+use anyhow::{bail, Context};
 
 fn main() {
     let matches = get_cli_app().get_matches();
 
     if let Err(error) = run(&matches) {
-        cargo::handle_error(&error, &mut Shell::new());
+        cargo::display_error(&error, &mut Shell::new());
         exit(1);
     }
 }

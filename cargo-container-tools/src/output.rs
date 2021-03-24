@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use cargo::core::compiler::BuildOutput;
 use cargo::util::CargoResult;
-use failure::ResultExt;
+use anyhow::Context;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::env::RuntimeEnv;
@@ -65,7 +65,7 @@ impl From<BuildOutput> for BuildScriptOutput {
         Self {
             library_paths: output.library_paths,
             library_links: output.library_links,
-            linker_args: output.linker_args,
+            linker_args: output.linker_args.into_iter().map(|(_ty, arg)| arg).collect(),
             cfgs: output.cfgs,
             env: output.env,
             metadata: output.metadata,
