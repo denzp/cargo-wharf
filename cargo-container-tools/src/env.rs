@@ -1,8 +1,8 @@
 use std::env;
 use std::path::Path;
 
-use cargo::util::CargoResult;
 use anyhow::format_err;
+use cargo::util::CargoResult;
 use lazy_static::*;
 
 lazy_static! {

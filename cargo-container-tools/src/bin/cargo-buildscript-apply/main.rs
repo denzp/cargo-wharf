@@ -3,10 +3,10 @@
 
 use std::process::{exit, Command, Stdio};
 
+use anyhow::{bail, Context};
 use cargo::core::Shell;
 use cargo::util::CargoResult;
 use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
-use anyhow::{bail, Context};
 
 use cargo_container_tools::BuildScriptOutput;
 

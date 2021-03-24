@@ -7,13 +7,16 @@ use std::io::{copy, BufWriter};
 use std::process::{exit, Command, Stdio};
 use std::sync::Arc;
 
-use cargo::{core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor}, util::interning::InternedString};
 use cargo::core::{Shell, Workspace};
 use cargo::ops::{CompileFilter, CompileOptions, FilterRule, LibRule, Packages};
 use cargo::util::{config::Config, CargoResult};
+use cargo::{
+    core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor},
+    util::interning::InternedString,
+};
 
-use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
 use anyhow::{bail, Context};
+use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
 
 fn main() {
     let matches = get_cli_app().get_matches();
@@ -128,8 +131,14 @@ fn run_stdout(matches: &ArgMatches<'static>) -> CargoResult<()> {
     let mut build_config = BuildConfig::new(
         &config,
         Some(1),
-        matches.value_of("target").unwrap_or_default().split(",").map(String::from).collect::<Vec<_>>().as_slice(),
-        CompileMode::Build
+        matches
+            .value_of("target")
+            .unwrap_or_default()
+            .split(",")
+            .map(String::from)
+            .collect::<Vec<_>>()
+            .as_slice(),
+        CompileMode::Build,
     )?;
     if matches.is_present("release") {
         build_config.requested_profile = InternedString::new("release");

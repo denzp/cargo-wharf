@@ -5,10 +5,10 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::{exit, Command, Stdio};
 
+use anyhow::{bail, Context};
 use cargo::core::{compiler::BuildOutput, Shell};
 use cargo::util::CargoResult;
 use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
-use anyhow::{bail, Context};
 
 use cargo_container_tools::{BuildScriptOutput, RuntimeEnv};
 

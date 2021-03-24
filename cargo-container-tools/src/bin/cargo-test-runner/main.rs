@@ -6,8 +6,8 @@ use std::process::{exit, Command, Stdio};
 use cargo::core::Shell;
 use cargo::util::CargoResult;
 
-use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
 use anyhow::{bail, Context};
+use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
 
 fn main() {
     let matches = get_cli_app().get_matches();
