@@ -7,19 +7,22 @@ use std::io::{copy, BufWriter};
 use std::process::{exit, Command, Stdio};
 use std::sync::Arc;
 
-use cargo::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use cargo::core::{Shell, Workspace};
 use cargo::ops::{CompileFilter, CompileOptions, FilterRule, LibRule, Packages};
 use cargo::util::{config::Config, CargoResult};
+use cargo::{
+    core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor},
+    util::interning::InternedString,
+};
 
+use anyhow::{bail, Context};
 use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
-use failure::{bail, ResultExt};
 
 fn main() {
     let matches = get_cli_app().get_matches();
 
     if let Err(error) = run(&matches) {
-        cargo::handle_error(&error, &mut Shell::new());
+        cargo::display_error(&error, &mut Shell::new());
         exit(1);
     }
 }
@@ -123,13 +126,25 @@ fn run(matches: &ArgMatches<'static>) -> CargoResult<()> {
 
 fn run_stdout(matches: &ArgMatches<'static>) -> CargoResult<()> {
     let mut config = Config::default()?;
-    config.configure(0, None, &None, false, true, false, &None, &[])?;
+    config.configure(0, false, None, false, true, false, &None, &[], &[])?;
 
-    let mut build_config = BuildConfig::new(&config, Some(1), &None, CompileMode::Build)?;
-    build_config.release = matches.is_present("release");
+    let mut build_config = BuildConfig::new(
+        &config,
+        Some(1),
+        matches
+            .value_of("target")
+            .unwrap_or_default()
+            .split(",")
+            .map(String::from)
+            .collect::<Vec<_>>()
+            .as_slice(),
+        CompileMode::Build,
+    )?;
+    if matches.is_present("release") {
+        build_config.requested_profile = InternedString::new("release");
+    }
     build_config.force_rebuild = true;
     build_config.build_plan = true;
-    build_config.requested_target = matches.value_of("target").map(String::from);
 
     let features = {
         matches
@@ -140,7 +155,6 @@ fn run_stdout(matches: &ArgMatches<'static>) -> CargoResult<()> {
     };
 
     let options = CompileOptions {
-        config: &config,
         build_config,
 
         features,
@@ -160,7 +174,7 @@ fn run_stdout(matches: &ArgMatches<'static>) -> CargoResult<()> {
         target_rustdoc_args: None,
         target_rustc_args: None,
         local_rustdoc_args: None,
-        export_dir: None,
+        rustdoc_document_private_items: false,
     };
 
     let executor: Arc<dyn Executor> = Arc::new(DefaultExecutor);
