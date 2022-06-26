@@ -158,7 +158,6 @@ fn run_stdout(matches: &ArgMatches<'static>) -> CargoResult<()> {
     );
 
     let options = CompileOptions {
-        // config: &config,
         build_config,
 
         cli_features: CliFeatures {

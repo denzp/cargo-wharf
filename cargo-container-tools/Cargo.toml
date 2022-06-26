@@ -15,7 +15,6 @@ either = "1.5"
 anyhow = "1.0.57"
 lazy_static = "1.4"
 semver = "1"
-# toml = "0.5"
 toml_edit = {version = "0.13.4", features = ["easy", "serde"]}
 
 serde = "1.0"
