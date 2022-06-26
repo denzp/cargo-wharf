@@ -5,10 +5,11 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::{exit, Command, Stdio};
 
+use anyhow::bail;
+use anyhow::Context;
 use cargo::core::{compiler::BuildOutput, Shell};
 use cargo::util::CargoResult;
 use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
-use failure::{bail, ResultExt};
 
 use cargo_container_tools::{BuildScriptOutput, RuntimeEnv};
 
@@ -16,7 +17,7 @@ fn main() {
     let matches = get_cli_app().get_matches();
 
     if let Err(error) = run(&matches) {
-        cargo::handle_error(&error, &mut Shell::new());
+        cargo::display_error(&error, &mut Shell::new());
         exit(1);
     }
 }
@@ -82,14 +83,20 @@ fn get_buildscript_output<'a>(
         command
             .args(bin_args)
             .output()
-            .with_context(|_| format!("Unable to spawn '{}'", bin_path))?
+            .with_context(|| format!("Unable to spawn '{}'", bin_path))?
     };
+
+    let package_name = RuntimeEnv::package_name()?;
 
     let cargo_output_result = BuildOutput::parse(
         &output.stdout,
-        RuntimeEnv::package_name()?,
+        Some(package_name.to_string()),
+        // pkg_descr is used for error messages
+        package_name,
         RuntimeEnv::output_dir()?,
         RuntimeEnv::output_dir()?,
+        true,
+        &[],
     );
 
     let cargo_output = match cargo_output_result {

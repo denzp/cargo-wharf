@@ -1,8 +1,8 @@
 use std::env;
 use std::path::Path;
 
+use anyhow::Error;
 use cargo::util::CargoResult;
-use failure::format_err;
 use lazy_static::*;
 
 lazy_static! {
@@ -18,14 +18,14 @@ impl RuntimeEnv {
         OUT_DIR
             .as_ref()
             .map(|value| Path::new(value))
-            .ok_or_else(|| format_err!("unable to find OUT_DIR env variable"))
+            .ok_or_else(|| Error::msg("unable to find OUT_DIR env variable"))
     }
 
     pub fn package_name() -> CargoResult<&'static str> {
         CARGO_PKG_NAME
             .as_ref()
             .map(|value| value.as_str())
-            .ok_or_else(|| format_err!("unable to find CARGO_PKG_NAME env variable"))
+            .ok_or_else(|| Error::msg("unable to find CARGO_PKG_NAME env variable"))
     }
 
     pub fn manifest_link_name() -> Option<&'static str> {

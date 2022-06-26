@@ -13,7 +13,7 @@ use cargo::util::{config::Config, CargoResult};
 
 use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
 use either::Either;
-use toml::Value;
+use toml_edit::easy::Value;
 
 use cargo_container_tools::metadata::*;
 
@@ -21,7 +21,7 @@ fn main() {
     let matches = get_cli_app().get_matches();
 
     if let Err(error) = run(&matches) {
-        cargo::handle_error(&error, &mut Shell::new());
+        cargo::display_error(&error, &mut Shell::new());
         exit(1);
     }
 }
@@ -99,7 +99,7 @@ fn workspace_metadata(ws: &Workspace) -> Vec<Metadata> {
 
 fn workspace_root_inner_metadata(ws: &Workspace) -> Option<Value> {
     let manifest_contents = read_to_string(ws.root().join("Cargo.toml")).ok()?;
-    let manifest: manifest::Root = toml::from_str(&manifest_contents).ok()?;
+    let manifest: manifest::Root = toml_edit::easy::from_str(&manifest_contents).ok()?;
 
     manifest.workspace?.metadata
 }

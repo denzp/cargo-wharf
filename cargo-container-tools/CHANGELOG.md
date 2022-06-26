@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0-alpha.3] - 2022-06-23
+### Changed
+- Cargo updated to `v0.62.0`.
+- Fixes `edition = "2021"` issue
+
 ## [0.2.0-alpha.1] - 2019-12-01
 ### Changed
 - Switched to stable Rust channel.

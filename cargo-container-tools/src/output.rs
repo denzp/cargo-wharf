@@ -2,9 +2,9 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 
+use anyhow::Context;
 use cargo::core::compiler::BuildOutput;
 use cargo::util::CargoResult;
-use failure::ResultExt;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::env::RuntimeEnv;
@@ -65,7 +65,12 @@ impl From<BuildOutput> for BuildScriptOutput {
         Self {
             library_paths: output.library_paths,
             library_links: output.library_links,
-            linker_args: output.linker_args,
+            // TODO: Can we really drop all link types?
+            linker_args: output
+                .linker_args
+                .into_iter()
+                .map(|(_link_type, arg)| arg)
+                .collect(),
             cfgs: output.cfgs,
             env: output.env,
             metadata: output.metadata,
