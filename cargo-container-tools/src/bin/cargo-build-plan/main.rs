@@ -5,21 +5,25 @@ use std::env::{current_dir, current_exe};
 use std::fs::File;
 use std::io::{copy, BufWriter};
 use std::process::{exit, Command, Stdio};
+use std::rc::Rc;
 use std::sync::Arc;
 
 use cargo::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
+use cargo::core::resolver::CliFeatures;
+use cargo::core::summary::FeatureValue;
 use cargo::core::{Shell, Workspace};
 use cargo::ops::{CompileFilter, CompileOptions, FilterRule, LibRule, Packages};
+use cargo::util::interning::InternedString;
 use cargo::util::{config::Config, CargoResult};
 
+use anyhow::{bail, Context};
 use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
-use failure::{bail, ResultExt};
 
 fn main() {
     let matches = get_cli_app().get_matches();
 
     if let Err(error) = run(&matches) {
-        cargo::handle_error(&error, &mut Shell::new());
+        cargo::display_error(&error, &mut Shell::new());
         exit(1);
     }
 }
@@ -123,29 +127,44 @@ fn run(matches: &ArgMatches<'static>) -> CargoResult<()> {
 
 fn run_stdout(matches: &ArgMatches<'static>) -> CargoResult<()> {
     let mut config = Config::default()?;
-    config.configure(0, None, &None, false, true, false, &None, &[])?;
+    config.configure(0, false, None, false, true, false, &None, &[], &[])?;
 
-    let mut build_config = BuildConfig::new(&config, Some(1), &None, CompileMode::Build)?;
-    build_config.release = matches.is_present("release");
+    // TODO: Should I pass true to keep_going?
+    let mut build_config = BuildConfig::new(
+        &config,
+        Some(1),
+        false,
+        &matches
+            .value_of("target")
+            .map(String::from)
+            .into_iter()
+            .collect::<Vec<String>>(),
+        CompileMode::Build,
+    )?;
+    if matches.is_present("release") {
+        build_config.requested_profile = InternedString::new("release");
+    }
+
     build_config.force_rebuild = true;
     build_config.build_plan = true;
-    build_config.requested_target = matches.value_of("target").map(String::from);
 
-    let features = {
+    let features = Rc::new(
         matches
             .values_of("features")
             .unwrap_or_default()
-            .map(String::from)
-            .collect()
-    };
+            .map(InternedString::from)
+            .map(FeatureValue::Feature)
+            .collect(),
+    );
 
     let options = CompileOptions {
-        config: &config,
         build_config,
 
-        features,
-        all_features: false,
-        no_default_features: matches.is_present("no_default_features"),
+        cli_features: CliFeatures {
+            features,
+            all_features: false,
+            uses_default_features: !matches.is_present("no_default_features"),
+        },
 
         spec: Packages::All,
         filter: CompileFilter::Only {
@@ -160,7 +179,10 @@ fn run_stdout(matches: &ArgMatches<'static>) -> CargoResult<()> {
         target_rustdoc_args: None,
         target_rustc_args: None,
         local_rustdoc_args: None,
-        export_dir: None,
+
+        honor_rust_version: true,
+        rustdoc_document_private_items: false,
+        target_rustc_crate_types: None,
     };
 
     let executor: Arc<dyn Executor> = Arc::new(DefaultExecutor);

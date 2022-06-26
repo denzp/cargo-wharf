@@ -1,6 +1,6 @@
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use toml::value::Value;
+use toml_edit::easy::Value;
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
@@ -26,6 +26,6 @@ pub mod manifest {
 
     #[derive(Deserialize, Clone, Debug)]
     pub struct Workspace {
-        pub metadata: Option<toml::Value>,
+        pub metadata: Option<toml_edit::easy::Value>,
     }
 }

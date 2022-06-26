@@ -3,10 +3,10 @@
 
 use std::process::{exit, Command, Stdio};
 
+use anyhow::{bail, Context};
 use cargo::core::Shell;
 use cargo::util::CargoResult;
 use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
-use failure::{bail, ResultExt};
 
 use cargo_container_tools::BuildScriptOutput;
 
@@ -14,7 +14,7 @@ fn main() {
     let matches = get_cli_app().get_matches();
 
     if let Err(error) = run(&matches) {
-        cargo::handle_error(&error, &mut Shell::new());
+        cargo::display_error(&error, &mut Shell::new());
         exit(1);
     }
 }
@@ -77,7 +77,7 @@ fn invoke_rustc<'a>(
 
     let output = command
         .output()
-        .with_context(|_| format!("Unable to spawn '{}'", bin_path))?;
+        .with_context(|| format!("Unable to spawn '{}'", bin_path))?;
 
     if output.status.success() {
         Ok(())

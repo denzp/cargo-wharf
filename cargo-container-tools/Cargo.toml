@@ -2,20 +2,20 @@
 
 [package]
 name = "cargo-container-tools"
-version = "0.2.0-alpha.2"
+version = "0.2.0-alpha.3"
 authors = ["Denys Zariaiev <denys.zariaiev@gmail.com>"]
 edition = "2018"
 publish = false
 license = "MIT/Apache-2.0"
 
 [dependencies]
-cargo = "0.40"
+cargo = "0.62"
 clap = "2.33"
 either = "1.5"
-failure = "0.1"
+anyhow = "1.0.57"
 lazy_static = "1.4"
-semver = "0.9"
-toml = "0.5"
+semver = "1"
+toml_edit = {version = "0.13.4", features = ["easy", "serde"]}
 
 serde = "1.0"
 serde_json = "1.0"

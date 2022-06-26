@@ -20,7 +20,7 @@ cfg_if::cfg_if! {
         }
     } else {
         fn get_container_tools_ref() -> &'static str {
-            "denzp/cargo-container-tools:v0.2.0-alpha.1"
+            "denzp/cargo-container-tools:v0.2.0-alpha.3"
         }
     }
 }
